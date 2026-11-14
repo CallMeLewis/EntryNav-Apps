@@ -5,7 +5,8 @@ appear under **My Vehicle** in iDrive and read the engine and gearbox through th
 
 - **BoostDeck**: boost, air-fuel ratio, ignition timing, intake air, gearbox, rail pressure, oil pressure and coolant.
 - **ShiftDeck**: a full-width RPM bar with a shift light, and road speed.
-- **MHD Maps**: map switching for MHD+ multi-map tunes. It is being replaced by a bootmod3 version.
+- **BM3 Maps**: switches between the four map slots of a bootmod3 multi-map CustomROM and shows which one is active.
+  It replaces upstream's MHD Maps.
 
 > [!WARNING]
 > Work in progress. The apps build and pass their checks against a copy of the EntryNav2's system, but they have not
@@ -33,7 +34,8 @@ supports the EntryNav2 only.
 | Settings | beside the apps | `/var/local/data/EntryNavApps` |
 | `bmw::PluginApp` | 352 bytes | larger (a Linux semaphore), so the apps reserve 0x200 bytes |
 | Gateway access | open | the head unit's firewall drops outgoing connections, so port 6801 needs a rule |
-| Installer | desktop app over ENET | `setup.sh` on the head unit, or Flare Drive |
+| Installer | desktop app over ENET | `setup.sh` on the head unit, or Flare Drive (in progress) |
+| Map switching | MHD+ | bootmod3 CustomROM |
 
 ## Signals
 
@@ -42,6 +44,23 @@ scale them differently. Compare each reading with a logger you trust before rely
 [Signal table](docs/SIGNALS.md) · [Porting to another car](docs/PORTING.md)
 
 ShiftDeck uses standard OBD engine speed and road speed, which nearly every car answers.
+
+## BM3 Maps
+
+Map switching isn't a BMW function: bootmod3's code in the DME does it. BM3 Maps reads bootmod3's CustomROM marker
+from the DME's memory and goes on only if the marker names one of the 150 ROMs in
+[`src/bm3_profiles.h`](src/bm3_profiles.h). It then writes the slot to that ROM's address and reads it back. Opening
+the page shows the active map. A stock DME, an MHD tune or an unlisted ROM gets a message and nothing is written.
+
+- Pick only slots that hold a map for the fuel in the tank. The app can't tell what each slot contains.
+- Some DMEs refuse bootmod3's memory reads with "security access denied". Then the app can't work on that car.
+- The marker's address in DME memory depends on the DME. It defaults to upstream's `807FFE50`, and
+  `/var/local/data/EntryNavApps/bm3-marker-address` (eight hex digits) overrides it.
+
+The protocol and the ROM profiles come from
+[cauliflowermossgrape/idrive7-apps](https://github.com/cauliflowermossgrape/idrive7-apps) (MIT), itself from BM3 Live
+by ezl0l. `tools/make_bm3_profiles.py` regenerates the table from upstream's `bm3_profiles.js`. This project is
+independent of and unaffiliated with bootmod3.
 
 ## Build
 

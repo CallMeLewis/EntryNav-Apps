@@ -67,7 +67,8 @@ static int exchange(int fd, unsigned ecu, const unsigned char *uds, unsigned uds
                     const unsigned char *prefix, unsigned prefix_size,
                     unsigned char *reply, unsigned reply_size, unsigned timeout_ms,
                     unsigned *negative) {
-    unsigned char request[12] = {0,0,0,0,0,1,0xf4,0};
+    /* HSFZ header (length, control 1, tester F4, target) and up to 64 UDS bytes; BM3's longest request is 11. */
+    unsigned char request[8+64] = {0,0,0,0,0,1,0xf4,0};
     unsigned char header[6], body[4096];
     uint64_t deadline = bd_mono_ms() + timeout_ms;
     if (uds_size > sizeof request - 8) return -1;
@@ -172,37 +173,133 @@ int main(int argc, char **argv) {
     close(lock);
     return 0;
 }
-#elif defined(MHD_MAPS_ONLY)
+#elif defined(BM3_MAPS_ONLY)
+/* bm3-maps: bootmod3 CustomROM map slots (src/bm3.h). It prints one line for the app's status label.
+ *   bm3-maps --host IPv4 --status      identifies the ROM and reads the active slot; only reads
+ *   bm3-maps --host IPv4 --map 1..4    identifies the ROM, writes the slot and reads it back
+ * Every run identifies the ROM again, and nothing is written unless the marker names a known ROM.
+ * --marker HEX overrides the marker's address; otherwise ENA_DATA_DIR/bm3-marker-address, then upstream's default.
+ * Exit 0 when the line reports the active map, 1 otherwise. */
+#include "bm3.h"
+#include "paths.h"
+
+static int bm3_exchange(int fd, const unsigned char *uds, size_t size, unsigned char *reply, unsigned cap,
+                        unsigned *negative) {
+    unsigned char prefix[8];
+    size_t length = bm3_reply_prefix(uds, prefix);
+    return exchange(fd, BM3_DME, uds, (unsigned)size, prefix, (unsigned)length, reply, cap, 4500, negative);
+}
+
+/* Reads the CustomROM marker: through a dynamic DID, or straight from memory when the DME refuses that. */
+static const bm3_profile *bm3_identify(int fd, uint32_t marker_address) {
+    unsigned char request[16], reply[1024]; /* room for a wrong-length marker, reported as such */
+    const unsigned char *marker = 0;
+    size_t marker_size = 0;
+    const char *why;
+    const bm3_profile *profile;
+    unsigned negative;
+    int n, refused = 0;
+    n = bm3_exchange(fd, request, bm3_clear_dynamic_did(request), reply, sizeof reply, &negative);
+    if (n == -2) refused = 1;
+    else if (n < 0) { puts("The DME did not answer"); return 0; }
+    if (!refused) {
+        n = bm3_exchange(fd, request, bm3_define_marker_did(request, marker_address), reply, sizeof reply, &negative);
+        if (n == -2) refused = 1;
+        else if (n < 0) { puts("The DME did not answer"); return 0; }
+    }
+    if (!refused) {
+        n = bm3_exchange(fd, request, bm3_read_marker_did(request), reply, sizeof reply, &negative);
+        if (n == -2) refused = 1;
+        else if (n < 0) { puts("The DME did not answer"); return 0; }
+        else { marker = reply + 3; marker_size = (size_t)n - 3; } /* after 62 F3 01 */
+    }
+    if (refused) {
+        n = bm3_exchange(fd, request, bm3_read_memory(request, marker_address, BM3_MARKER_SIZE), reply, sizeof reply,
+                         &negative);
+        if (n == -2) { printf("The DME refused to read its memory (NRC %02X)\n", negative); return 0; }
+        if (n < 0) { puts("The DME did not answer"); return 0; }
+        marker = reply + 1; /* after 63 */
+        marker_size = (size_t)n - 1;
+    }
+    profile = bm3_marker_profile(marker, marker_size, &why);
+    if (!profile) printf("No known bootmod3 ROM: %s\n", why);
+    return profile;
+}
+
+static int bm3_read_slot(int fd, const bm3_profile *profile) {
+    unsigned char request[16], reply[8];
+    unsigned negative;
+    int n = bm3_exchange(fd, request, bm3_read_memory(request, profile->map_address, 1), reply, sizeof reply,
+                         &negative);
+    return n > 0 ? bm3_slot_reply(reply, (size_t)n) : -1;
+}
+
+static uint32_t bm3_marker_address(const char *option) {
+    char text[32] = "";
+    char *end;
+    unsigned long value;
+    FILE *file;
+    if (option) snprintf(text, sizeof text, "%s", option);
+    else if ((file = fopen(ENA_DATA_DIR "/bm3-marker-address", "r"))) {
+        if (!fgets(text, sizeof text, file)) text[0] = 0;
+        fclose(file);
+    }
+    text[strcspn(text, "\r\n")] = 0;
+    if (!text[0]) return BM3_MARKER_ADDRESS;
+    value = strtoul(text, &end, 16);
+    if (strlen(text) != 8 || *end) { fprintf(stderr, "Invalid marker address: %s\n", text); exit(2); }
+    return (uint32_t)value;
+}
+
 int main(int argc, char **argv) {
-    const char *host=0;
-    unsigned port=6801, slot=0, negative;
-    int fd, lock, n, i;
-    unsigned char request[]={0x2f,0x01,0}, prefix[]={0x6f,0x01,0}, reply[16];
-    for (i=1;i<argc;++i) {
-        if (!strcmp(argv[i],"--host") && i+1<argc && !host) host=argv[++i];
-        else if (!strcmp(argv[i],"--port") && i+1<argc) port=number(argv[++i],1,65535);
-        else if (!strcmp(argv[i],"--map") && i+1<argc && !slot) slot=number(argv[++i],1,4);
+    const char *host = 0, *marker_option = 0;
+    unsigned port = 6801, slot = 0, negative;
+    int status = 0, fd, lock, i, n, active;
+    const bm3_profile *profile;
+    for (i = 1; i < argc; ++i) {
+        if (!strcmp(argv[i], "--host") && i + 1 < argc && !host) host = argv[++i];
+        else if (!strcmp(argv[i], "--port") && i + 1 < argc) port = number(argv[++i], 1, 65535);
+        else if (!strcmp(argv[i], "--marker") && i + 1 < argc) marker_option = argv[++i];
+        else if (!strcmp(argv[i], "--map") && i + 1 < argc && !slot && !status) slot = number(argv[++i], 1, BM3_SLOTS);
+        else if (!strcmp(argv[i], "--status") && !slot) status = 1;
         else return 2;
     }
-    if (!host || !slot) return 2;
-    signal(SIGINT,stop); signal(SIGTERM,stop); signal(SIGPIPE,SIG_IGN);
-    lock=reserve_gateway();
-    if (lock<0) { puts("Diagnostics busy. Wait a moment and try again."); return 0; }
-    fd=connect_gw(host,port);
-    if (fd<0) {
-        puts("Diagnostic gateway unavailable");
-        close(lock);
-        return 0;
+    if (!host || (!slot && !status)) {
+        fprintf(stderr, "Usage: %s --host IPv4 [--port 6801] [--marker HEX] (--status | --map 1-4)\n", argv[0]);
+        return 2;
     }
-    /* MHD+ slot selector documented in idrive7-apps, tune.js at cca7f9a.
-       The echoed value acknowledges the request but does not read active state. */
-    request[2]=prefix[2]=(unsigned char)(slot-1);
-    n=exchange(fd,0x12,request,sizeof request,prefix,sizeof prefix,reply,sizeof reply,1600,&negative);
-    if (n>=3) printf("Confirmed: Map %u\n",slot);
-    else if (n==-2) printf("Map %u refused by DME (NRC %02X)\n",slot,negative);
-    else puts("Map result unknown. Check Current Map in MHD.");
-    close(fd);
-    close(lock);
+    signal(SIGINT, stop); signal(SIGTERM, stop); signal(SIGPIPE, SIG_IGN);
+    lock = reserve_gateway();
+    if (lock < 0) { puts("Diagnostics busy. Wait a moment and try again."); return 1; }
+    fd = connect_gw(host, port);
+    if (fd < 0) { puts("Diagnostic gateway unavailable"); close(lock); return 1; }
+    profile = bm3_identify(fd, bm3_marker_address(marker_option));
+    if (!profile) { release_gateway(&fd, &lock); return 1; }
+    if (slot) {
+        unsigned char request[16], reply[8], data[2];
+        data[0] = (unsigned char)(slot - 1);
+        data[1] = 0x01; /* activate */
+        n = bm3_exchange(fd, request,
+                         bm3_write_memory(request, sizeof request, profile, profile->map_address, data, sizeof data),
+                         reply, sizeof reply, &negative);
+        if (n == -2) {
+            printf("The DME refused the map change (NRC %02X)\n", negative);
+            release_gateway(&fd, &lock);
+            return 1;
+        }
+    }
+    active = bm3_read_slot(fd, profile);
+    release_gateway(&fd, &lock);
+    if (active < 0) {
+        puts(slot ? "Map change not confirmed. Check the active map before trying again."
+                  : "Could not read the active map");
+        return 1;
+    }
+    if (slot && (unsigned)active != slot - 1) {
+        printf("Map change not confirmed: the DME reports map %d\n", active + 1);
+        return 1;
+    }
+    printf("Map %d active (%s)\n", active + 1, profile->rom);
     return 0;
 }
 #elif defined(SHIFT_DECK_ONLY)

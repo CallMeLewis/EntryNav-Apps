@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <pluginApps>
-  <pluginApp applicationType="VehicleInformation" applicationWeight="208" text="MHD Maps">
+  <pluginApp applicationType="VehicleInformation" applicationWeight="208" text="BM3 Maps">
     <entryButton id="1" action="10">
       <properties>
         <property id="23" value="2" />
@@ -20,7 +20,7 @@
       <imageIdModel id="62" imageId="56002" />
     </models>
     <hmiStates>
-      <hmiState id="100" text="MHD Maps">
+      <hmiState id="100" text="BM3 Maps">
         <components>
           <image id="200" model="60">
             <properties>

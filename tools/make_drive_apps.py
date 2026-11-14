@@ -1,4 +1,4 @@
-"""Generate RHMI resources for the standalone ShiftDeck and MHD Maps apps."""
+"""Generate RHMI resources for the standalone ShiftDeck and BM3 Maps apps."""
 from pathlib import Path
 from io import BytesIO
 from xml.etree import ElementTree as ET
@@ -95,8 +95,8 @@ def shift_app():
 
 
 def map_app():
-    name="MhdMaps"
-    doc, actions, models, _, page = entry(name,"MHD Maps",208,103,100,images=True)
+    name="Bm3Maps"
+    doc, actions, models, _, page = entry(name,"BM3 Maps",208,103,100,images=True)
     ET.SubElement(models,"raDataModel",id="50",modelType="Richtext")
     content=ET.SubElement(page,"components")
     def graphic(component, model, asset, x, y, w, h):
@@ -121,7 +121,7 @@ def map_app():
     arial=Path("/System/Library/Fonts/Supplemental/Arial.ttf")
     font=ImageFont.truetype(str(arial) if arial.is_file() else "DejaVuSans.ttf",39)
     logo=Image.new("RGBA",(360,48))
-    ImageDraw.Draw(logo).text((180,24),"MHD Maps",font=font,anchor="mm",fill="#f0f4fb")
+    ImageDraw.Draw(logo).text((180,24),"BM3 Maps",font=font,anchor="mm",fill="#f0f4fb")
     tiles=Image.new("RGBA",(852,192))
     draw=ImageDraw.Draw(tiles)
     for slot,x in enumerate(range(0,4*220,220),1):
