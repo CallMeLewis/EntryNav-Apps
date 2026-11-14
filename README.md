@@ -25,6 +25,40 @@ supports the EntryNav2 only.
 
 *The original apps on an NBT Evo, from the upstream project.*
 
+## Installing
+
+Each app is its own plugin: install any of them, in any order, and remove one without touching the others.
+
+| Plugin | Archive | Installed in |
+|---|---|---|
+| BoostDeck | `boostdeck-VERSION-armhf.tar` | `/opt/hmi/data/ro/Plugins/BoostDeck` |
+| ShiftDeck | `shiftdeck-VERSION-armhf.tar` | `/opt/hmi/data/ro/Plugins/ShiftDeck` |
+| BM3 Maps | `bm3-maps-VERSION-armhf.tar` | `/opt/hmi/data/ro/Plugins/Bm3Maps` |
+
+Flare Drive support is in progress. Until then, install by hand. You need an ENET cable, a PC with an SSH client, the
+head unit's root password and the plugin's archive (`tools/package_release.py` builds them). Do it parked, with the
+ignition on. For BoostDeck:
+
+1. Copy the archive to the head unit's `/tmp` and unpack it there: `tar -xf boostdeck-VERSION-armhf.tar -C /tmp`.
+2. Run `sh /tmp/boostdeck-VERSION/setup.sh check`. It checks the car and writes nothing.
+3. Run `sh /tmp/boostdeck-VERSION/setup.sh install`. Besides the app, it installs a firewall rule that lets it reach
+   the diagnostic gateway, then finds the gateway and saves its address for every app.
+4. Restart iDrive: hold the volume knob for about 30 seconds. The app appears under **My Vehicle**.
+
+Once installed, each plugin's `setup.sh` sits in its folder, for example `/opt/hmi/data/ro/Plugins/BoostDeck/setup.sh`:
+
+| Command | |
+|---|---|
+| `status` | Whether it's installed, whether its files are intact, and the gateway in use |
+| `gateway [IP]` | Finds the gateway again, or checks and saves the one given. Every app uses the address |
+| `tidy` | Deletes an earlier version iDrive was still using, after a restart |
+| `uninstall [--purge]` | Removes the plugin. `--purge` also deletes its settings, and the gateway's address once no other app is left |
+
+`check` stops unless iDrive's app framework is the exact version the apps were checked against
+(`install/frameworks.md5`). It also stops when anything in the way wasn't installed by EntryNav-Apps, or when the
+system partition is already writable. A plugin's folder only changes by a whole-folder rename, so a power cut leaves
+the previous or the new version.
+
 ## What the EntryNav2 needs that the NBT Evo didn't
 
 | | NBT Evo (upstream) | EntryNav2 (this fork) |
@@ -34,7 +68,7 @@ supports the EntryNav2 only.
 | Settings | beside the apps | `/var/local/data/EntryNavApps` |
 | `bmw::PluginApp` | 352 bytes | larger (a Linux semaphore), so the apps reserve 0x200 bytes |
 | Gateway access | open | the head unit's firewall drops outgoing connections, so port 6801 needs a rule |
-| Installer | desktop app over ENET | `setup.sh` on the head unit, or Flare Drive (in progress) |
+| Installer | one desktop app for all three, over ENET | one plugin per app: `setup.sh` on the head unit, or Flare Drive (in progress) |
 | Map switching | MHD+ | bootmod3 CustomROM |
 
 ## Signals
@@ -73,7 +107,13 @@ make test                                          # host tests: decoders and wo
 make assets                                        # screens and images (needs Pillow)
 bash toolchain/tc.sh make arm                      # ARM plugins, workers and test programs
 bash toolchain/qemu.sh python3 tests/run_arm.py    # ARM checks with the car's libraries
+python3 tools/package_release.py                   # one release archive per plugin, in dist/
+python3 tests/run_setup.py                         # setup.sh on a pretend head unit
 ```
+
+`tests/run_setup.py` runs `setup.sh` in a chroot built from the copy of the car's system, with the car's own bash,
+BusyBox, mount and loader. Its system partition is a real ext4 image on a loop device, so remounts and renames behave
+as they do in the car. iptables is replaced by a recorder, because the car's doesn't run under QEMU's user mode.
 
 `tests/run_arm.py` loads each plugin the way iDrive does, with the car's own HMI libraries under QEMU. It compares each
 plugin's 34 virtual functions with the car's `bmw::PluginApp`, slot by slot. It also starts a worker with the car's C

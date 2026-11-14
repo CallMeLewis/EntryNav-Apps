@@ -1,0 +1,7 @@
+# EntryNav-Apps @NAME@: lets it reach the car's diagnostic gateway.
+# BMW's iptables-firewall sources every /etc/firewall/*.rules file at boot, after iptables.service has loaded
+# /etc/sysconfig/iptables.rules, whose OUTPUT policy is DROP. This allows only outgoing HSFZ (TCP 6801) on the ENET
+# link-local network. Replies come back through the ESTABLISHED rule already there. Each EntryNav-Apps plugin has its
+# own copy of this rule, so removing one leaves the others working; a repeated ACCEPT rule does no harm.
+# The first line marks this file as the plugin's. Its setup.sh install puts it in /etc/firewall; uninstall removes it.
+/usr/sbin/iptables -A OUTPUT -d 169.254.0.0/16 -p tcp --dport 6801 -j ACCEPT

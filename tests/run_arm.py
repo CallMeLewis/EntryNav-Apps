@@ -5,6 +5,7 @@
     bash toolchain/qemu.sh python3 tests/run_arm.py
 """
 
+import hashlib
 import subprocess
 import sys
 from pathlib import Path
@@ -26,7 +27,18 @@ def run(name, command, expect="PASS", code=0):
     print(out.strip() if expect == "PASS" else f"PASS {name}", flush=True)
 
 
+def frameworks_match():
+    """install/frameworks.md5, which setup.sh check compares with the car, must name the libraries checked here."""
+    for line in (ROOT / "install/frameworks.md5").read_text().splitlines():
+        digest, path = line.split("  ")
+        actual = hashlib.md5((Path(SYSROOT) / path.lstrip("/")).read_bytes()).hexdigest()
+        if actual != digest:
+            raise SystemExit(f"FAIL install/frameworks.md5: {path} is {actual} in the copy of the car, not {digest}")
+    print("PASS install/frameworks.md5 matches the copy of the car these checks use", flush=True)
+
+
 def main():
+    frameworks_match()
     for lib, name, _ in PLUGINS:
         run(f"load {name}", [*QEMU, str(ARM / "test-plugin-load"), str(ARM / lib), name])
     run("vtables", [sys.executable, str(ROOT / "tests/check_vtable.py"), SYSROOT,
