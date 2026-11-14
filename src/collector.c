@@ -276,6 +276,102 @@ int main(int argc, char **argv) {
     close(sock);
     return 0;
 }
+#elif defined(GATEWAY_TOOL)
+/* ena-gateway: finds the diagnostic gateway from the head unit and checks the route to it, for setup.sh.
+ *   ena-gateway discover [--to IPv4] [--port 6811] [--wait MS]
+ *     HSFZ vehicle identification: sends 00 00 00 00 00 11 to the ENET broadcast address and prints each
+ *     responder that calls itself the gateway (DIAGADR10), one per line. Exit 0 if one answered, 1 if none.
+ *     A --to other than the default accepts any responder, for tests.
+ *   ena-gateway check --host IPv4 [--port 6801]
+ *     Reads OBD 01 00 (the DME's supported PIDs) through the gateway. It only reads. Exit 0 on a positive reply. */
+static int link_local(struct in_addr address) { return (ntohl(address.s_addr) >> 16) == 0xa9feu; }
+
+static int discover(const char *to, unsigned port, unsigned wait_ms, int any_source) {
+    const unsigned char request[] = {0, 0, 0, 0, 0, 0x11};
+    struct sockaddr_in dest, from;
+    unsigned char reply[2048];
+    char seen[16][INET_ADDRSTRLEN];
+    unsigned found = 0, i;
+    int on = 1;
+    uint64_t deadline = bd_mono_ms() + wait_ms;
+    int fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd < 0) { perror("socket"); return 2; }
+    setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &on, sizeof on);
+    memset(&dest, 0, sizeof dest);
+    dest.sin_family = AF_INET;
+    dest.sin_port = htons((uint16_t)port);
+    if (inet_pton(AF_INET, to, &dest.sin_addr) != 1) { fprintf(stderr, "Invalid address: %s\n", to); close(fd); return 2; }
+    if (sendto(fd, request, sizeof request, 0, (struct sockaddr *)&dest, sizeof dest) < 0) {
+        perror("sendto");
+        close(fd);
+        return 2;
+    }
+    while (running && ready(fd, POLLIN, deadline)) {
+        socklen_t length = sizeof from;
+        ssize_t n = recvfrom(fd, reply, sizeof reply - 1, 0, (struct sockaddr *)&from, &length);
+        char text[INET_ADDRSTRLEN];
+        int duplicate = 0;
+        if (n < 6 || reply[4] != 0 || reply[5] != 0x11) continue;
+        if (!any_source && !link_local(from.sin_addr)) continue;
+        reply[n] = 0;
+        /* The identification is text (DIAGADR10BMWMAC...BMWVIN...); the gateway's diagnostic address is 10. */
+        for (i = 6; i + 9 <= (unsigned)n; ++i)
+            if (!memcmp(reply + i, "DIAGADR10", 9)) break;
+        if (i + 9 > (unsigned)n) continue;
+        inet_ntop(AF_INET, &from.sin_addr, text, sizeof text);
+        for (i = 0; i < found; ++i) duplicate |= !strcmp(seen[i], text);
+        if (duplicate || found == sizeof seen / sizeof seen[0]) continue;
+        strcpy(seen[found++], text);
+        puts(text);
+        fflush(stdout);
+    }
+    close(fd);
+    return found ? 0 : 1;
+}
+
+static int check(const char *host, unsigned port) {
+    const unsigned char request[] = {0x01, 0x00}, prefix[] = {0x41, 0x00};
+    unsigned char reply[16];
+    unsigned negative;
+    int fd, lock, n;
+    lock = reserve_gateway();
+    if (lock < 0) { puts("Diagnostics busy. Close BoostDeck or ShiftDeck and try again."); return 1; }
+    fd = connect_gw(host, port);
+    if (fd < 0) {
+        printf("No connection to %s port %u\n", host, port);
+        close(lock);
+        return 1;
+    }
+    n = exchange(fd, 0x12, request, sizeof request, prefix, sizeof prefix, reply, sizeof reply, 1500, &negative);
+    release_gateway(&fd, &lock);
+    if (n >= 2) { printf("Gateway %s answers; the DME replied to OBD 01 00\n", host); return 0; }
+    if (n == -2) { printf("Gateway %s answers; the DME refused OBD 01 00 (NRC %02X)\n", host, negative); return 0; }
+    printf("Connected to %s, but the DME did not answer\n", host);
+    return 1;
+}
+
+int main(int argc, char **argv) {
+    const char *host = 0, *to = "169.254.255.255";
+    unsigned port = 0, wait_ms = 1800;
+    int discovering, any_source = 0, i;
+    if (argc < 2 || (strcmp(argv[1], "discover") && strcmp(argv[1], "check"))) {
+        fprintf(stderr, "Usage: %s discover [--to IPv4] [--port 6811] [--wait MS] | check --host IPv4 [--port 6801]\n",
+                argv[0]);
+        return 2;
+    }
+    discovering = !strcmp(argv[1], "discover");
+    for (i = 2; i < argc; ++i) {
+        if (!discovering && !strcmp(argv[i], "--host") && i + 1 < argc && !host) host = argv[++i];
+        else if (discovering && !strcmp(argv[i], "--to") && i + 1 < argc) { to = argv[++i]; any_source = 1; }
+        else if (discovering && !strcmp(argv[i], "--wait") && i + 1 < argc) wait_ms = number(argv[++i], 100, 10000);
+        else if (!strcmp(argv[i], "--port") && i + 1 < argc) port = number(argv[++i], 1, 65535);
+        else { fprintf(stderr, "Unknown argument: %s\n", argv[i]); return 2; }
+    }
+    signal(SIGINT, stop); signal(SIGTERM, stop); signal(SIGPIPE, SIG_IGN);
+    if (discovering) return discover(to, port ? port : 6811, wait_ms, any_source);
+    if (!host) { fprintf(stderr, "check needs --host\n"); return 2; }
+    return check(host, port ? port : 6801);
+}
 #else
 static int trace_reads = 0;
 static void pause_ms(int ms) { while (running && poll(0, 0, ms) < 0 && errno == EINTR) {} }

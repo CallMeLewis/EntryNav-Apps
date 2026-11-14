@@ -1,0 +1,6 @@
+# EntryNav-Apps: lets BoostDeck, ShiftDeck and the map app reach the car's diagnostic gateway.
+# BMW's iptables-firewall sources every /etc/firewall/*.rules file at boot, after iptables.service has loaded
+# /etc/sysconfig/iptables.rules, whose OUTPUT policy is DROP. This allows only outgoing HSFZ (TCP 6801) on the ENET
+# link-local network. Replies come back through the ESTABLISHED rule already there.
+# setup.sh install puts this file in /etc/firewall; setup.sh uninstall removes it.
+/usr/sbin/iptables -A OUTPUT -d 169.254.0.0/16 -p tcp --dport 6801 -j ACCEPT

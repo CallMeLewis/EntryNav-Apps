@@ -33,13 +33,17 @@ build/shift-deck: src/collector.c $(CORE) $(HEADERS) | build
 build/mhd-maps: src/collector.c $(CORE) $(HEADERS) | build
 	$(CC) $(CFLAGS) -Isrc -DMHD_MAPS_ONLY $(filter %.c,$^) -lm -o $@
 
+build/ena-gateway: src/collector.c $(CORE) $(HEADERS) | build
+	$(CC) $(CFLAGS) -Isrc -DGATEWAY_TOOL $(filter %.c,$^) -lm -o $@
+
 build/test-core: tests/test_core.c $(CORE) $(HEADERS) | build
 	$(CC) $(CFLAGS) -Isrc $(filter %.c,$^) -lm -o $@
 
-test: build/boostdeck-collector build/shift-deck build/mhd-maps build/test-core
+test: build/boostdeck-collector build/shift-deck build/mhd-maps build/ena-gateway build/test-core
 	./build/test-core
 	$(PYTHON) -B tests/test_transport.py
 	$(PYTHON) -B tests/test_drive_apps.py
+	$(PYTHON) -B tests/test_gateway_tool.py
 	$(PYTHON) -B tests/test_probe_signals.py
 
 # ---- ARM (run through toolchain/tc.sh) --------------------------------------------------------------------------------
@@ -76,6 +80,8 @@ build-arm/shift-deck: src/collector.c $(CORE) $(HEADERS) | build-arm
 	$(ARM_CC) $(ARM_CFLAGS) -Isrc -DSHIFT_DECK_ONLY src/collector.c $(CORE) -o $@ $(LIBDIRS) -lm -lrt
 build-arm/mhd-maps: src/collector.c $(CORE) $(HEADERS) | build-arm
 	$(ARM_CC) $(ARM_CFLAGS) -Isrc -DMHD_MAPS_ONLY src/collector.c $(CORE) -o $@ $(LIBDIRS) -lm -lrt
+build-arm/ena-gateway: src/collector.c $(CORE) $(HEADERS) | build-arm
+	$(ARM_CC) $(ARM_CFLAGS) -Isrc -DGATEWAY_TOOL src/collector.c $(CORE) -o $@ $(LIBDIRS) -lm -lrt
 
 build-arm/test-plugin-load: tests/test_plugin_load.cpp | build-arm
 	$(ARM_CXX) -O2 -Wall -Wextra -Werror $(ARCH) tests/test_plugin_load.cpp -o $@ $(LIBDIRS) -ldl
@@ -83,7 +89,8 @@ build-arm/test-spawn: tests/test_spawn.cpp src/diagnostic_worker.h src/paths.h |
 	$(ARM_CXX) -O2 -Wall -Wextra -Werror $(ARCH) -Isrc tests/test_spawn.cpp -o $@ $(LIBDIRS)
 
 arm: build-arm/libBoostDeck.so build-arm/libShiftDeck.so build-arm/libMhdMaps.so \
-     build-arm/boostdeck-collector build-arm/shift-deck build-arm/mhd-maps build-arm/test-plugin-load build-arm/test-spawn
+     build-arm/boostdeck-collector build-arm/shift-deck build-arm/mhd-maps build-arm/ena-gateway \
+     build-arm/test-plugin-load build-arm/test-spawn
 
 clean:
 	rm -rf build build-arm

@@ -18,10 +18,10 @@ PLUGINS = [("libBoostDeck.so", "BoostDeck", "_ZTV9BoostDeck"), ("libShiftDeck.so
            ("libMhdMaps.so", "MhdMaps", "_ZTV7MhdMaps")]
 
 
-def run(name, command, expect="PASS"):
+def run(name, command, expect="PASS", code=0):
     result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, timeout=120)
     out = result.stdout + result.stderr
-    if result.returncode != 0 or expect not in out:
+    if result.returncode != code or expect not in out:
         raise SystemExit(f"FAIL {name} (exit {result.returncode})\n{out}")
     print(out.strip() if expect == "PASS" else f"PASS {name}", flush=True)
 
@@ -34,6 +34,9 @@ def main():
     run("worker spawn", [*QEMU, str(ARM / "test-spawn"), "--hu-glibc"])
     # The workers start and parse their arguments with the car's C library (demo mode sends to a local UDP port).
     run("boostdeck-collector demo", [*QEMU, str(ARM / "boostdeck-collector"), "--demo", "--cycles", "2"], "")
+    # Nothing answers under QEMU: discovery must time out cleanly with exit 1.
+    run("ena-gateway discover", [*QEMU, str(ARM / "ena-gateway"), "discover", "--to", "127.0.0.1", "--wait", "200"],
+        "", 1)
     print("PASS all ARM checks")
 
 
