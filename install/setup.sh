@@ -1,6 +1,6 @@
 #!/bin/sh
-# Checks, installs, updates and removes one EntryNav-Apps plugin (BoostDeck, ShiftDeck, Bootmod3 Suite or Engine
-# Fault Codes) on an EntryNav2, with the car's bash 3.2 and BusyBox 1.21. Each plugin is installed on its own; Flare Drive
+# Checks, installs, updates and removes one EntryNav-Apps plugin (BoostDeck, ShiftDeck, Bootmod3 Suite, MHD+ Suite or
+# Engine Fault Codes) on an EntryNav2, with the car's bash 3.2 and BusyBox 1.21. Each plugin is installed on its own; Flare Drive
 # runs the same commands.
 #
 #   sh setup.sh check                every check of the installation; writes nothing
@@ -45,7 +45,7 @@ NEW=/opt/.entrynav-$ID.new
 OLD=/opt/.entrynav-$ID.old
 SOURCE=opt/hmi/data/ro/Plugins/$APP
 # Every EntryNav-Apps plugin's folder name: the gateway's address is theirs to share.
-SIBLINGS="BoostDeck ShiftDeck Bm3Maps EngineCodes"
+SIBLINGS="BoostDeck ShiftDeck Bm3Maps MhdMaps EngineCodes"
 MARK=.installed-by-entrynav-apps
 RULES_DIR=/etc/firewall
 RULES=$RULES_DIR/entrynav-$ID.rules

@@ -16,7 +16,8 @@ QEMU = ["qemu-arm", "-L", SYSROOT, "-E", "LD_LIBRARY_PATH=/opt/hmi/lib:/usr/loca
         "LD_BIND_NOW=1"]
 ARM = ROOT / "build-arm"
 PLUGINS = [("libBoostDeck.so", "BoostDeck", "_ZTV9BoostDeck"), ("libShiftDeck.so", "ShiftDeck", "_ZTV9ShiftDeck"),
-           ("libBm3Maps.so", "Bm3Maps", "_ZTV7Bm3Maps"), ("libEngineCodes.so", "EngineCodes", "_ZTV11EngineCodes")]
+           ("libBm3Maps.so", "Bm3Maps", "_ZTV7Bm3Maps"), ("libMhdMaps.so", "MhdMaps", "_ZTV7MhdMaps"),
+           ("libEngineCodes.so", "EngineCodes", "_ZTV11EngineCodes")]
 
 
 def run(name, command, expect="PASS", code=0):
@@ -47,6 +48,8 @@ def main():
     run("bm3 markers and requests", [*QEMU, str(ARM / "test-bm3")], "passed")
     # No gateway under QEMU: the map worker must report it and exit 1 without hanging.
     run("bm3-maps without a gateway", [*QEMU, str(ARM / "bm3-maps"), "--host", "127.0.0.1", "--port", "1", "--status"],
+        "Diagnostic gateway unavailable", 1)
+    run("mhd-maps without a gateway", [*QEMU, str(ARM / "mhd-maps"), "--host", "127.0.0.1", "--port", "1", "--map", "1"],
         "Diagnostic gateway unavailable", 1)
     run("engine-codes without a gateway", [*QEMU, str(ARM / "engine-codes"), "--host", "127.0.0.1", "--port", "1", "--codes"],
         "Diagnostic gateway unavailable", 0)

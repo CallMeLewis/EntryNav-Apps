@@ -1,6 +1,6 @@
 <div align="center">
   <h1>EntryNav-Apps</h1>
-  <p>Engine gauges, a shift light, bootmod3 controls and fault codes for BMW iDrive 6.</p>
+  <p>Engine gauges, a shift light, bootmod3 and MHD controls, and fault codes for BMW iDrive 6.</p>
   <p>
     <a href="https://github.com/CallMeLewis/EntryNav-Apps/releases"><img src="https://img.shields.io/github/v/release/CallMeLewis/EntryNav-Apps?display_name=tag&amp;sort=semver" alt="Latest release"></a>
     <a href="https://github.com/CallMeLewis/EntryNav-Apps/actions/workflows/ci.yml"><img src="https://github.com/CallMeLewis/EntryNav-Apps/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
@@ -8,7 +8,7 @@
   </p>
 </div>
 
-EntryNav-Apps adds four apps to BMWs with the **EntryNav2** head unit, the iDrive 6 unit with a 1280×480 screen and
+EntryNav-Apps adds five apps to BMWs with the **EntryNav2** head unit, the iDrive 6 unit with a 1280×480 screen and
 CarPlay over Wi-Fi. They appear under *My Vehicle* in iDrive and read the engine through the car's diagnostic gateway.
 Each app is its own plugin: install any of them, and remove one without touching the others.
 
@@ -17,6 +17,7 @@ Each app is its own plugin: install any of them, and remove one without touching
 | [BoostDeck](#boostdeck) | Boost, air-fuel ratio, ignition timing, intake air, gearbox, rail pressure, oil pressure and coolant |
 | [ShiftDeck](#shiftdeck) | A full-width rev bar with shift lights, and road speed |
 | [Bootmod3 Suite](#bootmod3-suite) | bootmod3's four map slots, Active Sound and burbles, on a car running a bootmod3 CustomROM |
+| [MHD+ Suite](#mhd-suite) | MHD's four maps and Max Cooling, on a car running an MHD+ multi-map tune |
 | [Engine Fault Codes](#engine-fault-codes) | The engine computer's fault codes, with a description of each, and a way to clear them |
 
 They're ported from [inotbarnacle's apps](https://github.com/inotbarnacle/ID6_apps_prerelease) for the NBT Evo. This
@@ -24,8 +25,8 @@ port runs on the EntryNav2 only: on an NBT Evo, use the originals.
 
 > [!WARNING]
 > EntryNav-Apps is experimental, and installing it changes the head unit's system. Install it with the car parked,
-> entirely at your own risk. Bootmod3 Suite writes to the engine computer's memory. The authors accept no
-> responsibility for any damage to your car or loss of its warranty.
+> entirely at your own risk. Bootmod3 Suite writes to the engine computer's memory, and MHD+ Suite sends commands to
+> MHD's code in it. The authors accept no responsibility for any damage to your car or loss of its warranty.
 
 ## Installing
 
@@ -51,6 +52,7 @@ doesn't come with the password. Do it parked, with the ignition on. For BoostDec
 | BoostDeck | `boostdeck-VERSION-armhf.tar` | `/opt/hmi/data/ro/Plugins/BoostDeck` |
 | ShiftDeck | `shiftdeck-VERSION-armhf.tar` | `/opt/hmi/data/ro/Plugins/ShiftDeck` |
 | Bootmod3 Suite | `bm3-maps-VERSION-armhf.tar` | `/opt/hmi/data/ro/Plugins/Bm3Maps` |
+| MHD+ Suite | `mhd-maps-VERSION-armhf.tar` | `/opt/hmi/data/ro/Plugins/MhdMaps` |
 | Engine Fault Codes | `engine-codes-VERSION-armhf.tar` | `/opt/hmi/data/ro/Plugins/EngineCodes` |
 
 Once installed, each app's `setup.sh` sits in its folder, for example `/opt/hmi/data/ro/Plugins/BoostDeck/setup.sh`:
@@ -109,7 +111,7 @@ back. Called BM3 Maps until 0.1.1.
 Map switching isn't a BMW function: bootmod3's code in the engine computer does it. So before anything else, the app
 reads bootmod3's CustomROM marker from the engine computer's memory, and goes on only if it names one of the 150 ROMs
 in [`src/bm3_profiles.h`](src/bm3_profiles.h). A stock engine computer, an MHD tune or an unlisted ROM gets a message,
-and nothing is written.
+and nothing is written. For MHD, use [MHD+ Suite](#mhd-suite).
 
 - Pick only slots that hold a map for the fuel in the tank. The app can't tell what each slot contains.
 - There's no exhaust flap setting: bootmod3 sets the flap in each map.
@@ -117,6 +119,26 @@ and nothing is written.
   car.
 - Where the marker sits in memory depends on the engine computer. The app tries each address bootmod3's own app does,
   and `/var/local/data/EntryNavApps/bm3-marker-address` (eight hex digits) sets one by hand.
+
+### MHD+ Suite
+
+Switches between MHD's four maps. Picking a tile asks the engine computer for that map, and the app counts the request
+only when the engine computer echoes it back.
+
+| Under OPTIONS | |
+|---|---|
+| *Max Cooling* | Off or On. On needs the engine running |
+
+Map switching isn't a BMW function: MHD's code in the engine computer does it, so it needs an MHD+ multi-map tune. An
+engine computer without one refuses the request, and the app says so.
+
+- MHD has no known way to read the active map back. So no tile is marked, and the app says the engine computer accepted
+  the map, not that the map is active.
+- Pick only maps made for the fuel in the tank. The app can't tell what each map contains.
+- The check engine light may flash after a switch. That's MHD showing the map change.
+- There's no exhaust flap setting.
+- The commands come from cauliflowermossgrape's Live Adjustments, which checked them on one MG1 engine computer. Other
+  engine computers are untried.
 
 ### Engine Fault Codes
 
@@ -154,7 +176,7 @@ ENET cable hands out, and find it again when it moves.
 | `bmw::PluginApp` | 352 bytes | larger (a Linux semaphore), so the apps reserve 0x200 bytes |
 | Gateway access | open, at a fixed address | the head unit's firewall drops outgoing connections, so port 6801 needs a rule, and the apps search for the gateway |
 | Installer | files copied over SSH | one archive per app with its own `setup.sh`, or Flare Drive |
-| Tuning controls | MHD+ | bootmod3 CustomROM |
+| Tuning controls | MHD+ Suite or Bootmod3 Suite | both, each its own plugin |
 
 </details>
 
@@ -190,9 +212,10 @@ Flare Drive note.
 EntryNav-Apps is a port of [ID6_apps_prerelease](https://github.com/inotbarnacle/ID6_apps_prerelease) by inotbarnacle.
 Bootmod3 Suite's protocol and ROM profiles come from [cauliflowermossgrape](https://github.com/cauliflowermossgrape)'s
 port of BM3 Live by ezl0l, under the MIT licence in [third-party](third-party/cauliflowermossgrape-LICENSE).
-`tools/make_bm3_profiles.py` regenerates the ROM table from that port's `bm3_profiles.js`.
+`tools/make_bm3_profiles.py` regenerates the ROM table from that port's `bm3_profiles.js`. MHD+ Suite's commands come
+from the same author's Live Adjustments app, from a1-mapping's captures.
 
 EntryNav-Apps is under the [MIT licence](LICENSE), like the project it comes from. It comes with no warranty.
 
-EntryNav-Apps is an independent project. It is not made or endorsed by BMW or by bootmod3's makers. BMW and iDrive are
-trademarks of BMW AG.
+EntryNav-Apps is an independent project. It is not made or endorsed by BMW, by bootmod3's makers or by MHD's. BMW and
+iDrive are trademarks of BMW AG.

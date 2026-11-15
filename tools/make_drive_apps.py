@@ -1,4 +1,4 @@
-"""Generate RHMI resources for the standalone ShiftDeck, Bootmod3 Suite and Engine Fault Codes apps."""
+"""Generate RHMI resources for the standalone ShiftDeck, Bootmod3 Suite, MHD+ Suite and Engine Fault Codes apps."""
 from pathlib import Path
 from io import BytesIO
 from xml.etree import ElementTree as ET
@@ -121,13 +121,33 @@ BM3_SCREENS = (
 )
 
 
+# MHD+ Suite's option screen, as BM3_SCREENS. The worker's arguments for each button are in src/mhd_maps.cpp.
+# No exhaust flap screen: Live Adjustments documents no MHD flap command, and BMW's own flap request is let go by the
+# DME after about 20 s, as for Bootmod3 Suite.
+MHD_SCREENS = (
+    (13, 103, 52, "Max Cooling", ((28, "Off"), (29, "On"))),
+)
+
+
 def map_app():
-    name="Bm3Maps"
     # Shown as Bootmod3 Suite; the plugin keeps its 0.1.0 name, Bm3Maps, so installs update in place.
-    doc, actions, models, states, page = entry(name,"Bootmod3 Suite",208,103,100,images=True)
+    tuner_app("Bm3Maps","Bootmod3 Suite",208,103,BM3_SCREENS,MAP_LOGO,MAP_TILES,MAP_BLANK,
+              ((MAP_LOGO,map_logo("BOOTMOD3 SUITE")),(MAP_BLANK,Image.new("RGBA",(1,1))),
+               *((MAP_TILES+active,map_tiles(active)) for active in range(5))))
+
+
+def mhd_app():
+    # MHD can't read back the active map, so its tiles have no ACTIVE variants.
+    tuner_app("MhdMaps","MHD+ Suite",211,105,MHD_SCREENS,MHD_LOGO,MHD_TILES,MHD_BLANK,
+              ((MHD_LOGO,map_logo("MHD+ SUITE")),(MHD_BLANK,Image.new("RGBA",(1,1))),(MHD_TILES,map_tiles(0))))
+
+
+def tuner_app(name, app_title, weight, connector, screens, logo, tiles, blank, images):
+    """A tuning suite: a logo, four map tiles that each start the worker, a result line, and option screens."""
+    doc, actions, models, states, page = entry(name,app_title,weight,connector,100,images=True)
     ET.SubElement(models,"raDataModel",id="50",modelType="Richtext")
     options=ET.SubElement(page,"optionComponents")
-    for i,(opener,state,model,title,choices) in enumerate(BM3_SCREENS):
+    for i,(opener,state,model,title,choices) in enumerate(screens):
         ET.SubElement(actions,"hmiAction",id=str(opener),target=str(state))
         for action,_ in choices:
             ET.SubElement(actions,"raAction",id=str(action))
@@ -148,9 +168,9 @@ def map_app():
         ET.SubElement(image.find("properties"),"property",id="3",value="true")
 
     tiles_x=(1220-(4*MAP_TILE+3*MAP_GAP))//2
-    graphic(200,60,MAP_LOGO,(1220-420)//2,30,420,48)
-    graphic(201,61,MAP_TILES,tiles_x,96,4*MAP_TILE+3*MAP_GAP,MAP_TILE_H)
-    ET.SubElement(models,"imageIdModel",id="62",imageId=str(MAP_BLANK))
+    graphic(200,60,logo,(1220-420)//2,30,420,48)
+    graphic(201,61,tiles,tiles_x,96,4*MAP_TILE+3*MAP_GAP,MAP_TILE_H)
+    ET.SubElement(models,"imageIdModel",id="62",imageId=str(blank))
     for slot in range(1,5):
         ET.SubElement(actions,"raAction",id=str(20+slot))
         # iDrive places native button text at the top left. Keep its focus
@@ -161,8 +181,7 @@ def map_app():
     save(doc,f"{name}.xml")
 
     with ZipFile(ROOT/f"{name}_ALL_Images.zip","w",ZIP_DEFLATED) as archive:
-        for identifier,image in ((MAP_LOGO,map_logo()),(MAP_BLANK,Image.new("RGBA",(1,1))),
-                                 *((MAP_TILES+active,map_tiles(active)) for active in range(5))):
+        for identifier,image in images:
             data=BytesIO()
             image.save(data,format="PNG",optimize=True)
             archive.writestr(ZipInfo(f"{identifier}.png"),data.getvalue(),ZIP_DEFLATED)
@@ -171,14 +190,16 @@ def map_app():
 # Bootmod3 Suite's pictures. MAP_TILES is the four tiles with none active, MAP_TILES + n the same with map n marked active;
 # src/bm3_maps.cpp shows the one that matches the worker's last answer.
 MAP_LOGO, MAP_TILES, MAP_BLANK = 56000, 56010, 56002
+# MHD+ Suite's, after Engine Fault Codes' 56700 range. Its tiles never mark a map.
+MHD_LOGO, MHD_TILES, MHD_BLANK = 56800, 56801, 56802
 MAP_TILE, MAP_TILE_H, MAP_GAP = 250, 230, 20
 MAP_ACCENT = "#58ceff"
 
 
-def map_logo():
+def map_logo(text):
     logo=Image.new("RGBA",(420,48))
     draw=ImageDraw.Draw(logo)
-    draw.text((210,24),"BOOTMOD3 SUITE",font=art.font(34),anchor="mm",fill=art.WHITE)
+    draw.text((210,24),text,font=art.font(34),anchor="mm",fill=art.WHITE)
     return logo
 
 
@@ -267,4 +288,5 @@ def codes_app():
 if __name__=="__main__":
     shift_app()
     map_app()
+    mhd_app()
     codes_app()

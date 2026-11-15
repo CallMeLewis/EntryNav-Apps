@@ -1,10 +1,24 @@
 # Changelog
 
 Each release's section holds one Flare Drive note per plugin, the paragraph the app shows with that plugin's release,
-as `<!-- Flare Drive boostdeck: ... -->`, `<!-- Flare Drive shiftdeck: ... -->` and `<!-- Flare Drive bm3-maps: ... -->`.
+as `<!-- Flare Drive boostdeck: ... -->`, `<!-- Flare Drive bm3-maps: ... -->`, `<!-- Flare Drive mhd-maps: ... -->` and
+so on.
 `tools/publish_release.py publish` refuses a version without the notes of the plugins it publishes.
 
 Each version says whether it is verified or unverified. Verified means this exact build has run in a car.
+
+## [Unreleased] · Unverified
+
+<!-- Flare Drive mhd-maps: The first release. MHD+ Suite switches between the four maps of an MHD+ multi-map tune from My Vehicle in iDrive, and turns Max Cooling on or off. It counts a request only when the engine computer echoes it back, and MHD can't report the active map, so no tile is marked. Pick only maps made for the fuel in the tank. Restart the head unit after installing it to see it. -->
+
+- **MHD+ Suite, a new plugin (mhd-maps)**, for cars on MHD rather than bootmod3. Its four tiles switch an MHD+
+  multi-map tune's maps with MHD's own request, `2F 01 <map - 1>`, and OPTIONS has Max Cooling, `2F 03 01` or `00`.
+  Max Cooling goes on only while the engine runs above 500 rpm. The commands are the ones cauliflowermossgrape's Live
+  Adjustments sends, checked there on one MG1. A request counts only when the DME echoes it, and nothing is read
+  first: MHD's marker sits at a ROM-dependent address, and no read-back of the active map is known. It installs beside
+  Bootmod3 Suite with its own connector (105), folder `MhdMaps` and firewall rule.
+- Upstream's MHD exhaust flap (`2F 02`) and BoostDeck's ethanol reading are left out: neither is documented outside
+  upstream, and neither has been tried on an EntryNav2.
 
 ## [0.1.1] · Verified
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Build one release archive per plugin, which Flare Drive and setup.sh install on their own:
-dist/<id>-<version>-armhf.tar for boostdeck, shiftdeck, bm3-maps and engine-codes.
+dist/<id>-<version>-armhf.tar for boostdeck, shiftdeck, bm3-maps, mhd-maps and engine-codes.
 
 Build the ARM programs and the screens first (bash toolchain/tc.sh make arm, make assets). Each archive holds one
 folder, <id>-<version>/, laid out like the head unit:
@@ -46,6 +46,7 @@ PLUGINS = [
     Plugin("boostdeck", "BoostDeck", "BoostDeck", "boostdeck-collector", "boostdeck-temperature"),
     Plugin("shiftdeck", "ShiftDeck", "ShiftDeck", "shift-deck", "shiftdeck-speed"),
     Plugin("bm3-maps", "Bm3Maps", "Bootmod3 Suite", "bm3-maps", "bm3-marker-address", former_name="BM3 Maps"),
+    Plugin("mhd-maps", "MhdMaps", "MHD+ Suite", "mhd-maps"),
     Plugin("engine-codes", "EngineCodes", "Engine Fault Codes", "engine-codes"),
 ]
 

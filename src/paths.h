@@ -12,5 +12,6 @@
 #define ENA_SHIFTDECK_WORKER ENA_PLUGIN_DIR "/ShiftDeck/shift-deck"
 #define ENA_BM3MAPS_WORKER ENA_PLUGIN_DIR "/Bm3Maps/bm3-maps"
 #define ENA_ENGINECODES_WORKER ENA_PLUGIN_DIR "/EngineCodes/engine-codes"
+#define ENA_MHDMAPS_WORKER ENA_PLUGIN_DIR "/MhdMaps/mhd-maps"
 
 #endif

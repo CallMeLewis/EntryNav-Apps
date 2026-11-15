@@ -15,7 +15,8 @@ from headunit import Unit
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "VERSION").read_text().strip()
-PLUGINS = {"boostdeck": "BoostDeck", "shiftdeck": "ShiftDeck", "bm3-maps": "Bm3Maps", "engine-codes": "EngineCodes"}
+PLUGINS = {"boostdeck": "BoostDeck", "shiftdeck": "ShiftDeck", "bm3-maps": "Bm3Maps", "mhd-maps": "MhdMaps",
+           "engine-codes": "EngineCodes"}
 MARK = ".installed-by-entrynav-apps"
 RULE_HSFZ = "OUTPUT -o vbr0 -p tcp --dport 6801 -j ACCEPT"
 RULE_HSFZ_OLD = "OUTPUT -d 169.254.0.0/16 -p tcp --dport 6801 -j ACCEPT"  # 0.1.0-test.1
@@ -168,6 +169,7 @@ class SetupTest(unittest.TestCase):
         self.sh(f"{installed('boostdeck')} uninstall")
         self.assertEqual(self.unit.rules(), RULES)
         self.sh(f"{installed('engine-codes')} uninstall")
+        self.sh(f"{installed('mhd-maps')} uninstall")
         self.sh(f"{installed('shiftdeck')} uninstall --purge")  # the last one
         for plugin in PLUGINS:
             self.assert_absent(plugin)

@@ -668,6 +668,105 @@ int main(int argc, char **argv) {
     release_gateway(&fd, &lock);
     return result;
 }
+#elif defined(MHD_MAPS_ONLY)
+/* mhd-maps: MHD+ live controls, for the MHD+ Suite app. It prints one line for the app's status label.
+ *   mhd-maps --host IPv4 --map 1..4      asks the DME for that map
+ *   mhd-maps --host IPv4 --cooling 0|1   Max Cooling off or on; on only with the engine running
+ * Map switching and Max Cooling aren't BMW jobs: MHD's code in the DME answers them. The commands are the ones
+ * cauliflowermossgrape's Live Adjustments sends (apps/live_adjustments/tune.js), from a1-mapping's captures, and work
+ * on an MG1 with an MHD+ multi-map tune:
+ *     map         2F 01 <map - 1>   ->  6F 01 <map - 1>
+ *     Max Cooling 2F 03 01 | 00     ->  6F 03 01 | 00
+ * A request counts only when the DME echoes it. A DME without MHD refuses it. MHD's marker sits at a ROM-dependent
+ * address and no read-back of the active map is known, so nothing is read first and the line says accepted, not
+ * confirmed. Exit 0 when the DME accepted the request, 1 otherwise. */
+enum { MHD_DME = 0x12, MHD_MAP = 0x01, MHD_COOLING = 0x03, MHD_TIMEOUT_MS = 3000 };
+/* Live Adjustments' threshold for "running": over 500 rpm, from OBD's engine speed (01 0C, quarter rpm). */
+enum { MHD_COOLING_RPM = 500 };
+
+/* Sends 2F function value and waits for its echo: the exchange's result. */
+static int mhd_send(int fd, unsigned function, unsigned value, unsigned *negative) {
+    const unsigned char request[] = {0x2F, (unsigned char)function, (unsigned char)value};
+    const unsigned char echo[] = {0x6F, (unsigned char)function, (unsigned char)value};
+    unsigned char reply[16];
+    return exchange(fd, MHD_DME, request, sizeof request, echo, sizeof echo, reply, sizeof reply, MHD_TIMEOUT_MS,
+                    negative);
+}
+
+/* Engine speed in rpm, or -1 when the DME doesn't give it. */
+static int mhd_engine_rpm(int fd) {
+    const unsigned char request[] = {0x01, 0x0C}, prefix[] = {0x41, 0x0C};
+    unsigned char reply[8];
+    unsigned negative;
+    int n = exchange(fd, MHD_DME, request, sizeof request, prefix, sizeof prefix, reply, sizeof reply, 1000, &negative);
+    return n == 4 ? (int)((((unsigned)reply[2] << 8) | reply[3]) / 4) : -1;
+}
+
+static int mhd_result(int n, unsigned negative, const char *what, const char *accepted) {
+    if (n > 0) {
+        puts(accepted);
+        return 0;
+    }
+    if (n == -2 && (negative == 0x11 || negative == 0x12 || negative == 0x13 || negative == 0x31))
+        printf("The DME refused %s (NRC %02X). Is an MHD+ tune flashed?\n", what, negative);
+    else if (n == -2) printf("The DME refused %s (NRC %02X)\n", what, negative);
+    else printf("No answer from the DME for %s\n", what);
+    return 1;
+}
+
+int main(int argc, char **argv) {
+    enum { NONE, MAP, COOLING } action = NONE;
+    const char *host_option = 0;
+    char host[INET_ADDRSTRLEN] = "", what[32], accepted[64];
+    unsigned port = 6801, value = 0, negative = 0;
+    int fd, lock, i, n, result;
+    uint64_t deadline;
+    struct gateway_search search;
+    gateway_search_init(&search);
+    for (i = 1; i < argc; ++i) {
+        int has_value = i + 1 < argc && action == NONE;
+        if (!strcmp(argv[i], "--host") && i + 1 < argc && !host_option) host_option = argv[++i];
+        else if (!strcmp(argv[i], "--port") && i + 1 < argc) port = number(argv[++i], 1, 65535);
+        else if (!strcmp(argv[i], "--map") && has_value) { action = MAP; value = number(argv[++i], 1, 4); }
+        else if (!strcmp(argv[i], "--cooling") && has_value) { action = COOLING; value = number(argv[++i], 0, 1); }
+        else if (!gateway_search_option(&search, argc, argv, &i)) return 2;
+    }
+    if (host_option && strlen(host_option) < sizeof host) strcpy(host, host_option);
+    if (!host[0] || action == NONE) {
+        fprintf(stderr, "Usage: %s --host IPv4 [--port 6801] (--map 1-4 | --cooling 0-1)\n", argv[0]);
+        return 2;
+    }
+    signal(SIGINT, stop); signal(SIGTERM, stop); signal(SIGPIPE, SIG_IGN);
+    /* A gauge app still holding the gateway gives it up within a lease once asked (reserve_gateway asks). */
+    lock = reserve_gateway();
+    deadline = bd_mono_ms() + 650;
+    while (running && lock < 0 && errno == EADDRINUSE && bd_mono_ms() < deadline) {
+        poll(0, 0, 25);
+        lock = reserve_gateway();
+    }
+    if (lock < 0) { puts("Diagnostics busy. Wait a moment and try again."); return 1; }
+    fd = connect_gw(host, port);
+    if (fd < 0) {
+        search.failures = GATEWAY_SEARCH_FAILURES - 1; /* a one-shot run searches at once */
+        if (gateway_search_after_failure(&search, host, port)) fd = connect_gw(host, port);
+    }
+    if (fd < 0) { puts("Diagnostic gateway unavailable"); close(lock); return 1; }
+    if (action == MAP) {
+        snprintf(what, sizeof what, "map %u", value);
+        snprintf(accepted, sizeof accepted, "Map %u accepted by the DME", value);
+        n = mhd_send(fd, MHD_MAP, value - 1, &negative);
+        result = mhd_result(n, negative, what, accepted);
+    } else if (value && mhd_engine_rpm(fd) <= MHD_COOLING_RPM) {
+        puts("Start the engine first. Max Cooling needs it running.");
+        result = 1;
+    } else {
+        n = mhd_send(fd, MHD_COOLING, value, &negative);
+        result = mhd_result(n, negative, value ? "Max Cooling on" : "Max Cooling off",
+                            value ? "Max Cooling on, accepted by the DME" : "Max Cooling off, accepted by the DME");
+    }
+    release_gateway(&fd, &lock);
+    return result;
+}
 #elif defined(SHIFT_DECK_ONLY)
 #include "drive_frame.h"
 
