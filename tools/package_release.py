@@ -39,7 +39,7 @@ class Plugin:
 
 
 PLUGINS = [
-    Plugin("boostdeck", "BoostDeck", "BoostDeck", "boostdeck-collector"),
+    Plugin("boostdeck", "BoostDeck", "BoostDeck", "boostdeck-collector", "boostdeck-temperature"),
     Plugin("shiftdeck", "ShiftDeck", "ShiftDeck", "shift-deck"),
     Plugin("bm3-maps", "Bm3Maps", "BM3 Maps", "bm3-maps", "bm3-marker-address"),
 ]

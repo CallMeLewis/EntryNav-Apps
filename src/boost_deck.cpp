@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #if defined(__arm__)
@@ -32,7 +33,36 @@ const unsigned kPollKey = 0x4244504cu; // BDPL, private to this app
 const unsigned kActivePollIntervalMs = 40u;
 const unsigned kIdlePollIntervalMs = 250u;
 const char kCollector[] = ENA_BOOSTDECK_WORKER;
+// The Temperature setting: C or F on one line. Fahrenheit, upstream's unit, until one is picked.
+const char kTemperatureFile[] = ENA_DATA_DIR "/boostdeck-temperature";
+const unsigned kCelsius = 0, kFahrenheit = 1;
 typedef char dial_count_check[sizeof(kDialScales)/sizeof(kDialScales[0]) == BD_COUNT ? 1 : -1];
+typedef char unit_count_check[sizeof(kTemperatureUnits)/sizeof(kTemperatureUnits[0]) == 2 ? 1 : -1];
+
+bool temperature_reading(unsigned i) { return i==BD_IAT || i==BD_TRANS || i==BD_COOLANT; }
+
+unsigned load_temperature_unit() {
+    char line[8] = "";
+    FILE *file = fopen(kTemperatureFile, "r");
+    if (file) {
+        if (!fgets(line, sizeof line, file)) line[0] = 0;
+        fclose(file);
+    }
+    return line[0]=='C' ? kCelsius : kFahrenheit;
+}
+
+// Written whole and renamed into place, so a power cut leaves the old setting or the new one.
+void save_temperature_unit(unsigned unit) {
+    char temporary[sizeof kTemperatureFile + 4];
+    snprintf(temporary, sizeof temporary, "%s.new", kTemperatureFile);
+    mkdir(ENA_DATA_DIR, 0755);
+    FILE *file = fopen(temporary, "w");
+    if (!file) return;
+    bool written = fputs(unit==kCelsius ? "C\n" : "F\n", file) >= 0;
+    written = fflush(file) == 0 && fsync(fileno(file)) == 0 && written;
+    if (fclose(file) == 0 && written) rename(temporary, kTemperatureFile);
+    else unlink(temporary);
+}
 }
 
 class BoostDeck : public bmw::PluginApp {
@@ -44,9 +74,11 @@ class BoostDeck : public bmw::PluginApp {
     bool stopping_;
     bool gauges_visible_;
     unsigned color_;
+    unsigned temperature_unit_;
     uint64_t retry_at_;
     void startVisibleCollector();
     void selectColor(unsigned color);
+    void selectTemperatureUnit(unsigned unit);
     char labels_[BD_COUNT][128];
     unsigned images_[BD_COUNT];
     void postPoll();
@@ -55,7 +87,7 @@ public:
               bmw::RHMIInterfaceVersion rhmi, const bmw::Bundle& cfg, const bmw::Bundle& res)
         : bmw::PluginApp(d,name,maj,mn,rhmi,cfg,res), fd_(-1), poll_generation_(0),
           received_(0), collector_(-1), stopping_(false), gauges_visible_(false),
-          color_(0), retry_at_(0) {
+          color_(0), temperature_unit_(kFahrenheit), retry_at_(0) {
         resetDisplay();
     }
     virtual ~BoostDeck() { shutdown(); }
@@ -65,6 +97,11 @@ public:
     bool gaugeVisibility(const bmw::Parcel&);
     template <unsigned Color> bool changeColor(const bmw::Parcel&) {
         selectColor(Color);
+        return true;
+    }
+    template <unsigned Unit> bool changeTemperatureUnit(const bmw::Parcel&) {
+        selectTemperatureUnit(Unit);
+        save_temperature_unit(Unit);
         return true;
     }
     void reapCollector() {
@@ -132,6 +169,12 @@ bool BoostDeck::onInit() {
         action.m_exec=colorHandlers[i];
         addHandler(40u+i,action);
     }
+    // The Temperature screen's buttons (tools/make_bars.py): Celsius is action 70, Fahrenheit 71.
+    action.m_exec=&Action::execImpl<BoostDeck,&BoostDeck::changeTemperatureUnit<kCelsius> >;
+    addHandler(70u,action);
+    action.m_exec=&Action::execImpl<BoostDeck,&BoostDeck::changeTemperatureUnit<kFahrenheit> >;
+    addHandler(71u,action);
+    selectTemperatureUnit(load_temperature_unit());
     selectColor(color_);
     bmw::Parcel visible(true);
     for (unsigned i=0;i<BD_COUNT;++i) setProperty(200u+i,3u,visible);
@@ -174,6 +217,14 @@ void BoostDeck::selectColor(unsigned color) {
     char label[48];
     snprintf(label,sizeof label,"Selected: %s",kColorNames[color_]);
     updateModel(110u,bmw::BasicString<char>(label));
+    refresh();
+}
+
+void BoostDeck::selectTemperatureUnit(unsigned unit) {
+    temperature_unit_=unit;
+    char label[48];
+    snprintf(label,sizeof label,"Selected: %s",kTemperatureUnits[unit].name);
+    updateModel(111u,bmw::BasicString<char>(label));
     refresh();
 }
 
@@ -224,13 +275,15 @@ void BoostDeck::refresh() {
         if (received_ && bd_is_fresh(&frame_,i,elapsed)) {
             double x=frame_.value[i];
             const char *prefix = frame_.demo && i==BD_BOOST ? "Demo " : "";
-            const char *unit_space = *scale.unit ? " " : "";
+            const bool celsius = temperature_reading(i) && temperature_unit_==kCelsius;
+            const char *unit = temperature_reading(i) ? kTemperatureUnits[temperature_unit_].unit : scale.unit;
+            const char *unit_space = *unit ? " " : "";
             const char *format = i==BD_BOOST ? "%s%s   %+.1f%s%s"
                                 : i==BD_RAIL ? "%s%s   %.0f%s%s"
                                 : "%s%s   %.1f%s%s";
-            double reading = bd_display_value(i,x,0);
+            double reading = bd_display_value(i,x,celsius ? 1 : 0); // metric only changes temperatures here
             if (i==BD_BOOST && fabs(reading)<0.05) reading=0;
-            snprintf(label,sizeof label,format,prefix,scale.name,reading,unit_space,scale.unit);
+            snprintf(label,sizeof label,format,prefix,scale.name,reading,unit_space,unit);
             double fraction=(x-scale.minimum)/(scale.maximum-scale.minimum);
             if (fraction<0) fraction=0;
             if (fraction>1) fraction=1;

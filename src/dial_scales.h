@@ -3,6 +3,7 @@ static const unsigned kDialSteps = 32;
 static const unsigned kBarFirst = 55000;
 static const unsigned kMulticolor = 8;
 static const char *const kColorNames[] = {"BMW Orange", "Blue", "Green", "White", "Purple", "Pink", "Cyan", "Red", "Multicolor"};
+static const struct TemperatureUnit { const char *name, *unit; } kTemperatureUnits[] = {{"Celsius", "\260C"}, {"Fahrenheit", "\260F"}};
 static const struct DialScale { double minimum, maximum; const char *name, *unit; } kDialScales[] = {
     {0, 35, "Boost", "psi"},
     {9, 19, "AFR", ""},
