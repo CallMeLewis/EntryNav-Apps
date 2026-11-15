@@ -13,10 +13,10 @@ Each app is its own plugin: install any of them, and remove one without touching
 
 | App | What it shows |
 |---|---|
-| **BoostDeck** | Boost, air-fuel ratio, ignition timing, intake air, gearbox, rail pressure, oil pressure and coolant |
-| **ShiftDeck** | A full-width rev bar with shift lights, and road speed |
-| **Bootmod3 Suite** | bootmod3's four map slots, Active Sound and burbles, on a car running a bootmod3 CustomROM |
-| **Engine Fault Codes** | The engine computer's fault codes, with a description of each, and a way to clear them |
+| [BoostDeck](#boostdeck) | Boost, air-fuel ratio, ignition timing, intake air, gearbox, rail pressure, oil pressure and coolant |
+| [ShiftDeck](#shiftdeck) | A full-width rev bar with shift lights, and road speed |
+| [Bootmod3 Suite](#bootmod3-suite) | bootmod3's four map slots, Active Sound and burbles, on a car running a bootmod3 CustomROM |
+| [Engine Fault Codes](#engine-fault-codes) | The engine computer's fault codes, with a description of each, and a way to clear them |
 
 They're ported from [inotbarnacle's apps](https://github.com/inotbarnacle/ID6_apps_prerelease) for the NBT Evo. This
 port runs on the EntryNav2 only: on an NBT Evo, use the originals.
@@ -63,20 +63,20 @@ Once installed, each app's `setup.sh` sits in its folder, for example `/opt/hmi/
 
 `check` stops unless iDrive's app framework is the exact version the apps were checked against
 (`install/frameworks.md5`). It also stops when anything in the way wasn't installed by EntryNav-Apps, or when the
-system partition is already writable. An app's folder only changes by a whole-folder rename, so a power cut leaves the
-previous version or the new one.
+system partition is already writable.
 
 </details>
 
-## What it does
-
-The apps find the car's diagnostic gateway themselves, on the link-local network or on the one that tethering on the
-ENET cable hands out, and find it again when it moves. Settings live in `/var/local/data/EntryNavApps`.
+## The apps
 
 ### BoostDeck
 
-Eight readings, each on its own card, about every 35 ms while the page is open. *Gauge color* under OPTIONS picks the
-bars' colour, and *Temperature* picks Celsius or Fahrenheit.
+Eight engine readings, each on its own card, updated about every 35 ms while the page is open.
+
+| Under OPTIONS | |
+|---|---|
+| *Gauge color* | The bars' colour: one of eight, or Multicolor for a different colour per reading |
+| *Temperature* | Celsius or Fahrenheit |
 
 The BMW-specific readings come from a 2016 340i with the B58 engine. Other engines may answer fewer of them or scale
 them differently, so compare each reading with a logger you trust before relying on it. The
@@ -85,28 +85,33 @@ a new one.
 
 ### ShiftDeck
 
-A rev bar from 0 to 8,000 rpm with a row of shift lights, and road speed. It reads engine speed about every 20 ms,
-and the bar eases between readings. *Shift light setting* under OPTIONS sets the shift point, from 5,800 to
-6,700 rpm, and *Speed* picks MPH or km/h. It uses the standard engine speed and road speed that nearly every car
-reports.
+A rev bar from 0 to 8,000 rpm with a row of shift lights, and road speed. It reads engine speed about every 20 ms, and
+the bar eases between readings.
+
+| Under OPTIONS | |
+|---|---|
+| *Shift light setting* | The shift point, from 5,800 to 6,700 rpm |
+| *Speed* | MPH or km/h |
+
+It uses the standard engine speed and road speed that nearly every car reports.
 
 ### Bootmod3 Suite
 
-Called BM3 Maps until 0.1.1. Map switching isn't a BMW function: bootmod3's code in the engine computer does it.
-Bootmod3 Suite reads bootmod3's CustomROM marker from the engine computer's memory and goes on only if the marker
-names one of the 150 ROMs in [`src/bm3_profiles.h`](src/bm3_profiles.h). A stock engine computer, an MHD tune or an
-unlisted ROM gets a message, and nothing is written.
+Switches between bootmod3's four map slots and marks the active one. Picking a tile writes that slot and reads it
+back. Called BM3 Maps until 0.1.1.
 
-The page shows four map tiles and marks the active one. Picking a tile writes that slot and reads it back. OPTIONS has
-two more screens, which check the marker the same way first:
+| Under OPTIONS | |
+|---|---|
+| *Active Sound* | Off or On. Shows whether the engine computer accepted it |
+| *Burbles* | Off, or aggression 4, 8 or 12. Written to the ROM's burble table and switch, and read back |
 
-| Screen | Choices | What it does |
-|---|---|---|
-| *Active Sound* | Off, On | Sends the setting. Shows whether the engine computer accepted it |
-| *Burbles* | Off, Aggression 4, 8, 12 | Writes the ROM's burble table and switch, and reads both back |
+Map switching isn't a BMW function: bootmod3's code in the engine computer does it. So before anything else, the app
+reads bootmod3's CustomROM marker from the engine computer's memory, and goes on only if it names one of the 150 ROMs
+in [`src/bm3_profiles.h`](src/bm3_profiles.h). A stock engine computer, an MHD tune or an unlisted ROM gets a message,
+and nothing is written.
 
 - Pick only slots that hold a map for the fuel in the tank. The app can't tell what each slot contains.
-- There's no exhaust flap screen: bootmod3 sets the flap in each map.
+- There's no exhaust flap setting: bootmod3 sets the flap in each map.
 - Some engine computers refuse bootmod3's memory reads with "security access denied". Then the app can't work on that
   car.
 - Where the marker sits in memory depends on the engine computer. The app tries each address bootmod3's own app does,
@@ -115,9 +120,42 @@ two more screens, which check the marker the same way first:
 ### Engine Fault Codes
 
 *Read engine codes* reads the engine computer's fault memory and shows four codes a page, each as Active, Pending or
-Stored, with a description when [`src/dme_descriptions.h`](src/dme_descriptions.h) has one. Those descriptions were
-collected on a 340i, so other engines show some codes without one. OPTIONS has *Next page* and *Clear engine
-codes...*, which asks first, clears the fault memory and reads it again. Clear with the ignition on and the engine off.
+Stored, with a description when one is known.
+
+| Under OPTIONS | |
+|---|---|
+| *Next page* | The next four codes |
+| *Clear engine codes...* | Asks first, then clears the fault memory and reads it again. Use it with the ignition on and the engine off |
+
+The descriptions in [`src/dme_descriptions.h`](src/dme_descriptions.h) were collected on a 340i, so other engines show
+some codes without one.
+
+## How it works
+
+Each app is a plugin that iDrive loads at start-up, with a worker program beside it that does the diagnostics, so
+iDrive's own process never waits on the car. The workers reach the engine computer through the car's diagnostic
+gateway on TCP 6801. They find the gateway themselves, on the link-local network or on the one that tethering on the
+ENET cable hands out, and find it again when it moves.
+
+- The apps live in `/opt/hmi/data/ro/Plugins` on the system partition, each with its own firewall rule in
+  `/etc/firewall`, because the head unit's firewall drops outgoing connections.
+- Their settings and the gateway's address live in `/var/local/data/EntryNavApps`, on the data partition.
+- An app's folder only changes by a whole-folder rename, so a power cut leaves the previous version or the new one.
+
+<details>
+<summary><b>What the EntryNav2 needs that the NBT Evo didn't</b></summary>
+
+| | NBT Evo (upstream) | EntryNav2 (this port) |
+|---|---|---|
+| System | QNX | ARMv7 Linux, glibc 2.15 |
+| App folder | `/var/opt/hmi/data/ID5/Plugins` | `/opt/hmi/data/ro/Plugins` on the system partition. `/var/local` doesn't allow programs to run |
+| Settings | beside the apps | `/var/local/data/EntryNavApps` |
+| `bmw::PluginApp` | 352 bytes | larger (a Linux semaphore), so the apps reserve 0x200 bytes |
+| Gateway access | open, at a fixed address | the head unit's firewall drops outgoing connections, so port 6801 needs a rule, and the apps search for the gateway |
+| Installer | files copied over SSH | one archive per app with its own `setup.sh`, or Flare Drive |
+| Tuning controls | MHD+ | bootmod3 CustomROM |
+
+</details>
 
 ## Building it yourself
 
@@ -135,25 +173,12 @@ another). That copy holds BMW files and never goes into git.
 | `python3 tests/run_setup.py` | `setup.sh` on a pretend head unit built from the copy of the car's system |
 | `python3 tools/check.py` | Every check above, in the order a release needs them |
 
+### Publishing a release
+
 `tools/publish_release.py publish` runs `tools/check.py`, then uploads each archive and its signed index to the feeds
 Flare Drive reads, at `https://updates.darkzone.dev/<id>/`. It needs the release signing key and a Wrangler login, and
 refuses a dirty or unpushed tree, a version already published, and a version whose CHANGELOG section lacks an app's
 Flare Drive note.
-
-<details>
-<summary><b>What the EntryNav2 needs that the NBT Evo didn't</b></summary>
-
-| | NBT Evo (upstream) | EntryNav2 (this port) |
-|---|---|---|
-| System | QNX | ARMv7 Linux, glibc 2.15 |
-| App folder | `/var/opt/hmi/data/ID5/Plugins` | `/opt/hmi/data/ro/Plugins` on the system partition. `/var/local` doesn't allow programs to run |
-| Settings | beside the apps | `/var/local/data/EntryNavApps` |
-| `bmw::PluginApp` | 352 bytes | larger (a Linux semaphore), so the apps reserve 0x200 bytes |
-| Gateway access | open, at a fixed address | the head unit's firewall drops outgoing connections, so port 6801 needs a rule, and the apps search for the gateway |
-| Installer | files copied over SSH | one archive per app with its own `setup.sh`, or Flare Drive |
-| Tuning controls | MHD+ | bootmod3 CustomROM |
-
-</details>
 
 ## Credits and licence
 
