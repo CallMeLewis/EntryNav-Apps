@@ -4,6 +4,20 @@ Each release's section holds one Flare Drive note per plugin, the paragraph the 
 as `<!-- Flare Drive boostdeck: ... -->`, `<!-- Flare Drive shiftdeck: ... -->` and `<!-- Flare Drive bm3-maps: ... -->`.
 `tools/publish_release.py publish` refuses a version without the notes of the plugins it publishes.
 
+## [0.1.0-test.4]
+
+<!-- Flare Drive boostdeck: New Temperature setting in BoostDeck's options: Celsius or Fahrenheit for intake air, gearbox and coolant. BoostDeck also finds the diagnostic gateway again by itself when its address changes, for example after Ethernet tethering on the ENET cable, so you no longer need Find the gateway then. -->
+<!-- Flare Drive shiftdeck: ShiftDeck finds the diagnostic gateway again by itself when its address changes, for example after Ethernet tethering on the ENET cable, so you no longer need Find the gateway then. -->
+<!-- Flare Drive bm3-maps: BM3 Maps finds the diagnostic gateway again by itself when its address changes, for example after Ethernet tethering on the ENET cable, so you no longer need Find the gateway then. -->
+
+- **The apps find the gateway again by themselves.** When the saved address stops taking connections, BoostDeck,
+  ShiftDeck and BM3 Maps ask the car-side Ethernet for the gateway, at most every 20 seconds, and save the address
+  that answers for the other apps. The gateway moves when tethering on the ENET cable hands it an address, and back
+  when that runs out. The firewall rules now keep the search's UDP port 6811 open on vbr0.
+- **BoostDeck has a Temperature setting.** Celsius or Fahrenheit, in the options beside Gauge color, for intake air,
+  the gearbox and the coolant. It's kept in `boostdeck-temperature` on the data partition, and Fahrenheit stays the
+  default.
+
 ## [0.1.0-test.3]
 
 <!-- Flare Drive bm3-maps: BM3 Maps now recognises bootmod3 on F-series engine computers, as on the M140i's B58, and shows the active map instead of "The DME refused to read its memory (NRC 72)". It looks where bootmod3's own app looks. -->
