@@ -114,7 +114,7 @@ def shift_app():
 # Bootmod3 Suite's option screens: (action that opens it, its state, its result model, title, [(action, button text)]).
 # The worker's arguments for each button are in src/bm3_maps.cpp.
 # No exhaust flap screen: bootmod3 sets the flap in each map, and the DME lets a tester's flap request go after about
-# 20 s (idrive7-apps' notes), so a one-off request would undo itself.
+# 20 s (the BM3 Live port's notes), so a one-off request would undo itself.
 BM3_SCREENS = (
     (13, 103, 52, "Active Sound", ((28, "Off"), (29, "On"))),
     (14, 104, 53, "Burbles", ((30, "Off"), (31, "Aggression 4"), (32, "Aggression 8"), (33, "Aggression 12"))),

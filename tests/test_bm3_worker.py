@@ -1,4 +1,4 @@
-"""The bm3-maps worker against a simulated DME with bootmod3's map slot, like idrive7-apps' test_bm3_protocol.js
+"""The bm3-maps worker against a simulated DME with bootmod3's map slot, like cauliflowermossgrape's test_bm3_protocol.js
 fixture. Checks that nothing is written unless the marker names a known ROM, and that a map change is read back."""
 from pathlib import Path
 import socket

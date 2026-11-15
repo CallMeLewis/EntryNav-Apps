@@ -1,4 +1,4 @@
-/* See bm3.h. Ported from idrive7-apps bm3_protocol.js (markerDataRom, binaryMarkerTag, hashMarkerTag, Bm3Protocol). */
+/* See bm3.h. Ported from cauliflowermossgrape's bm3_protocol.js (markerDataRom, binaryMarkerTag, hashMarkerTag, Bm3Protocol). */
 #include "bm3.h"
 #include "bm3_profiles.h"
 #include <string.h>

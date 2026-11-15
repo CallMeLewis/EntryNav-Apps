@@ -24,7 +24,7 @@ Ported from upstream's 14 November update (inotbarnacle/ID6_apps_prerelease, `69
   128 steps instead of 32 and eases between readings. A new Speed screen picks MPH or km/h, and the choice is kept.
 - **BM3 Maps is now Bootmod3 Suite**, as upstream calls it, since it does more than maps. Its plugin, folder,
   worker and Flare Drive feed keep their names, so an install of 0.1.0 updates in place, firewall rule included.
-- **Bootmod3 Suite has Active Sound and burbles**, from bootmod3's controls in idrive7-apps' `bm3_protocol.js`. Burbles
+- **Bootmod3 Suite has Active Sound and burbles**, from bootmod3's controls in cauliflowermossgrape's BM3 Live port. Burbles
   write the ROM's timing table and switch and read both back. Upstream's exhaust flap screen is left out: bootmod3
   sets the flap in each map, and the DME lets a one-off flap request go after about 20 seconds.
 - **Bootmod3 Suite's tiles are larger and show the active map**, outlined with an ACTIVE tag, whenever the last read

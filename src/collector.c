@@ -378,7 +378,7 @@ int main(int argc, char **argv) {
 #include "bm3.h"
 #include "paths.h"
 
-/* idrive7-apps' timeouts: 4.5 s for most requests and 8 s for Active Sound. */
+/* bm3_protocol.js's timeouts: 4.5 s for most requests and 8 s for Active Sound. */
 static int bm3_exchange_within(int fd, const unsigned char *uds, size_t size, unsigned char *reply, unsigned cap,
                                unsigned *negative, unsigned timeout_ms) {
     unsigned char prefix[8];

@@ -1,5 +1,5 @@
-/* bootmod3 CustomROM map slots on the DME, ported from cauliflowermossgrape/idrive7-apps
- * apps/live_adjustments/bm3_protocol.js (MIT, third-party/idrive7-apps-LICENSE), itself from BM3 Live by ezl0l.
+/* bootmod3 CustomROM map slots on the DME, ported from cauliflowermossgrape's bm3_protocol.js (MIT,
+ * third-party/cauliflowermossgrape-LICENSE), itself from BM3 Live by ezl0l.
  * This project is independent of and unaffiliated with bootmod3.
  *
  * Map switching is not a BMW job: bootmod3's code in the DME handles it. The app reads the CustomROM marker from DME

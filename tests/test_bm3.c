@@ -1,4 +1,4 @@
-/* src/bm3.c against the cases of idrive7-apps kit/tools/test_bm3_protocol.js (markerDetectionChecks and the
+/* src/bm3.c against the cases of cauliflowermossgrape's test_bm3_protocol.js (markerDetectionChecks and the
  * per-profile loop), plus the request bytes it asserts. */
 #include "bm3.h"
 #include "bm3_profiles.h"

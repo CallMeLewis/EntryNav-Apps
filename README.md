@@ -102,10 +102,10 @@ ROM gets nothing written. There's no exhaust flap screen: bootmod3 sets the flap
 | Active Sound | Off, On | a write of DID `5FFD`. Shows whether the DME accepted it |
 | Burbles | Off, Aggression 4, 8, 12 | the ROM's burble timing table and switch, written to its addresses and read back |
 
-The protocol and the ROM profiles come from
-[cauliflowermossgrape/idrive7-apps](https://github.com/cauliflowermossgrape/idrive7-apps) (MIT), itself from BM3 Live
-by ezl0l. `tools/make_bm3_profiles.py` regenerates the table from upstream's `bm3_profiles.js`. This project is
-independent of and unaffiliated with bootmod3.
+The protocol and the ROM profiles come from [cauliflowermossgrape](https://github.com/cauliflowermossgrape)'s port
+of BM3 Live by ezl0l (MIT, [licence](third-party/cauliflowermossgrape-LICENSE)). `tools/make_bm3_profiles.py`
+regenerates the table from that port's `bm3_profiles.js`. This project is independent of and unaffiliated with
+bootmod3.
 
 ## Engine Fault Codes
 
