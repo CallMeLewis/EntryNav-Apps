@@ -4,7 +4,11 @@ Each release's section holds one Flare Drive note per plugin, the paragraph the 
 as `<!-- Flare Drive boostdeck: ... -->`, `<!-- Flare Drive shiftdeck: ... -->` and `<!-- Flare Drive bm3-maps: ... -->`.
 `tools/publish_release.py publish` refuses a version without the notes of the plugins it publishes.
 
-## [Unreleased]
+## [0.1.0-test.2]
+
+<!-- Flare Drive boostdeck: Find the diagnostic gateway now finds it after your phone's Ethernet tethering or a laptop has been on the ENET cable, when the gateway has an address such as 10.x.y.54 instead of 169.254.x.y. Flare Drive 2.1.7 or later shows that address. -->
+<!-- Flare Drive shiftdeck: Find the diagnostic gateway now finds it after your phone's Ethernet tethering or a laptop has been on the ENET cable, when the gateway has an address such as 10.x.y.54 instead of 169.254.x.y. Flare Drive 2.1.7 or later shows that address. -->
+<!-- Flare Drive bm3-maps: Find the diagnostic gateway now finds it after your phone's Ethernet tethering or a laptop has been on the ENET cable, when the gateway has an address such as 10.x.y.54 instead of 169.254.x.y. Flare Drive 2.1.7 or later shows that address. -->
 
 - **Finding the gateway works after a phone or laptop has been on the ENET cable.** With Ethernet tethering or a
   laptop's DHCP server on the cable, the gateway takes an address from it, such as 10.x.y.54, and keeps it for a while
