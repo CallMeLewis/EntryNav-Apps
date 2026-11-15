@@ -7,25 +7,13 @@ so on.
 
 Each version says whether it is verified or unverified. Verified means this exact build has run in a car.
 
-## [Unreleased] · Unverified
-
-<!-- Flare Drive mhd-maps: The first release. MHD+ Suite switches between the four maps of an MHD+ multi-map tune from My Vehicle in iDrive, and turns Max Cooling on or off. It counts a request only when the engine computer echoes it back, and MHD can't report the active map, so no tile is marked. Pick only maps made for the fuel in the tank. Restart the head unit after installing it to see it. -->
-
-- **MHD+ Suite, a new plugin (mhd-maps)**, for cars on MHD rather than bootmod3. Its four tiles switch an MHD+
-  multi-map tune's maps with MHD's own request, `2F 01 <map - 1>`, and OPTIONS has Max Cooling, `2F 03 01` or `00`.
-  Max Cooling goes on only while the engine runs above 500 rpm. The commands are the ones cauliflowermossgrape's Live
-  Adjustments sends, checked there on one MG1. A request counts only when the DME echoes it, and nothing is read
-  first: MHD's marker sits at a ROM-dependent address, and no read-back of the active map is known. It installs beside
-  Bootmod3 Suite with its own connector (105), folder `MhdMaps` and firewall rule.
-- Upstream's MHD exhaust flap (`2F 02`) and BoostDeck's ethanol reading are left out: neither is documented outside
-  upstream, and neither has been tried on an EntryNav2.
-
-## [0.1.1] · Verified
+## [0.1.1] · Verified, except MHD+ Suite
 
 <!-- Flare Drive boostdeck: A new look: each reading has its own card, in two rows of four. The gauges update faster too: BoostDeck now reads the engine about every 35 milliseconds while its page is open. -->
 <!-- Flare Drive shiftdeck: The rev bar sweeps smoothly in 128 steps and follows the engine more closely. Road speed can show in MPH or km/h: pick one under OPTIONS, Speed. -->
 <!-- Flare Drive bm3-maps: BM3 Maps is now Bootmod3 Suite. Larger map tiles, and the active map is marked on its tile. OPTIONS has two new screens: Active Sound and burbles. Like map switching, they write nothing unless the engine computer runs a bootmod3 CustomROM Bootmod3 Suite knows. Burbles are read back from the engine computer after each change. -->
 <!-- Flare Drive engine-codes: The first release. Engine Fault Codes reads the engine computer's fault codes under My Vehicle in iDrive, with a description of each when it has one, and clears them. Restart the head unit after installing it to see it. -->
+<!-- Flare Drive mhd-maps: The first release. MHD+ Suite switches between the four maps of an MHD+ multi-map tune from My Vehicle in iDrive, and turns Max Cooling on or off. It counts a request only when the engine computer echoes it back, and MHD can't report the active map, so no tile is marked. Pick only maps made for the fuel in the tank. Restart the head unit after installing it to see it. -->
 
 Ported from upstream's 14 November update (inotbarnacle/ID6_apps_prerelease, `697a3fa` to `a402dd0`).
 
@@ -44,6 +32,14 @@ Ported from upstream's 14 November update (inotbarnacle/ID6_apps_prerelease, `69
 - **Bootmod3 Suite's tiles are larger and show the active map**, outlined with an ACTIVE tag, whenever the last read
   confirmed it. Any other answer leaves no tile marked.
 - **Engine Fault Codes colours each row's mark by its state**: red for Active, amber for Pending, blue for Stored.
+- **MHD+ Suite, a new plugin (mhd-maps)**, added to 0.1.1 after its release, from `81f41fa`. It is unverified: it
+  hasn't run in a car yet. It is for cars on MHD rather than bootmod3. Its four tiles switch an MHD+ multi-map tune's
+  maps with MHD's own request, `2F 01 <map - 1>`, and OPTIONS has Max Cooling, `2F 03 01` or `00`. Max Cooling goes on
+  only while the engine runs above 500 rpm. The commands are the ones cauliflowermossgrape's Live Adjustments sends,
+  checked there on one MG1. A request counts only when the DME echoes it, and nothing is read first: MHD's marker sits
+  at a ROM-dependent address, and no read-back of the active map is known. It installs beside Bootmod3 Suite with its
+  own connector (105), folder `MhdMaps` and firewall rule. Upstream's MHD exhaust flap (`2F 02`) and BoostDeck's
+  ethanol reading are left out: neither is documented outside upstream, and neither has been tried on an EntryNav2.
 
 ## [0.1.0] · Verified
 
