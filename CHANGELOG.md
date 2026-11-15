@@ -6,7 +6,7 @@ as `<!-- Flare Drive boostdeck: ... -->`, `<!-- Flare Drive shiftdeck: ... -->` 
 
 Each version says whether it is verified or unverified. Verified means this exact build has run in a car.
 
-## [Unreleased] · Unverified
+## [0.1.1] · Verified
 
 <!-- Flare Drive boostdeck: A new look: each reading has its own card, in two rows of four. The gauges update faster too: BoostDeck now reads the engine about every 35 milliseconds while its page is open. -->
 <!-- Flare Drive shiftdeck: The rev bar sweeps smoothly in 128 steps and follows the engine more closely. Road speed can show in MPH or km/h: pick one under OPTIONS, Speed. -->
