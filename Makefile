@@ -11,16 +11,33 @@
 #   make clean       every build output
 
 CC ?= cc
+CXX ?= g++
 PYTHON ?= python3
+SHELLCHECK ?= shellcheck
 CFLAGS ?= -O2 -std=c99 -Wall -Wextra -Werror
 CORE = src/gauge_core.c
 HEADERS = src/gauge_core.h src/drive_frame.h src/diagnostic_lease.h
 BM3 = src/bm3.c src/bm3.h src/bm3_profiles.h
-.PHONY: assets test arm clean
+.PHONY: assets check syntax lint generated test arm clean
 
 assets:
 	$(PYTHON) tools/make_bars.py
 	$(PYTHON) tools/make_drive_apps.py
+
+# Every check that needs no copy of the car's system. CI (.github/workflows/ci.yml) runs each as its own job.
+check: test syntax lint generated
+
+# The apps' C++ on the PC, for errors only: the ARM build needs the car's libraries.
+syntax:
+	for f in src/*.cpp; do $(CXX) -std=gnu++98 -Wall -Wextra -Werror -fsyntax-only -Isrc -Isdk "$$f" || exit 1; done
+
+lint:
+	$(SHELLCHECK) -s sh -S style install/setup.sh
+	$(SHELLCHECK) -S style toolchain/tc.sh toolchain/qemu.sh
+
+# The committed screens and headers are what the generators make now.
+generated: assets
+	git diff --exit-code -- plugin/*.xml plugin/*.manifest src/dial_scales.h src/shift_assets.h
 
 # ---- host ------------------------------------------------------------------------------------------------------------
 build:

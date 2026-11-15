@@ -3,6 +3,7 @@
   <p>Engine gauges, a shift light, bootmod3 controls and fault codes for BMW iDrive 6.</p>
   <p>
     <a href="https://github.com/CallMeLewis/EntryNav-Apps/releases"><img src="https://img.shields.io/github/v/release/CallMeLewis/EntryNav-Apps?display_name=tag&amp;sort=semver" alt="Latest release"></a>
+    <a href="https://github.com/CallMeLewis/EntryNav-Apps/actions/workflows/ci.yml"><img src="https://github.com/CallMeLewis/EntryNav-Apps/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-blue" alt="Licence: MIT"></a>
   </p>
 </div>
@@ -167,11 +168,15 @@ another). That copy holds BMW files and never goes into git.
 |---|---|
 | `make test` | The PC tests: the decoders, and each worker against a simulated gateway (Linux or WSL) |
 | `make assets` | The screens and their image archives (Python with Pillow) |
+| `make check` | The PC tests, the apps' C++ compiled for errors, ShellCheck, and the committed screens matching their generators. CI runs each as its own job on every push |
 | `bash toolchain/tc.sh make arm` | The ARM apps, workers and test programs |
 | `bash toolchain/qemu.sh python3 tests/run_arm.py` | Loads each app the way iDrive does, with the car's own libraries under QEMU |
 | `python3 tools/package_release.py` | One release archive per app, in `dist/` |
 | `python3 tests/run_setup.py` | `setup.sh` on a pretend head unit built from the copy of the car's system |
 | `python3 tools/check.py` | Every check above, in the order a release needs them |
+
+CI can't hold the copy of the car's system, so the ARM build and its checks run only in `tools/check.py`, which
+`tools/publish_release.py` runs before every release.
 
 ### Publishing a release
 
