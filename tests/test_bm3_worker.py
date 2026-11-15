@@ -4,6 +4,7 @@ from pathlib import Path
 import socket
 import struct
 import subprocess
+import tempfile
 import threading
 import unittest
 
@@ -67,36 +68,44 @@ class FakeDme:
 
 
 class Bm3WorkerTest(unittest.TestCase):
-    def run_worker(self, dme, *args, marker=MARKER):
-        errors = []
+    def run_worker(self, dme, *args, marker=MARKER, host="127.0.0.1"):
+        """Runs bm3-maps against dme behind a gateway on 127.0.0.1, which serves each connection in turn."""
+        errors, done = [], threading.Event()
         with socket.socket() as listener:
             listener.bind(("127.0.0.1", 0))
             listener.listen()
-            listener.settimeout(3)
+            listener.settimeout(0.2)
 
             def gateway():
                 try:
-                    conn, _ = listener.accept()
-                    with conn:
-                        conn.settimeout(8)
-                        while True:
-                            header = conn.recv(6, socket.MSG_WAITALL)
-                            if not header:
-                                return
-                            size, control = struct.unpack(">IH", header)
-                            body = exact(conn, size)
-                            self.assertEqual((control, body[:2]), (1, b"\xf4\x12"))
-                            for reply in dme.answer(body[2:]):
-                                conn.sendall(frame(1, b"\x12\xf4" + reply))
+                    while not done.is_set():
+                        try:
+                            conn, _ = listener.accept()
+                        except socket.timeout:
+                            continue
+                        with conn:
+                            conn.settimeout(8)
+                            while True:
+                                header = conn.recv(6, socket.MSG_WAITALL)
+                                if not header:
+                                    break
+                                size, control = struct.unpack(">IH", header)
+                                body = exact(conn, size)
+                                self.assertEqual((control, body[:2]), (1, b"\xf4\x12"))
+                                for reply in dme.answer(body[2:]):
+                                    conn.sendall(frame(1, b"\x12\xf4" + reply))
                 except Exception as error:  # noqa: BLE001
                     errors.append(error)
 
             thread = threading.Thread(target=gateway)
             thread.start()
             chosen = ["--marker", f"{marker:08X}"] if marker is not None else []
-            result = subprocess.run([WORKER, "--host", "127.0.0.1", "--port", str(listener.getsockname()[1]),
-                                     *chosen, *args], capture_output=True, text=True, timeout=30)
-            thread.join(10)
+            try:
+                result = subprocess.run([WORKER, "--host", host, "--port", str(listener.getsockname()[1]),
+                                         *chosen, *args], capture_output=True, text=True, timeout=30)
+            finally:
+                done.set()
+                thread.join(10)
             if errors:
                 raise errors[0]
             return result.returncode, result.stdout.strip()
@@ -165,6 +174,29 @@ class Bm3WorkerTest(unittest.TestCase):
         dme = FakeDme(mevd17_marker("ZZZZZZZZZCEKXA"), at=MEVD17_MARKER)
         code, line = self.run_worker(dme, "--status", marker=None)
         self.assertEqual((code, line), (1, "No known bootmod3 ROM: ROM not uniquely matched in the binary marker"))
+
+    def test_finds_a_gateway_that_moved_and_saves_it(self):
+        """The saved address takes no connection: the worker asks lo for the gateway, as it asks vbr0 on the car."""
+        identification = b"DIAGADR10BMWMAC001122334455"
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as responder, tempfile.TemporaryDirectory() as data:
+            responder.bind(("0.0.0.0", 0))  # a broadcast reaches only sockets bound to the wildcard address
+            responder.settimeout(5)
+
+            def answer():
+                request, sender = responder.recvfrom(64)
+                if request == bytes.fromhex("000000000011"):
+                    responder.sendto(struct.pack(">IH", len(identification), 0x11) + identification, sender)
+
+            thread = threading.Thread(target=answer, daemon=True)
+            thread.start()
+            saved = Path(data) / "gateway-ip.txt"
+            dme = FakeDme(legacy_marker("R1C900000"), slot=1)
+            result = self.run_worker(dme, "--status", "--search-dev", "lo", "--search-port",
+                                     str(responder.getsockname()[1]), "--gateway-file", str(saved),
+                                     host="127.0.0.2")  # nothing listens there
+            thread.join(5)
+            self.assertEqual(result, (0, "Map 2 active (R1C900000)"))
+            self.assertEqual(saved.read_text(), "127.0.0.1\n")
 
     def test_map_change_not_taken_is_reported(self):
         dme = FakeDme(legacy_marker("R1C900000"), slot=0, stuck=True)

@@ -19,6 +19,7 @@ PLUGINS = {"boostdeck": "BoostDeck", "shiftdeck": "ShiftDeck", "bm3-maps": "Bm3M
 MARK = ".installed-by-entrynav-apps"
 RULE_HSFZ = "OUTPUT -o vbr0 -p tcp --dport 6801 -j ACCEPT"
 RULE_HSFZ_OLD = "OUTPUT -d 169.254.0.0/16 -p tcp --dport 6801 -j ACCEPT"  # 0.1.0-test.1
+RULES = [RULE_HSFZ, "OUTPUT -o vbr0 -p udp --dport 6811 -j ACCEPT", "INPUT -i vbr0 -p udp --sport 6811 -j ACCEPT"]
 GATEWAY = "169.254.10.3"
 DATA = "var/local/data/EntryNavApps"
 
@@ -128,7 +129,7 @@ class SetupTest(unittest.TestCase):
         self.assert_absent("bm3-maps")
         self.assertEqual(self.leftovers(), [])
         self.assertIn("No gateway answered", out)  # nothing answers in the container
-        self.assertEqual(self.unit.rules(), [RULE_HSFZ])  # discovery's two rules were closed again
+        self.assertEqual(self.unit.rules(), RULES)  # the search's rules stay, for the apps' own searches
         status = self.sh(f"{installed('shiftdeck')} status")
         for line in (f"installed: {VERSION}", "files: intact", "firewall rule: installed", "app framework: as checked",
                      "gateway: none"):
@@ -152,9 +153,9 @@ class SetupTest(unittest.TestCase):
         self.assert_installed("shiftdeck")
         self.assertFalse(self.unit.path(f"{DATA}/bm3-marker-address").exists())  # its own setting goes
         self.assertTrue(self.unit.path(f"{DATA}/gateway-ip.txt").exists())  # the shared one stays
-        self.assertIn(RULE_HSFZ, self.unit.rules())  # the others still need it
+        self.assertEqual(self.unit.rules(), RULES)  # the others still need them
         self.sh(f"{installed('boostdeck')} uninstall")
-        self.assertIn(RULE_HSFZ, self.unit.rules())
+        self.assertEqual(self.unit.rules(), RULES)
         self.sh(f"{installed('shiftdeck')} uninstall --purge")  # the last one
         for plugin in PLUGINS:
             self.assert_absent(plugin)
@@ -233,7 +234,7 @@ class SetupTest(unittest.TestCase):
     def test_install_replaces_the_rule_of_0_1_0_test_1(self):
         self.unit.sh(f"iptables -A {RULE_HSFZ_OLD}")
         self.install("shiftdeck")
-        self.assertEqual(self.unit.rules(), [RULE_HSFZ])
+        self.assertEqual(self.unit.rules(), RULES)
 
 
 if __name__ == "__main__":

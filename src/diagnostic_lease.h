@@ -13,6 +13,14 @@ enum { DIAGNOSTIC_PORT = 42861, DIAGNOSTIC_LEASE_MS = 500,
        DIAGNOSTIC_MIN_LEASE_MS = 140, DIAGNOSTIC_YIELD_MS = 165,
        DIAGNOSTIC_RETRY_MS = 300 };
 
+/* Whether address (host order) can be the gateway on the car-side Ethernet: link-local (169.254.1.0 to
+ * 169.254.254.255), or private (10/8, 172.16/12, 192.168/16) when tethering on the ENET cable handed it out.
+ * setup.sh and Flare Drive use the same rule. */
+static inline int gateway_address_ok(uint32_t address) {
+    if ((address >> 16) == 0xa9feu) return (address >> 8 & 0xff) >= 1 && (address >> 8 & 0xff) <= 254;
+    return (address >> 24) == 10 || (address >> 20) == 0xac1u || (address >> 16) == 0xc0a8u;
+}
+
 /* The TCP connection must be closed before giving up this loopback lock.
  * One-shot diagnostics use the same lock as the gauge workers. */
 static inline int reserve_gateway(void) {

@@ -1,9 +1,11 @@
 #define _POSIX_C_SOURCE 200809L
 #include "gauge_core.h"
 #include "diagnostic_lease.h"
+#include "paths.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <ifaddrs.h>
 #include <math.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -107,6 +109,164 @@ static unsigned number(const char *s, unsigned lo, unsigned hi) {
     char *end; unsigned long n = strtoul(s, &end, 10);
     if (!*s || *end || n < lo || n > hi) { fprintf(stderr, "Invalid number: %s\n", s); exit(2); }
     return (unsigned)n;
+}
+
+/* ---- finding the gateway: ena-gateway discover, and each worker when the saved address stops answering ---- */
+#define MAX_NETWORKS 8
+#define MAX_GATEWAYS 16
+
+struct network { uint32_t address, mask; };
+
+/* The IPv4 networks on device: the interface itself and its labelled aliases (vbr0:1), not its VLANs (vbr0.73). */
+static inline unsigned device_networks(const char *device, struct network *networks, unsigned capacity) {
+    struct ifaddrs *list, *i;
+    size_t length = strlen(device);
+    unsigned count = 0;
+    if (getifaddrs(&list) < 0) { perror("getifaddrs"); return 0; }
+    for (i = list; i && count < capacity; i = i->ifa_next) {
+        if (!i->ifa_addr || i->ifa_addr->sa_family != AF_INET || !i->ifa_netmask) continue;
+        if (strncmp(i->ifa_name, device, length) || (i->ifa_name[length] && i->ifa_name[length] != ':')) continue;
+        networks[count].address = ntohl(((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr);
+        networks[count].mask = ntohl(((struct sockaddr_in *)i->ifa_netmask)->sin_addr.s_addr);
+        ++count;
+    }
+    freeifaddrs(list);
+    return count;
+}
+
+static inline int on_networks(struct in_addr address, const struct network *networks, unsigned count) {
+    uint32_t host = ntohl(address.s_addr);
+    unsigned i;
+    for (i = 0; i < count; ++i)
+        if ((host & networks[i].mask) == (networks[i].address & networks[i].mask)) return 1;
+    return 0;
+}
+
+/* HSFZ vehicle identification: sends 00 00 00 00 00 11 to the broadcast address of every IPv4 network on device and
+ * collects each responder from those networks that calls itself the gateway (DIAGADR10), up to capacity. With to, it
+ * sends there instead and accepts any responder (the tests). The gateway is usually link-local; while tethering or a
+ * laptop on the ENET cable hands out addresses, the gateway and the head unit take one, and the gateway keeps it for
+ * a while after it goes (seen on an F20, 15 November 2026). Returns the count, -1 when device has no address, -2 when
+ * nothing could be sent. */
+static inline int find_gateways(const char *device, const char *to, unsigned port, unsigned wait_ms,
+                                char found[][INET_ADDRSTRLEN], unsigned capacity) {
+    const unsigned char request[] = {0, 0, 0, 0, 0, 0x11};
+    struct network networks[MAX_NETWORKS];
+    struct sockaddr_in dest, from;
+    unsigned char reply[2048];
+    unsigned count = 0, sent = 0, n_found = 0, i;
+    int on = 1;
+    uint64_t deadline;
+    int fd;
+    memset(&dest, 0, sizeof dest);
+    dest.sin_family = AF_INET;
+    dest.sin_port = htons((uint16_t)port);
+    if (to && inet_pton(AF_INET, to, &dest.sin_addr) != 1) { fprintf(stderr, "Invalid address: %s\n", to); return -2; }
+    if (!to) {
+        count = device_networks(device, networks, MAX_NETWORKS);
+        if (!count) { fprintf(stderr, "%s has no IPv4 address\n", device); return -1; }
+    }
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd < 0) { perror("socket"); return -2; }
+    setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &on, sizeof on);
+    for (i = 0; i < (to ? 1u : count); ++i) {
+        if (!to) dest.sin_addr.s_addr = htonl(networks[i].address | ~networks[i].mask);
+        if (sendto(fd, request, sizeof request, 0, (struct sockaddr *)&dest, sizeof dest) < 0) {
+            char text[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &dest.sin_addr, text, sizeof text);
+            fprintf(stderr, "sendto %s: %s\n", text, strerror(errno));
+        } else ++sent;
+    }
+    if (!sent) { close(fd); return -2; }
+    deadline = bd_mono_ms() + wait_ms;
+    while (running && n_found < capacity && ready(fd, POLLIN, deadline)) {
+        socklen_t length = sizeof from;
+        ssize_t n = recvfrom(fd, reply, sizeof reply - 1, 0, (struct sockaddr *)&from, &length);
+        char text[INET_ADDRSTRLEN];
+        int duplicate = 0;
+        if (n < 6 || reply[4] != 0 || reply[5] != 0x11) continue;
+        if (!to && !on_networks(from.sin_addr, networks, count)) continue;
+        reply[n] = 0;
+        /* The identification is text (DIAGADR10BMWMAC...BMWVIN...); the gateway's diagnostic address is 10. */
+        for (i = 6; i + 9 <= (unsigned)n; ++i)
+            if (!memcmp(reply + i, "DIAGADR10", 9)) break;
+        if (i + 9 > (unsigned)n) continue;
+        inet_ntop(AF_INET, &from.sin_addr, text, sizeof text);
+        for (i = 0; i < n_found; ++i) duplicate |= !strcmp(found[i], text);
+        if (!duplicate) strcpy(found[n_found++], text);
+    }
+    close(fd);
+    return (int)n_found;
+}
+
+/* Saves address for every app, as setup.sh does: written whole, then renamed into place. */
+static inline int save_gateway(const char *path, const char *address) {
+    char temporary[256];
+    FILE *file;
+    int written;
+    if (snprintf(temporary, sizeof temporary, "%s.new", path) >= (int)sizeof temporary) return 0;
+    if (!(file = fopen(temporary, "w"))) return 0;
+    written = fprintf(file, "%s\n", address) > 0;
+    written = fflush(file) == 0 && fsync(fileno(file)) == 0 && written;
+    if (fclose(file) || !written || rename(temporary, path)) { unlink(temporary); return 0; }
+    return 1;
+}
+
+/* A worker's search for the gateway when the saved address stops answering: the gateway moves to an address that
+ * tethering hands it, and back once that runs out. --search-dev, --search-port and --gateway-file are for the tests. */
+enum { GATEWAY_SEARCH_FAILURES = 3, GATEWAY_SEARCH_MS = 20000, GATEWAY_SEARCH_WAIT_MS = 1200 };
+struct gateway_search {
+    const char *device, *file;
+    unsigned port, failures;
+    uint64_t next;
+};
+
+static inline void gateway_search_init(struct gateway_search *search) {
+    search->device = "vbr0";
+    search->file = ENA_GATEWAY_FILE;
+    search->port = 6811;
+    search->failures = 0;
+    search->next = 0;
+}
+
+/* Takes --search-dev, --search-port or --gateway-file at argv[*i]; 1 if it was one of them. */
+static inline int gateway_search_option(struct gateway_search *search, int argc, char **argv, int *i) {
+    if (*i + 1 >= argc) return 0;
+    if (!strcmp(argv[*i], "--search-dev")) search->device = argv[++*i];
+    else if (!strcmp(argv[*i], "--search-port")) search->port = number(argv[++*i], 1, 65535);
+    else if (!strcmp(argv[*i], "--gateway-file")) search->file = argv[++*i];
+    else return 0;
+    return 1;
+}
+
+/* Called after each failed connection to host (16 bytes). After GATEWAY_SEARCH_FAILURES in a row, and at most every
+ * GATEWAY_SEARCH_MS, it asks the car-side Ethernet for the gateway. The first other address that takes a connection
+ * on hsfz_port replaces host and is saved for the other apps. Returns 1 when host changed. */
+static inline int gateway_search_after_failure(struct gateway_search *search, char *host, unsigned hsfz_port) {
+    char found[MAX_GATEWAYS][INET_ADDRSTRLEN];
+    struct in_addr address;
+    int n, i;
+    uint64_t now = bd_mono_ms();
+    if (++search->failures < GATEWAY_SEARCH_FAILURES || now < search->next) return 0;
+    search->next = now + GATEWAY_SEARCH_MS;
+    n = find_gateways(search->device, 0, search->port, GATEWAY_SEARCH_WAIT_MS, found, MAX_GATEWAYS);
+    for (i = 0; i < n; ++i) {
+        int fd;
+        if (!strcmp(found[i], host) || inet_pton(AF_INET, found[i], &address) != 1) continue;
+        /* The tests search lo, where every address is loopback. */
+        if (!gateway_address_ok(ntohl(address.s_addr)) &&
+            !(!strcmp(search->device, "lo") && ntohl(address.s_addr) >> 24 == 127))
+            continue;
+        fd = connect_gw(found[i], hsfz_port);
+        if (fd < 0) continue;
+        close(fd);
+        fprintf(stderr, "The gateway moved from %s to %s\n", host, found[i]);
+        strcpy(host, found[i]);
+        save_gateway(search->file, found[i]);
+        search->failures = 0;
+        return 1;
+    }
+    return 0;
 }
 
 #ifdef ENGINE_CODES_ONLY
@@ -320,21 +480,25 @@ static int bm3_marker_address(const char *option, uint32_t *address) {
 }
 
 int main(int argc, char **argv) {
-    const char *host = 0, *marker_option = 0;
+    const char *host_option = 0, *marker_option = 0;
+    char host[INET_ADDRSTRLEN] = "";
     unsigned port = 6801, slot = 0, negative;
     int status = 0, fd, lock, i, n, active, marker_set;
     uint32_t marker_address = 0;
     const bm3_profile *profile;
+    struct gateway_search search;
+    gateway_search_init(&search);
     for (i = 1; i < argc; ++i) {
-        if (!strcmp(argv[i], "--host") && i + 1 < argc && !host) host = argv[++i];
+        if (!strcmp(argv[i], "--host") && i + 1 < argc && !host_option) host_option = argv[++i];
         else if (!strcmp(argv[i], "--port") && i + 1 < argc) port = number(argv[++i], 1, 65535);
         else if (!strcmp(argv[i], "--marker") && i + 1 < argc) marker_option = argv[++i];
         else if (!strcmp(argv[i], "--map") && i + 1 < argc && !slot && !status) slot = number(argv[++i], 1, BM3_SLOTS);
         else if (!strcmp(argv[i], "--status") && !slot) status = 1;
         else if (!strcmp(argv[i], "--dump")) bm3_dumping = 1;
-        else return 2;
+        else if (!gateway_search_option(&search, argc, argv, &i)) return 2;
     }
-    if (!host || (!slot && !status)) {
+    if (host_option && strlen(host_option) < sizeof host) strcpy(host, host_option);
+    if (!host[0] || (!slot && !status)) {
         fprintf(stderr, "Usage: %s --host IPv4 [--port 6801] [--marker HEX] [--dump] (--status | --map 1-4)\n", argv[0]);
         return 2;
     }
@@ -343,6 +507,10 @@ int main(int argc, char **argv) {
     lock = reserve_gateway();
     if (lock < 0) { puts("Diagnostics busy. Wait a moment and try again."); return 1; }
     fd = connect_gw(host, port);
+    if (fd < 0) {
+        search.failures = GATEWAY_SEARCH_FAILURES - 1; /* a one-shot run searches at once */
+        if (gateway_search_after_failure(&search, host, port)) fd = connect_gw(host, port);
+    }
     if (fd < 0) { puts("Diagnostic gateway unavailable"); close(lock); return 1; }
     profile = marker_set ? bm3_find(fd, &marker_address, 1)
                          : bm3_find(fd, bm3_marker_addresses, sizeof bm3_marker_addresses / sizeof *bm3_marker_addresses);
@@ -387,20 +555,24 @@ static int read_live_pid(int fd, unsigned char pid, int width, int *value) {
 }
 
 int main(int argc, char **argv) {
-    const char *host=0;
+    const char *host_option=0;
+    char host[INET_ADDRSTRLEN];
     unsigned port=6801, udp_port=DRIVE_PORT, cycles=0, count=0;
     pid_t parent=getppid();
     struct sockaddr_in dest;
+    struct gateway_search search;
     int fd=-1, sock, lock=-1, i;
     uint64_t lease_until=0, retry_at=0;
+    gateway_search_init(&search);
     for (i=1;i<argc;++i) {
-        if (!strcmp(argv[i],"--host") && i+1<argc && !host) host=argv[++i];
+        if (!strcmp(argv[i],"--host") && i+1<argc && !host_option) host_option=argv[++i];
         else if (!strcmp(argv[i],"--port") && i+1<argc) port=number(argv[++i],1,65535);
         else if (!strcmp(argv[i],"--udp-port") && i+1<argc) udp_port=number(argv[++i],1,65535);
         else if (!strcmp(argv[i],"--cycles") && i+1<argc) cycles=number(argv[++i],1,1000);
-        else return 2;
+        else if (!gateway_search_option(&search,argc,argv,&i)) return 2;
     }
-    if (!host || parent<=1) return 2;
+    if (!host_option || strlen(host_option)>=sizeof host || parent<=1) return 2;
+    strcpy(host,host_option);
     signal(SIGINT,stop); signal(SIGTERM,stop); signal(SIGPIPE,SIG_IGN);
     sock=socket(AF_INET,SOCK_DGRAM,0);
     if (sock<0) return 1;
@@ -419,7 +591,11 @@ int main(int argc, char **argv) {
                 if (fd<0) {
                     release_gateway(&fd,&lock);
                     retry_at=bd_mono_ms()+DIAGNOSTIC_RETRY_MS;
-                } else lease_until=bd_mono_ms()+DIAGNOSTIC_LEASE_MS;
+                    if (gateway_search_after_failure(&search,host,port)) retry_at=0;
+                } else {
+                    lease_until=bd_mono_ms()+DIAGNOSTIC_LEASE_MS;
+                    search.failures=0;
+                }
             }
         }
         if (fd>=0) {
@@ -457,89 +633,12 @@ int main(int argc, char **argv) {
  *     --to sends to one address instead and accepts any responder, for tests.
  *   ena-gateway check --host IPv4 [--port 6801]
  *     Reads OBD 01 00 (the DME's supported PIDs) through the gateway. It only reads. Exit 0 on a positive reply. */
-#include <ifaddrs.h>
-
-#define MAX_NETWORKS 8
-
-struct network { uint32_t address, mask; };
-
-/* The IPv4 networks on device: the interface itself and its labelled aliases (vbr0:1), not its VLANs (vbr0.73). */
-static unsigned device_networks(const char *device, struct network *networks, unsigned capacity) {
-    struct ifaddrs *list, *i;
-    size_t length = strlen(device);
-    unsigned count = 0;
-    if (getifaddrs(&list) < 0) { perror("getifaddrs"); return 0; }
-    for (i = list; i && count < capacity; i = i->ifa_next) {
-        if (!i->ifa_addr || i->ifa_addr->sa_family != AF_INET || !i->ifa_netmask) continue;
-        if (strncmp(i->ifa_name, device, length) || (i->ifa_name[length] && i->ifa_name[length] != ':')) continue;
-        networks[count].address = ntohl(((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr);
-        networks[count].mask = ntohl(((struct sockaddr_in *)i->ifa_netmask)->sin_addr.s_addr);
-        ++count;
-    }
-    freeifaddrs(list);
-    return count;
-}
-
-static int on_networks(struct in_addr address, const struct network *networks, unsigned count) {
-    uint32_t host = ntohl(address.s_addr);
-    unsigned i;
-    for (i = 0; i < count; ++i)
-        if ((host & networks[i].mask) == (networks[i].address & networks[i].mask)) return 1;
-    return 0;
-}
-
 static int discover(const char *device, const char *to, unsigned port, unsigned wait_ms) {
-    const unsigned char request[] = {0, 0, 0, 0, 0, 0x11};
-    struct network networks[MAX_NETWORKS];
-    struct sockaddr_in dest, from;
-    unsigned char reply[2048];
-    char seen[16][INET_ADDRSTRLEN];
-    unsigned found = 0, count = 0, sent = 0, i;
-    int on = 1;
-    uint64_t deadline;
-    int fd;
-    memset(&dest, 0, sizeof dest);
-    dest.sin_family = AF_INET;
-    dest.sin_port = htons((uint16_t)port);
-    if (to && inet_pton(AF_INET, to, &dest.sin_addr) != 1) { fprintf(stderr, "Invalid address: %s\n", to); return 2; }
-    if (!to) {
-        count = device_networks(device, networks, MAX_NETWORKS);
-        if (!count) { fprintf(stderr, "%s has no IPv4 address\n", device); return 1; }
-    }
-    fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd < 0) { perror("socket"); return 2; }
-    setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &on, sizeof on);
-    for (i = 0; i < (to ? 1u : count); ++i) {
-        if (!to) dest.sin_addr.s_addr = htonl(networks[i].address | ~networks[i].mask);
-        if (sendto(fd, request, sizeof request, 0, (struct sockaddr *)&dest, sizeof dest) < 0) {
-            char text[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &dest.sin_addr, text, sizeof text);
-            fprintf(stderr, "sendto %s: %s\n", text, strerror(errno));
-        } else ++sent;
-    }
-    if (!sent) { close(fd); return 2; }
-    deadline = bd_mono_ms() + wait_ms;
-    while (running && ready(fd, POLLIN, deadline)) {
-        socklen_t length = sizeof from;
-        ssize_t n = recvfrom(fd, reply, sizeof reply - 1, 0, (struct sockaddr *)&from, &length);
-        char text[INET_ADDRSTRLEN];
-        int duplicate = 0;
-        if (n < 6 || reply[4] != 0 || reply[5] != 0x11) continue;
-        if (!to && !on_networks(from.sin_addr, networks, count)) continue;
-        reply[n] = 0;
-        /* The identification is text (DIAGADR10BMWMAC...BMWVIN...); the gateway's diagnostic address is 10. */
-        for (i = 6; i + 9 <= (unsigned)n; ++i)
-            if (!memcmp(reply + i, "DIAGADR10", 9)) break;
-        if (i + 9 > (unsigned)n) continue;
-        inet_ntop(AF_INET, &from.sin_addr, text, sizeof text);
-        for (i = 0; i < found; ++i) duplicate |= !strcmp(seen[i], text);
-        if (duplicate || found == sizeof seen / sizeof seen[0]) continue;
-        strcpy(seen[found++], text);
-        puts(text);
-        fflush(stdout);
-    }
-    close(fd);
-    return found ? 0 : 1;
+    char found[MAX_GATEWAYS][INET_ADDRSTRLEN];
+    int n = find_gateways(device, to, port, wait_ms, found, MAX_GATEWAYS), i;
+    if (n < 0) return n == -1 ? 1 : 2;
+    for (i = 0; i < n; ++i) puts(found[i]);
+    return n ? 0 : 1;
 }
 
 static int check(const char *host, unsigned port) {
@@ -630,10 +729,12 @@ static int send_frame(int sock, struct sockaddr_in *dest, bd_frame *f, uint64_t 
         (struct sockaddr *)dest, sizeof *dest) == len;
 }
 int main(int argc, char **argv) {
-    const char *host = 0;
+    const char *host_option = 0;
+    char host[INET_ADDRSTRLEN] = "";
     unsigned port = 6801, udp_port = BD_UDP_PORT, cycles = 0, count = 0, i;
-    int demo = 0, sock, gw = -1, no_trans = 0, session = 0;
+    int demo = 0, sock, gw = -1, no_trans = 0, session = 0, option;
     int lock = -1;
+    struct gateway_search search;
     pid_t parent = getppid();
     struct sockaddr_in dest;
     bd_frame f;
@@ -652,18 +753,25 @@ int main(int argc, char **argv) {
     uint64_t failed_until[sizeof dids/sizeof dids[0]] = {0};
     uint64_t lease_until=0, retry_at=0;
     int scanned=0;
+    gateway_search_init(&search);
     for (i = 1; i < (unsigned)argc; ++i) {
+        option = (int)i;
         if (!strcmp(argv[i], "--demo")) demo = 1;
         else if (!strcmp(argv[i], "--session")) session = 1;
         else if (!strcmp(argv[i], "--trace")) trace_reads = 1;
         else if (!strcmp(argv[i], "--no-trans")) no_trans = 1;
-        else if (!strcmp(argv[i], "--host") && i+1 < (unsigned)argc) host = argv[++i];
+        else if (gateway_search_option(&search, argc, argv, &option)) i = (unsigned)option;
+        else if (!strcmp(argv[i], "--host") && i+1 < (unsigned)argc) host_option = argv[++i];
         else if (!strcmp(argv[i], "--port") && i+1 < (unsigned)argc) port = number(argv[++i],1,65535);
         else if (!strcmp(argv[i], "--udp-port") && i+1 < (unsigned)argc) udp_port = number(argv[++i],1,65535);
         else if (!strcmp(argv[i], "--cycles") && i+1 < (unsigned)argc) cycles = number(argv[++i],1,1000000);
         else { fprintf(stderr, "Usage: %s (--host IPv4 | --demo) [--port 6801] [--udp-port 42860] [--cycles N] [--no-trans] [--trace] [--session]\n", argv[0]); return 2; }
     }
-    if ((!host && !demo) || (host && demo)) { fprintf(stderr, "Choose --host or --demo, never both.\n"); return 2; }
+    if ((!host_option && !demo) || (host_option && demo)) { fprintf(stderr, "Choose --host or --demo, never both.\n"); return 2; }
+    if (host_option) {
+        if (strlen(host_option) >= sizeof host) { fprintf(stderr, "Invalid host: %s\n", host_option); return 2; }
+        strcpy(host, host_option);
+    }
     signal(SIGINT, stop); signal(SIGTERM, stop); signal(SIGPIPE, SIG_IGN);
     if (session && (parent <= 1 || demo)) return 2;
     sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -694,6 +802,8 @@ int main(int argc, char **argv) {
                         release_gateway(&gw,&lock);
                         retry_at=bd_mono_ms()+DIAGNOSTIC_RETRY_MS;
                     } else if (session) lease_until=bd_mono_ms()+DIAGNOSTIC_LEASE_MS;
+                    if (gw>=0) search.failures=0;
+                    else if (gateway_search_after_failure(&search,host,port)) retry_at=0;
                 }
             }
             for (i=0; gw >= 0 && i < sizeof dids / sizeof dids[0] && running; ++i) {

@@ -1,6 +1,7 @@
 #ifndef DIAGNOSTIC_WORKER_H
 #define DIAGNOSTIC_WORKER_H
 
+#include "diagnostic_lease.h"
 #include "paths.h"
 #include <arpa/inet.h>
 #include <errno.h>
@@ -12,13 +13,6 @@
 #include <string.h>
 #include <unistd.h>
 
-// Whether address can be the gateway on the car-side Ethernet: link-local (169.254.1.0 to 169.254.254.255), or private
-// (10/8, 172.16/12, 192.168/16) when a laptop's DHCP server handed it out. setup.sh and Flare Drive use the same rule.
-static inline bool gateway_address(uint32_t address) {
-    if ((address >> 16) == 0xa9feu) return (address >> 8 & 0xff) >= 1 && (address >> 8 & 0xff) <= 254;
-    return (address >> 24) == 10 || (address >> 20) == 0xac1u || (address >> 16) == 0xc0a8u;
-}
-
 // Read the diagnostic gateway's address that setup.sh saved on the data partition: one IPv4 line.
 static inline bool read_gateway(const char* path, char (&host)[16]) {
     FILE* file = fopen(path, "r");
@@ -29,7 +23,7 @@ static inline bool read_gateway(const char* path, char (&host)[16]) {
     if (!valid) return false;
     line[strcspn(line, "\r\n")] = 0;
     struct in_addr address;
-    if (inet_pton(AF_INET, line, &address) != 1 || !gateway_address(ntohl(address.s_addr))) return false;
+    if (inet_pton(AF_INET, line, &address) != 1 || !gateway_address_ok(ntohl(address.s_addr))) return false;
     strcpy(host, line);
     return true;
 }

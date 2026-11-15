@@ -61,10 +61,11 @@ MARGIN_KB=1024
 NEEDED_COMMANDS="cat cp date df du grep id iptables ls md5sum mkdir mount mv rm sed sync"
 # File systems on which a rename survives a power cut whole (journalled or log-structured).
 SAFE_FILESYSTEMS="ext3 ext4 ubifs jffs2 yaffs yaffs2 f2fs btrfs xfs"
-# Firewall rules, as iptables arguments: the one the rules file makes at start-up, and the two that discovery opens
-# for a moment (the gateway answers a broadcast from its own address, which the ESTABLISHED rule does not match).
+# Firewall rules, as iptables arguments, the ones the rules file makes at start-up: HSFZ out, and the gateway search
+# out and its answers in (the gateway answers a broadcast from its own address, which the ESTABLISHED rule does not
+# match). The search stays open because the apps search again by themselves when the saved address stops answering.
 # They name vbr0, the head unit's car-side Ethernet, not an address: the gateway is usually link-local, but takes an
-# address from a laptop's DHCP server on the ENET cable and keeps it for a while after the laptop goes.
+# address from tethering on the ENET cable and keeps it for a while after the cable comes out.
 RULE_HSFZ="OUTPUT -o vbr0 -p tcp --dport 6801 -j ACCEPT"
 RULE_IDENT_OUT="OUTPUT -o vbr0 -p udp --dport 6811 -j ACCEPT"
 RULE_IDENT_IN="INPUT -i vbr0 -p udp --sport 6811 -j ACCEPT"
@@ -74,7 +75,6 @@ RULE_HSFZ_OLD="OUTPUT -d 169.254.0.0/16 -p tcp --dport 6801 -j ACCEPT"
 STOPS=0
 WARNS=0
 WRITABLE=0
-DISCOVERY_OPEN=0
 
 say() {
     printf '%s\n' "$*" 2>/dev/null
@@ -407,7 +407,6 @@ end_write() {
             say "read-only. See $LOG."
         fi
     fi
-    close_discovery
     trap - EXIT HUP INT QUIT TERM PIPE
 }
 
@@ -490,9 +489,8 @@ do_install() {
     if [ -n "$_kept" ]; then
         say "The previous version stays until the restart; 'sh $TARGET/setup.sh tidy' deletes it then."
     fi
-    # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
-    iptables_add $RULE_HSFZ
-    # The new rule covers every app, an older one still installed included.
+    add_rules
+    # The new rules cover every app, an older one still installed included.
     # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
     iptables_del $RULE_HSFZ_OLD
     if ! gateway_setup ""; then
@@ -545,8 +543,7 @@ do_uninstall() {
     fi
     # The rule stays in force while another of the apps needs it.
     if ! sibling_installed; then
-        # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
-        iptables_del $RULE_HSFZ
+        del_rules
         # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
         iptables_del $RULE_HSFZ_OLD
     fi
@@ -651,24 +648,23 @@ iptables_del() {
     done
 }
 
-open_discovery() {
-    trap close_discovery EXIT
-    trap '' HUP INT QUIT TERM PIPE
-    DISCOVERY_OPEN=1
+# The rules file's three rules, in force now: the file only loads at start-up.
+add_rules() {
+    # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
+    iptables_add $RULE_HSFZ
     # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
     iptables_add $RULE_IDENT_OUT
     # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
     iptables_add $RULE_IDENT_IN
 }
 
-close_discovery() {
-    if [ "$DISCOVERY_OPEN" = 1 ]; then
-        # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
-        iptables_del $RULE_IDENT_OUT
-        # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
-        iptables_del $RULE_IDENT_IN
-        DISCOVERY_OPEN=0
-    fi
+del_rules() {
+    # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
+    iptables_del $RULE_HSFZ
+    # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
+    iptables_del $RULE_IDENT_OUT
+    # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
+    iptables_del $RULE_IDENT_IN
 }
 
 # Whether $1 can be the gateway on vbr0: link-local (169.254.1.0 to 169.254.254.255), or private (10/8, 172.16/12,
@@ -711,8 +707,7 @@ gateway_setup() {
         return 1
     fi
     _tool=$TARGET/ena-gateway
-    # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
-    iptables_add $RULE_HSFZ
+    add_rules
     if [ -n "$1" ]; then
         if ! valid_gateway_address "$1"; then
             say "$1 can't be the gateway: it is neither link-local (169.254.x.y) nor a private address."
@@ -726,10 +721,7 @@ gateway_setup() {
             say "Gateway $_current still answers."
             return 0
         fi
-        open_discovery
         _candidates=$("$_tool" discover 2>>"$LOG")
-        close_discovery
-        trap - EXIT HUP INT QUIT TERM PIPE
         if [ -z "$_candidates" ]; then
             say "No gateway answered. Is the ignition on?"
             return 1
