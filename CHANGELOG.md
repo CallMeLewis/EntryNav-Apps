@@ -4,7 +4,22 @@ Each release's section holds one Flare Drive note per plugin, the paragraph the 
 as `<!-- Flare Drive boostdeck: ... -->`, `<!-- Flare Drive shiftdeck: ... -->` and `<!-- Flare Drive bm3-maps: ... -->`.
 `tools/publish_release.py publish` refuses a version without the notes of the plugins it publishes.
 
-## [0.1.0-test.4]
+Each version says whether it is verified or unverified. Verified means this exact build has run in a car.
+
+## [0.1.0] · Unverified
+
+<!-- Flare Drive boostdeck: The first stable release. BoostDeck shows live engine readings under My Vehicle in iDrive: boost, air-fuel ratio, ignition timing, intake air, gearbox, rail pressure, oil pressure and coolant, in Celsius or Fahrenheit. Restart the head unit after installing it to see it. -->
+<!-- Flare Drive shiftdeck: The first stable release. ShiftDeck shows a full-width rev bar with a shift light, and road speed, under My Vehicle in iDrive. Restart the head unit after installing it to see it. -->
+<!-- Flare Drive bm3-maps: The first stable release. BM3 Maps switches between the four map slots of a bootmod3 multi-map tune from My Vehicle in iDrive, and shows which one is active, on MG1 and F-series engine computers. It changes nothing unless the engine computer runs a bootmod3 CustomROM it knows. Pick only maps made for the fuel in the tank. -->
+
+The same code as 0.1.0-test.4, released as stable. Since the first test build:
+
+- **The apps find the car's diagnostic gateway**, on the link-local network or on the network that tethering on the
+  ENET cable hands out, and find it again by themselves when it moves.
+- **BoostDeck has a Temperature setting**, Celsius or Fahrenheit.
+- **BM3 Maps works on F-series engine computers**, as on the M140i's B58, as well as on MG1.
+
+## [0.1.0-test.4] · Verified
 
 <!-- Flare Drive boostdeck: New Temperature setting in BoostDeck's options: Celsius or Fahrenheit for intake air, gearbox and coolant. BoostDeck also finds the diagnostic gateway again by itself when its address changes, for example after Ethernet tethering on the ENET cable, so you no longer need Find the gateway then. -->
 <!-- Flare Drive shiftdeck: ShiftDeck finds the diagnostic gateway again by itself when its address changes, for example after Ethernet tethering on the ENET cable, so you no longer need Find the gateway then. -->
@@ -18,7 +33,7 @@ as `<!-- Flare Drive boostdeck: ... -->`, `<!-- Flare Drive shiftdeck: ... -->` 
   the gearbox and the coolant. It's kept in `boostdeck-temperature` on the data partition, and Fahrenheit stays the
   default.
 
-## [0.1.0-test.3]
+## [0.1.0-test.3] · Verified
 
 <!-- Flare Drive bm3-maps: BM3 Maps now recognises bootmod3 on F-series engine computers, as on the M140i's B58, and shows the active map instead of "The DME refused to read its memory (NRC 72)". It looks where bootmod3's own app looks. -->
 
@@ -27,7 +42,7 @@ as `<!-- Flare Drive boostdeck: ... -->`, `<!-- Flare Drive shiftdeck: ... -->` 
   bootmod3 one. Upstream knew only the MG1 address and layout, so an F20 M140i got NRC 72. `--dump` shows each step
   and the marker's bytes, for the next car that doesn't match.
 
-## [0.1.0-test.2]
+## [0.1.0-test.2] · Verified
 
 <!-- Flare Drive boostdeck: Find the diagnostic gateway now finds it after your phone's Ethernet tethering or a laptop has been on the ENET cable, when the gateway has an address such as 10.x.y.54 instead of 169.254.x.y. Flare Drive 2.1.7 or later shows that address. -->
 <!-- Flare Drive shiftdeck: Find the diagnostic gateway now finds it after your phone's Ethernet tethering or a laptop has been on the ENET cable, when the gateway has an address such as 10.x.y.54 instead of 169.254.x.y. Flare Drive 2.1.7 or later shows that address. -->
@@ -38,7 +53,7 @@ as `<!-- Flare Drive boostdeck: ... -->`, `<!-- Flare Drive shiftdeck: ... -->` 
   after the cable comes out. The search only asked the 169.254 network and never found it there. It now asks every
   network on the head unit's car-side Ethernet, and the apps and the firewall rule accept the address it saves.
 
-## [0.1.0-test.1]
+## [0.1.0-test.1] · Verified
 
 <!-- Flare Drive boostdeck: The first test build. BoostDeck shows live engine readings under My Vehicle in iDrive: boost, air-fuel ratio, ignition timing, intake air, gearbox, rail pressure, oil pressure and coolant. Restart the head unit after installing it to see it. -->
 <!-- Flare Drive shiftdeck: The first test build. ShiftDeck shows a full-width rev bar with a shift light, and road speed, under My Vehicle in iDrive. Restart the head unit after installing it to see it. -->
