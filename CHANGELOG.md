@@ -4,6 +4,15 @@ Each release's section holds one Flare Drive note per plugin, the paragraph the 
 as `<!-- Flare Drive boostdeck: ... -->`, `<!-- Flare Drive shiftdeck: ... -->` and `<!-- Flare Drive bm3-maps: ... -->`.
 `tools/publish_release.py publish` refuses a version without the notes of the plugins it publishes.
 
+## [0.1.0-test.3]
+
+<!-- Flare Drive bm3-maps: BM3 Maps now recognises bootmod3 on F-series engine computers, as on the M140i's B58, and shows the active map instead of "The DME refused to read its memory (NRC 72)". It looks where bootmod3's own app looks. -->
+
+- **BM3 Maps finds the bootmod3 marker on F-series engine computers.** It tries the addresses bootmod3's own app
+  tries, in its order, and reads the F-series marker, which starts with `#DST` and names the stock ROM before the
+  bootmod3 one. Upstream knew only the MG1 address and layout, so an F20 M140i got NRC 72. `--dump` shows each step
+  and the marker's bytes, for the next car that doesn't match.
+
 ## [0.1.0-test.2]
 
 <!-- Flare Drive boostdeck: Find the diagnostic gateway now finds it after your phone's Ethernet tethering or a laptop has been on the ENET cable, when the gateway has an address such as 10.x.y.54 instead of 169.254.x.y. Flare Drive 2.1.7 or later shows that address. -->
