@@ -40,6 +40,25 @@ static void binary_marker(unsigned char *m, const char *token) {
     m[at] = 0;
 }
 
+/* The F-series MEVD17 layout, as read at 0977FE4C on an F20 M140i: #DST, then the binary layout above with the stock
+ * ROM's tag before the bootmod3 one. The 64 bytes are the MG1 capture's, not the car's. */
+static void mevd17_marker(unsigned char *m, const char *stock, const char *token) {
+    size_t at = 0;
+    unsigned char inner[BM3_MARKER_SIZE];
+    binary_marker(inner, "X");
+    memset(m, 0xFF, BM3_MARKER_SIZE);
+    memcpy(m, "#DST", 4);
+    memcpy(m + 4, inner, 4 + 64 + 3); /* BM3_, the block, ~|~ */
+    at = 4 + 4 + 64 + 3;
+    memset(m + at, '_', 4);
+    at += 4;
+    at += (size_t)sprintf((char *)m + at, "#%s", stock);
+    memset(m + at, '_', 6);
+    at += 6;
+    at += (size_t)sprintf((char *)m + at, "#%s", token);
+    m[at] = 0;
+}
+
 /* The S58 layout (G87, issue #175): BM3_, synthetic bytes without '#', the only '#' at byte 101, the tag, NUL. */
 static void hash_marker(unsigned char *m, const char *tag) {
     size_t i;
@@ -92,6 +111,16 @@ int main(void) {
     binary_marker(bad, "R4C9H5V02OKLX0EXTRA"); CHECK(!rom_of(bad, sizeof bad));
     CHECK(!rom_of(m, sizeof m - 1));                                                     /* short */
     memset(bad, 0, sizeof bad); CHECK(!rom_of(bad, sizeof bad));                        /* empty */
+
+    /* F-series MEVD17 layout */
+    mevd17_marker(m, "EPST:R1C9J8B3B", "R1C900000CEKXA");
+    p = bm3_marker_profile(m, sizeof m, &(const char *){0});
+    CHECK(p && !strcmp(p->rom, "R1C900000") && p->map_address == 0x4005E006u && p->write_service == 0x3E);
+    mevd17_marker(bad, "EPST:R1C9J8B3B", "UNKNOWN12CEKXA"); CHECK(!rom_of(bad, sizeof bad));
+    mevd17_marker(bad, "EPST:R1C9J8B3B", "R1C900000"); CHECK(!rom_of(bad, sizeof bad)); /* no build characters */
+    mevd17_marker(bad, "R1C900000CEKXA", "EPST:R1C9J8B3B"); CHECK(!rom_of(bad, sizeof bad)); /* the ROM isn't last */
+    memcpy(bad, m, sizeof bad); bad[2] = 'X'; CHECK(!rom_of(bad, sizeof bad));          /* damaged #DST */
+    memcpy(bad, m, sizeof bad); bad[72] = 0; CHECK(!rom_of(bad, sizeof bad));           /* damaged delimiter */
 
     /* Every profile, in the legacy and binary layouts */
     CHECK(BM3_PROFILE_COUNT == 150);

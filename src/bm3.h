@@ -15,8 +15,7 @@
 enum {
     BM3_DME = 0x12,
     BM3_MARKER_SIZE = 0xFF,
-    BM3_SLOTS = 4,
-    BM3_MARKER_ADDRESS = 0x807FFE50u /* upstream's default; set per car in ENA_DATA_DIR/bm3-marker-address */
+    BM3_SLOTS = 4
 };
 
 typedef struct {

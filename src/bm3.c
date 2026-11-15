@@ -19,17 +19,32 @@ static int contains(const unsigned char *data, size_t size, const char *needle) 
     return 0;
 }
 
-/* binaryMarkerTag: BM3_, 64 binary bytes, ~|~ at 68, then ^_+#([A-Z0-9]+)\0 from byte 71. The tag goes to tag. */
+/* binaryMarkerTag: BM3_, 64 binary bytes, ~|~, then underscores and #tags up to a NUL. The ROM tag is the last one,
+ * [A-Z0-9] only, and goes to tag. MG1 starts at BM3_ with a single tag (upstream's layout):
+ *     BM3_ <64> ~|~ ___ #R4C9H5V02OKLX0 \0
+ * The F-series MEVD17 puts #DST in front, and the stock ROM's tag before the bootmod3 one (an F20 M140i, 2026-11-15):
+ *     #DST BM3_ <64> ~|~ ____ #EPST:R1C9J8B3B ______ #R1C900000CEKXA \0 */
 static int binary_marker_tag(const unsigned char *m, char *tag, size_t cap) {
-    size_t i = 71, start, n;
-    if (memcmp(m, "BM3_", 4) || memcmp(m + 68, "~|~", 3)) return 0;
+    size_t base, i, start, n;
+    if (!memcmp(m, "BM3_", 4)) base = 0;
+    else if (!memcmp(m, "#DSTBM3_", 8)) base = 4;
+    else return 0;
+    if (memcmp(m + base + 68, "~|~", 3)) return 0;
+    i = base + 71;
     if (m[i] != '_') return 0;
-    while (i < BM3_MARKER_SIZE && m[i] == '_') ++i;
-    if (i >= BM3_MARKER_SIZE || m[i] != '#') return 0;
-    start = ++i;
-    while (i < BM3_MARKER_SIZE && upper_alnum(m[i])) ++i;
+    for (;;) {
+        while (i < BM3_MARKER_SIZE && m[i] == '_') ++i;
+        if (i >= BM3_MARKER_SIZE || m[i] != '#') return 0;
+        start = ++i;
+        while (i < BM3_MARKER_SIZE && m[i] >= 0x20 && m[i] < 0x7f && m[i] != '_' && m[i] != '#') ++i;
+        if (i >= BM3_MARKER_SIZE || i == start) return 0;
+        if (m[i] == 0) break; /* the last tag: the ROM's */
+        if (m[i] != '_') return 0;
+    }
     n = i - start;
-    if (!n || i >= BM3_MARKER_SIZE || m[i] != 0 || n >= cap) return 0;
+    if (n >= cap) return 0;
+    for (i = start; i < start + n; ++i)
+        if (!upper_alnum(m[i])) return 0;
     memcpy(tag, m + start, n);
     tag[n] = 0;
     return 1;

@@ -178,7 +178,8 @@ int main(int argc, char **argv) {
  *   bm3-maps --host IPv4 --status      identifies the ROM and reads the active slot; only reads
  *   bm3-maps --host IPv4 --map 1..4    identifies the ROM, writes the slot and reads it back
  * Every run identifies the ROM again, and nothing is written unless the marker names a known ROM.
- * --marker HEX overrides the marker's address; otherwise ENA_DATA_DIR/bm3-marker-address, then upstream's default.
+ * --marker HEX sets the marker's address; otherwise ENA_DATA_DIR/bm3-marker-address, otherwise each address bootmod3's
+ * own app tries (bm3_marker_addresses). --dump shows each step and the marker's bytes on stderr; it only adds output.
  * Exit 0 when the line reports the active map, 1 otherwise. */
 #include "bm3.h"
 #include "paths.h"
@@ -190,8 +191,34 @@ static int bm3_exchange(int fd, const unsigned char *uds, size_t size, unsigned 
     return exchange(fd, BM3_DME, uds, (unsigned)size, prefix, (unsigned)length, reply, cap, 4500, negative);
 }
 
-/* Reads the CustomROM marker: through a dynamic DID, or straight from memory when the DME refuses that. */
-static const bm3_profile *bm3_identify(int fd, uint32_t marker_address) {
+static int bm3_dumping = 0; /* --dump: each identification step's result and the marker's bytes, on stderr */
+
+static void bm3_note(const char *step, int n, unsigned negative) {
+    if (!bm3_dumping) return;
+    if (n == -2) fprintf(stderr, "%s: refused, NRC %02X\n", step, negative);
+    else if (n < 0) fprintf(stderr, "%s: no answer\n", step);
+    else fprintf(stderr, "%s: %d bytes\n", step, n);
+}
+
+static void bm3_dump(const unsigned char *data, size_t size) {
+    size_t i, j;
+    if (!bm3_dumping) return;
+    for (i = 0; i < size; i += 16) {
+        fprintf(stderr, "%04x ", (unsigned)i);
+        for (j = i; j < i + 16; ++j) {
+            if (j < size) fprintf(stderr, " %02x", data[j]);
+            else fputs("   ", stderr);
+        }
+        fputs("  ", stderr);
+        for (j = i; j < i + 16 && j < size; ++j) fputc(data[j] >= 0x20 && data[j] < 0x7f ? data[j] : '.', stderr);
+        fputc('\n', stderr);
+    }
+}
+
+/* Reads the CustomROM marker at one address: through a dynamic DID, or straight from memory when the DME refuses
+ * that. On failure it writes the reason to message: kind 1 for a refusal (try the next address), 2 for a marker that
+ * names no known ROM, 3 when the DME stopped answering. */
+static const bm3_profile *bm3_identify(int fd, uint32_t marker_address, char *message, size_t cap, int *kind) {
     unsigned char request[16], reply[1024]; /* room for a wrong-length marker, reported as such */
     const unsigned char *marker = 0;
     size_t marker_size = 0;
@@ -199,31 +226,70 @@ static const bm3_profile *bm3_identify(int fd, uint32_t marker_address) {
     const bm3_profile *profile;
     unsigned negative;
     int n, refused = 0;
+    if (bm3_dumping) fprintf(stderr, "marker at %08lX\n", (unsigned long)marker_address);
     n = bm3_exchange(fd, request, bm3_clear_dynamic_did(request), reply, sizeof reply, &negative);
+    bm3_note("2C 03 F3 01", n, negative);
     if (n == -2) refused = 1;
-    else if (n < 0) { puts("The DME did not answer"); return 0; }
+    else if (n < 0) goto lost;
     if (!refused) {
         n = bm3_exchange(fd, request, bm3_define_marker_did(request, marker_address), reply, sizeof reply, &negative);
+        bm3_note("2C 02 F3 01", n, negative);
         if (n == -2) refused = 1;
-        else if (n < 0) { puts("The DME did not answer"); return 0; }
+        else if (n < 0) goto lost;
     }
     if (!refused) {
         n = bm3_exchange(fd, request, bm3_read_marker_did(request), reply, sizeof reply, &negative);
+        bm3_note("22 F3 01", n, negative);
         if (n == -2) refused = 1;
-        else if (n < 0) { puts("The DME did not answer"); return 0; }
+        else if (n < 0) goto lost;
         else { marker = reply + 3; marker_size = (size_t)n - 3; } /* after 62 F3 01 */
     }
     if (refused) {
         n = bm3_exchange(fd, request, bm3_read_memory(request, marker_address, BM3_MARKER_SIZE), reply, sizeof reply,
                          &negative);
-        if (n == -2) { printf("The DME refused to read its memory (NRC %02X)\n", negative); return 0; }
-        if (n < 0) { puts("The DME did not answer"); return 0; }
+        bm3_note("23 14", n, negative);
+        if (n == -2) {
+            snprintf(message, cap, "The DME refused to read its memory (NRC %02X)", negative);
+            *kind = 1;
+            return 0;
+        }
+        if (n < 0) goto lost;
         marker = reply + 1; /* after 63 */
         marker_size = (size_t)n - 1;
     }
+    bm3_dump(marker, marker_size);
     profile = bm3_marker_profile(marker, marker_size, &why);
-    if (!profile) printf("No known bootmod3 ROM: %s\n", why);
+    if (!profile) {
+        snprintf(message, cap, "No known bootmod3 ROM: %s", why);
+        *kind = 2;
+    }
     return profile;
+lost:
+    snprintf(message, cap, "The DME did not answer");
+    *kind = 3;
+    return 0;
+}
+
+/* Where bootmod3's own app looks for the marker, in its order: MG1 first, then the F-series MEVD17 (0977FE4C, seen
+ * on an F20 M140i with R1C900000) and two more DME families. Captured by Noahbg/mgu-apps (hu-obd-adapter). */
+static const uint32_t bm3_marker_addresses[] = {0x807FFE50u, 0x0977FE4Cu, 0x801FFDACu, 0x8005FE1Eu};
+
+/* The profile at the first address whose marker names a known ROM. The status line keeps the most telling failure:
+ * a marker read beats a refusal, and a lost DME ends the search. */
+static const bm3_profile *bm3_find(int fd, const uint32_t *addresses, size_t count) {
+    char message[96] = "No bootmod3 CustomROM marker found", attempt[96];
+    int best = 0, kind;
+    size_t i;
+    for (i = 0; i < count; ++i) {
+        const bm3_profile *profile;
+        kind = 0;
+        profile = bm3_identify(fd, addresses[i], attempt, sizeof attempt, &kind);
+        if (profile) return profile;
+        if (kind >= best) { best = kind; snprintf(message, sizeof message, "%s", attempt); }
+        if (kind == 3) break;
+    }
+    puts(message);
+    return 0;
 }
 
 static int bm3_read_slot(int fd, const bm3_profile *profile) {
@@ -234,7 +300,8 @@ static int bm3_read_slot(int fd, const bm3_profile *profile) {
     return n > 0 ? bm3_slot_reply(reply, (size_t)n) : -1;
 }
 
-static uint32_t bm3_marker_address(const char *option) {
+/* The marker address set by hand (--marker, or ENA_DATA_DIR/bm3-marker-address): 1 and *address, or 0 for none. */
+static int bm3_marker_address(const char *option, uint32_t *address) {
     char text[32] = "";
     char *end;
     unsigned long value;
@@ -245,16 +312,18 @@ static uint32_t bm3_marker_address(const char *option) {
         fclose(file);
     }
     text[strcspn(text, "\r\n")] = 0;
-    if (!text[0]) return BM3_MARKER_ADDRESS;
+    if (!text[0]) return 0;
     value = strtoul(text, &end, 16);
     if (strlen(text) != 8 || *end) { fprintf(stderr, "Invalid marker address: %s\n", text); exit(2); }
-    return (uint32_t)value;
+    *address = (uint32_t)value;
+    return 1;
 }
 
 int main(int argc, char **argv) {
     const char *host = 0, *marker_option = 0;
     unsigned port = 6801, slot = 0, negative;
-    int status = 0, fd, lock, i, n, active;
+    int status = 0, fd, lock, i, n, active, marker_set;
+    uint32_t marker_address = 0;
     const bm3_profile *profile;
     for (i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--host") && i + 1 < argc && !host) host = argv[++i];
@@ -262,18 +331,21 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--marker") && i + 1 < argc) marker_option = argv[++i];
         else if (!strcmp(argv[i], "--map") && i + 1 < argc && !slot && !status) slot = number(argv[++i], 1, BM3_SLOTS);
         else if (!strcmp(argv[i], "--status") && !slot) status = 1;
+        else if (!strcmp(argv[i], "--dump")) bm3_dumping = 1;
         else return 2;
     }
     if (!host || (!slot && !status)) {
-        fprintf(stderr, "Usage: %s --host IPv4 [--port 6801] [--marker HEX] (--status | --map 1-4)\n", argv[0]);
+        fprintf(stderr, "Usage: %s --host IPv4 [--port 6801] [--marker HEX] [--dump] (--status | --map 1-4)\n", argv[0]);
         return 2;
     }
+    marker_set = bm3_marker_address(marker_option, &marker_address);
     signal(SIGINT, stop); signal(SIGTERM, stop); signal(SIGPIPE, SIG_IGN);
     lock = reserve_gateway();
     if (lock < 0) { puts("Diagnostics busy. Wait a moment and try again."); return 1; }
     fd = connect_gw(host, port);
     if (fd < 0) { puts("Diagnostic gateway unavailable"); close(lock); return 1; }
-    profile = bm3_identify(fd, bm3_marker_address(marker_option));
+    profile = marker_set ? bm3_find(fd, &marker_address, 1)
+                         : bm3_find(fd, bm3_marker_addresses, sizeof bm3_marker_addresses / sizeof *bm3_marker_addresses);
     if (!profile) { release_gateway(&fd, &lock); return 1; }
     if (slot) {
         unsigned char request[16], reply[8], data[2];

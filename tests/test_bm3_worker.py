@@ -11,6 +11,7 @@ from test_transport import exact, frame
 
 WORKER = Path(__file__).resolve().parents[1] / "build" / "bm3-maps"
 MARKER = 0x807FFE50
+MEVD17_MARKER = 0x0977FE4C  # where an F20 M140i keeps it: bootmod3's second address
 SLOT = 0x4005E006  # R1C900000's map slot (bm3_profiles.h)
 
 
@@ -18,13 +19,20 @@ def legacy_marker(rom):
     return (b"BM3_R#" + rom.encode() + b"#").ljust(255, b"\0")
 
 
+def mevd17_marker(token):
+    """The F-series layout read on that car, with synthetic bytes for its 64-byte block."""
+    block = bytes((i * 37 + 11) & 0xFF for i in range(64)).replace(b"#", b"$")
+    body = b"#DSTBM3_" + block + b"~|~____#EPST:R1C9J8B3B______#" + token.encode() + b"\0"
+    return body.ljust(255, b"\xff")
+
+
 class FakeDme:
     """Answers 2C, 22, 23 and 3E/3D like a bootmod3 DME. refuse: SIDs answered 7F xx 31. silent: SIDs not answered."""
 
-    def __init__(self, marker, slot=0, refuse=(), silent=(), stuck=False):
-        self.memory = {MARKER: marker, SLOT: bytes([slot, 1])}
+    def __init__(self, marker, slot=0, refuse=(), silent=(), stuck=False, at=MARKER):
+        self.memory = {at: marker, SLOT: bytes([slot, 1])}
         self.refuse, self.silent, self.stuck = set(refuse), set(silent), stuck
-        self.requests, self.entries = [], 0
+        self.requests, self.entries, self.defined = [], 0, None
 
     def answer(self, uds):
         sid = uds[0]
@@ -34,12 +42,18 @@ class FakeDme:
         if sid in self.refuse:
             return [bytes([0x7F, sid, 0x31])]
         if sid == 0x2C:
+            if uds[1] == 2:
+                self.defined = int.from_bytes(uds[5:9], "big")
+                if self.defined not in self.memory:  # as the car refused bootmod3's other addresses
+                    return [bytes([0x7F, sid, 0x33])]
             self.entries = 0 if uds[1] == 3 else self.entries + 1
             return [bytes([0x6C]) + uds[1:4]]
         if sid == 0x22:
-            return [bytes.fromhex("62f301") + self.memory[MARKER] * self.entries]
+            return [bytes.fromhex("62f301") + self.memory[self.defined] * self.entries]
         if sid == 0x23:
             address, length = int.from_bytes(uds[2:6], "big"), uds[6]
+            if address not in self.memory:
+                return [bytes([0x7F, sid, 0x72])]
             return [bytes([0x63]) + self.memory[address][:length]]
         if sid in (0x3D, 0x3E):
             address, length = int.from_bytes(uds[2:6], "big"), uds[6]
@@ -53,7 +67,7 @@ class FakeDme:
 
 
 class Bm3WorkerTest(unittest.TestCase):
-    def run_worker(self, dme, *args):
+    def run_worker(self, dme, *args, marker=MARKER):
         errors = []
         with socket.socket() as listener:
             listener.bind(("127.0.0.1", 0))
@@ -79,8 +93,9 @@ class Bm3WorkerTest(unittest.TestCase):
 
             thread = threading.Thread(target=gateway)
             thread.start()
+            chosen = ["--marker", f"{marker:08X}"] if marker is not None else []
             result = subprocess.run([WORKER, "--host", "127.0.0.1", "--port", str(listener.getsockname()[1]),
-                                     "--marker", f"{MARKER:08X}", *args], capture_output=True, text=True, timeout=30)
+                                     *chosen, *args], capture_output=True, text=True, timeout=30)
             thread.join(10)
             if errors:
                 raise errors[0]
@@ -131,6 +146,25 @@ class Bm3WorkerTest(unittest.TestCase):
         code, line = self.run_worker(dme, "--map", "2")
         self.assertEqual((code, line), (1, "No known bootmod3 ROM: marker length"))
         self.assertEqual(self.writes(dme), [])
+
+    def test_finds_the_mevd17_marker_at_bootmod3s_second_address(self):
+        dme = FakeDme(mevd17_marker("R1C900000CEKXA"), slot=2, at=MEVD17_MARKER)
+        self.assertEqual(self.run_worker(dme, "--status", marker=None), (0, "Map 3 active (R1C900000)"))
+        self.assertEqual(dme.requests, ["2c03f301", "2c02f30124807ffe5000ff", "2314807ffe50ff",
+                                        "2c03f301", "2c02f301240977fe4c00ff", "22f301", "23144005e00601"])
+
+    def test_no_marker_at_any_address_writes_nothing(self):
+        dme = FakeDme(mevd17_marker("R1C900000CEKXA"), at=0x12345678)
+        code, line = self.run_worker(dme, "--map", "2", marker=None)
+        self.assertEqual((code, line), (1, "The DME refused to read its memory (NRC 72)"))
+        defined = [r[10:18] for r in dme.requests if r.startswith("2c02")]
+        self.assertEqual(defined, ["807ffe50", "0977fe4c", "801ffdac", "8005fe1e"])
+        self.assertEqual(self.writes(dme), [])
+
+    def test_a_marker_read_beats_a_refusal_in_the_message(self):
+        dme = FakeDme(mevd17_marker("ZZZZZZZZZCEKXA"), at=MEVD17_MARKER)
+        code, line = self.run_worker(dme, "--status", marker=None)
+        self.assertEqual((code, line), (1, "No known bootmod3 ROM: ROM not uniquely matched in the binary marker"))
 
     def test_map_change_not_taken_is_reported(self):
         dme = FakeDme(legacy_marker("R1C900000"), slot=0, stuck=True)
