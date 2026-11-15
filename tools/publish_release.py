@@ -31,6 +31,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -42,6 +43,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 ROOT = Path(__file__).resolve().parents[1]
 BUCKET = "darkzone-updates"
 BASE_URL = "https://updates.darkzone.dev"
+ZONE_ID = "b2b2305591d3edbf29a4ffb14bc274a0"  # darkzone.dev, which serves updates.darkzone.dev
 PLUGINS = ("boostdeck", "shiftdeck", "bm3-maps")
 WRANGLER = "wrangler@4.146.0"  # the version the Flare apps pin
 # The first Flare Drive version code that knows these plugins (2.1.1 is 31). An older app never reads these feeds.
@@ -68,6 +70,71 @@ def run(*args):
 
 def output(*args) -> str:
     return subprocess.run([str(a) for a in args], cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip()
+
+
+def purge_token_path():
+    return Path(os.environ.get("FLARE_DRIVE_PURGE_TOKEN", Path.home() / ".flare-drive" / "cloudflare-purge-token"))
+
+
+def load_purge_token():
+    path = purge_token_path()
+    token = path.read_text().strip() if path.is_file() else ""
+    if not token:
+        sys.exit(
+            f"FAIL: no Cloudflare API token at {path}, needed to purge deleted archives from the cache. Create one "
+            "with Zone > Cache Purge on darkzone.dev and save it there, or set FLARE_DRIVE_PURGE_TOKEN. Nothing was "
+            "changed."
+        )
+    return token
+
+
+def purge_cache(token, urls):
+    """Purges urls from Cloudflare's cache, then checks each one answers 404. False, with the reason printed, if not.
+    The archives are uploaded as immutable, so a deleted one otherwise keeps downloading for up to a year."""
+    request = urllib.request.Request(
+        f"https://api.cloudflare.com/client/v4/zones/{ZONE_ID}/purge_cache",
+        data=json.dumps({"files": urls}).encode(),
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "User-Agent": "FlareDrivePublish",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            result = json.load(response)
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode(errors="replace")[:300]
+        print(f"FAIL: Cloudflare refused the cache purge (HTTP {error.code}): {detail}")
+        return False
+    except (urllib.error.URLError, OSError) as error:
+        print(f"FAIL: the cache purge did not reach Cloudflare: {error}")
+        return False
+    if not result.get("success"):
+        print(f"FAIL: the cache purge failed: {result.get('errors')}")
+        return False
+    # A purge reaches every data centre within seconds.
+    left = list(urls)
+    for _ in range(10):
+        left = [url for url in left if not answers_404(url)]
+        if not left:
+            print(f"Purged {len(urls)} archive(s) from Cloudflare's cache; each link answers 404.")
+            return True
+        time.sleep(3)
+    print("FAIL: still downloadable after the purge: " + ", ".join(left))
+    return False
+
+
+def answers_404(url):
+    request = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "FlareDrivePublish"})
+    try:
+        urllib.request.urlopen(request, timeout=30).close()
+    except urllib.error.HTTPError as error:
+        return error.code == 404
+    except (urllib.error.URLError, OSError):
+        return False
+    return False
 
 
 def wrangler_object(plugin, action, key, *options):
@@ -241,6 +308,7 @@ def stability(args):
 
 def retire(args):
     key = load_key()
+    token = load_purge_token() if args.delete_archives else None
     index = live_index(key, chosen([args.id])[0])
     if index is None:
         sys.exit(f"FAIL: no index is published for {args.id} yet.")
@@ -250,12 +318,18 @@ def retire(args):
     gone = [r for r in index["releases"] if r["version"] in args.versions]
     kept = [r for r in index["releases"] if r["version"] not in args.versions]
     publish_index(key, args.id, {**index, "published": now(), "releases": kept})
+    purged = True
     if args.delete_archives:
         for entry in gone:
             wrangler_object(args.id, "delete", entry["file"])
-        print("The deleted archives stay in Cloudflare's edge cache until their URLs are purged.")
+        purged = purge_cache(token, [f"{BASE_URL}/{args.id}/{entry['file']}" for entry in gone])
     args.ids = [args.id]
     verify(args)
+    if not purged:
+        sys.exit(
+            "FAIL: the archives are deleted from the bucket but may still download from the cache. Purge them by "
+            "URL in Cloudflare's dashboard (Caching > Configuration > Custom Purge)."
+        )
 
 
 def main():
