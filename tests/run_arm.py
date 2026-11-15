@@ -16,7 +16,7 @@ QEMU = ["qemu-arm", "-L", SYSROOT, "-E", "LD_LIBRARY_PATH=/opt/hmi/lib:/usr/loca
         "LD_BIND_NOW=1"]
 ARM = ROOT / "build-arm"
 PLUGINS = [("libBoostDeck.so", "BoostDeck", "_ZTV9BoostDeck"), ("libShiftDeck.so", "ShiftDeck", "_ZTV9ShiftDeck"),
-           ("libBm3Maps.so", "Bm3Maps", "_ZTV7Bm3Maps")]
+           ("libBm3Maps.so", "Bm3Maps", "_ZTV7Bm3Maps"), ("libEngineCodes.so", "EngineCodes", "_ZTV11EngineCodes")]
 
 
 def run(name, command, expect="PASS", code=0):
@@ -48,6 +48,8 @@ def main():
     # No gateway under QEMU: the map worker must report it and exit 1 without hanging.
     run("bm3-maps without a gateway", [*QEMU, str(ARM / "bm3-maps"), "--host", "127.0.0.1", "--port", "1", "--status"],
         "Diagnostic gateway unavailable", 1)
+    run("engine-codes without a gateway", [*QEMU, str(ARM / "engine-codes"), "--host", "127.0.0.1", "--port", "1", "--codes"],
+        "Diagnostic gateway unavailable", 0)
     # The workers start and parse their arguments with the car's C library (demo mode sends to a local UDP port).
     run("boostdeck-collector demo", [*QEMU, str(ARM / "boostdeck-collector"), "--demo", "--cycles", "2"], "")
     # Nothing answers under QEMU: discovery must time out cleanly with exit 1.

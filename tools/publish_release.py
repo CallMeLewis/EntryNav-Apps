@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Publish EntryNav-Apps releases for Flare Drive to download, one feed per plugin:
-https://updates.darkzone.dev/boostdeck/, /shiftdeck/ and /bm3-maps/
+https://updates.darkzone.dev/boostdeck/, /shiftdeck/, /bm3-maps/ and /engine-codes/
 
   uv run --no-project --with cryptography python tools/publish_release.py init [ID...]      an empty signed index, once
   uv run --no-project --with cryptography python tools/publish_release.py verify [ID...]    check the live indexes
@@ -8,8 +8,8 @@ https://updates.darkzone.dev/boostdeck/, /shiftdeck/ and /bm3-maps/
   uv run --no-project --with cryptography python tools/publish_release.py stability ID VERSION stable|experimental
   uv run --no-project --with cryptography python tools/publish_release.py retire ID VERSION... [--delete-archives]
 
-Without IDs, a command covers boostdeck, shiftdeck and bm3-maps. The index is the one Flare Drive reads for every
-plugin (design/release-updates.md and design/plugin-contract.md in flare-drive), signed with AA-EntryNav's Ed25519 key
+Without IDs, a command covers boostdeck, shiftdeck, bm3-maps and engine-codes. The index is the one Flare Drive reads
+for every plugin (design/release-updates.md and design/plugin-contract.md in flare-drive), signed with AA-EntryNav's Ed25519 key
 (~/.flare-drive/release-signing-key, or FLARE_DRIVE_SIGNING_KEY). Uploads use Wrangler, signed in with
 `wrangler login`, to the bucket darkzone-updates under each plugin's id. The zone's firewall rule "Updates: allow known
 files only" serves only <id>/index.json, <id>/index.json.sig and <id>/releases/*-armhf.tar.
@@ -44,7 +44,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BUCKET = "darkzone-updates"
 BASE_URL = "https://updates.darkzone.dev"
 ZONE_ID = "b2b2305591d3edbf29a4ffb14bc274a0"  # darkzone.dev, which serves updates.darkzone.dev
-PLUGINS = ("boostdeck", "shiftdeck", "bm3-maps")
+PLUGINS = ("boostdeck", "shiftdeck", "bm3-maps", "engine-codes")
 WRANGLER = "wrangler@4.146.0"  # the version the Flare apps pin
 # The first Flare Drive version code that knows these plugins (2.1.1 is 31). An older app never reads these feeds.
 MIN_APP = 32

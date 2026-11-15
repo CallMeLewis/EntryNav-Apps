@@ -14,6 +14,8 @@ WORKER = Path(__file__).resolve().parents[1] / "build" / "bm3-maps"
 MARKER = 0x807FFE50
 MEVD17_MARKER = 0x0977FE4C  # where an F20 M140i keeps it: bootmod3's second address
 SLOT = 0x4005E006  # R1C900000's map slot (bm3_profiles.h)
+BURBLES = 0x4005E099  # its burble switch
+TIMING = 0x4005E100  # and its 24-byte burble timing table, factor 2
 
 
 def legacy_marker(rom):
@@ -28,10 +30,11 @@ def mevd17_marker(token):
 
 
 class FakeDme:
-    """Answers 2C, 22, 23 and 3E/3D like a bootmod3 DME. refuse: SIDs answered 7F xx 31. silent: SIDs not answered."""
+    """Answers 2C, 22, 23, 3E/3D and 2E like a bootmod3 DME. refuse: SIDs answered 7F xx 31. silent: SIDs not
+    answered."""
 
     def __init__(self, marker, slot=0, refuse=(), silent=(), stuck=False, at=MARKER):
-        self.memory = {at: marker, SLOT: bytes([slot, 1])}
+        self.memory = {at: marker, SLOT: bytes([slot, 1]), BURBLES: b"\0", TIMING: bytes(24)}
         self.refuse, self.silent, self.stuck = set(refuse), set(silent), stuck
         self.requests, self.entries, self.defined = [], 0, None
 
@@ -64,6 +67,8 @@ class FakeDme:
                 self.memory[address] = uds[7:]
             # "pending" first, as a DME busy writing would answer, then the positive reply
             return [bytes([0x7F, sid, 0x78]), bytes([0x7E, 0x3D]) if sid == 0x3E else bytes([0x7D])]
+        if sid == 0x2E:  # Active Sound
+            return [bytes([0x6E]) + uds[1:3]]
         raise AssertionError(f"unexpected service {sid:02x}")
 
 
@@ -115,12 +120,12 @@ class Bm3WorkerTest(unittest.TestCase):
 
     def test_status_reads_the_rom_and_the_slot(self):
         dme = FakeDme(legacy_marker("R1C900000"), slot=1)
-        self.assertEqual(self.run_worker(dme, "--status"), (0, "Map 2 active (R1C900000)"))
+        self.assertEqual(self.run_worker(dme, "--status"), (0, "Map 2 active"))
         self.assertEqual(dme.requests, ["2c03f301", "2c02f30124807ffe5000ff", "22f301", "23144005e00601"])
 
     def test_map_change_writes_the_slot_and_reads_it_back(self):
         dme = FakeDme(legacy_marker("R1C900000"), slot=0)
-        self.assertEqual(self.run_worker(dme, "--map", "3"), (0, "Map 3 active (R1C900000)"))
+        self.assertEqual(self.run_worker(dme, "--map", "3"), (0, "Map 3 active"))
         self.assertEqual(self.writes(dme), ["3e144005e006020201"])
         self.assertEqual(dme.memory[SLOT], bytes([2, 1]))
 
@@ -139,7 +144,7 @@ class Bm3WorkerTest(unittest.TestCase):
 
     def test_refused_dynamic_did_reads_the_marker_directly(self):
         dme = FakeDme(legacy_marker("R1C900000"), slot=3, refuse={0x2C})
-        self.assertEqual(self.run_worker(dme, "--status"), (0, "Map 4 active (R1C900000)"))
+        self.assertEqual(self.run_worker(dme, "--status"), (0, "Map 4 active"))
         self.assertEqual(dme.requests[:2], ["2c03f301", "2314807ffe50ff"])
 
     def test_accumulated_marker_is_refused(self):
@@ -158,7 +163,7 @@ class Bm3WorkerTest(unittest.TestCase):
 
     def test_finds_the_mevd17_marker_at_bootmod3s_second_address(self):
         dme = FakeDme(mevd17_marker("R1C900000CEKXA"), slot=2, at=MEVD17_MARKER)
-        self.assertEqual(self.run_worker(dme, "--status", marker=None), (0, "Map 3 active (R1C900000)"))
+        self.assertEqual(self.run_worker(dme, "--status", marker=None), (0, "Map 3 active"))
         self.assertEqual(dme.requests, ["2c03f301", "2c02f30124807ffe5000ff", "2314807ffe50ff",
                                         "2c03f301", "2c02f301240977fe4c00ff", "22f301", "23144005e00601"])
 
@@ -195,7 +200,7 @@ class Bm3WorkerTest(unittest.TestCase):
                                      str(responder.getsockname()[1]), "--gateway-file", str(saved),
                                      host="127.0.0.2")  # nothing listens there
             thread.join(5)
-            self.assertEqual(result, (0, "Map 2 active (R1C900000)"))
+            self.assertEqual(result, (0, "Map 2 active"))
             self.assertEqual(saved.read_text(), "127.0.0.1\n")
 
     def test_map_change_not_taken_is_reported(self):
@@ -206,6 +211,61 @@ class Bm3WorkerTest(unittest.TestCase):
     def test_refused_write(self):
         dme = FakeDme(legacy_marker("R1C900000"), refuse={0x3E})
         self.assertEqual(self.run_worker(dme, "--map", "2"), (1, "The DME refused the map change (NRC 31)"))
+
+    def identified(self, dme):
+        """The requests after the ROM's identification."""
+        return dme.requests[3:]
+
+    def test_active_sound(self):
+        dme = FakeDme(legacy_marker("R1C900000"))
+        self.assertEqual(self.run_worker(dme, "--sound", "0"), (0, "The DME accepted: Active Sound off"))
+        self.assertEqual(self.identified(dme), ["2e5ffd01"])
+        dme = FakeDme(legacy_marker("R1C900000"))
+        self.assertEqual(self.run_worker(dme, "--sound", "1"), (0, "The DME accepted: Active Sound on"))
+        self.assertEqual(self.identified(dme), ["2e5ffd00"])
+
+    def test_refused_active_sound(self):
+        dme = FakeDme(legacy_marker("R1C900000"), refuse={0x2E})
+        self.assertEqual(self.run_worker(dme, "--sound", "1"), (1, "The DME refused Active Sound on (NRC 31)"))
+
+    def test_sound_and_burbles_need_a_known_rom(self):
+        for args in (("--sound", "1"), ("--burbles", "2")):
+            dme = FakeDme(legacy_marker("ZZZZZZZZZ"))
+            code, line = self.run_worker(dme, *args)
+            self.assertEqual(code, 1)
+            self.assertIn("No known bootmod3 ROM", line)
+            self.assertFalse([r for r in dme.requests if r[:2] in ("2e", "3d", "3e")])
+
+    def test_burbles_fill_the_table_before_turning_on(self):
+        dme = FakeDme(legacy_marker("R1C900000"))
+        self.assertEqual(self.run_worker(dme, "--burbles", "2"), (0, "Burbles at aggression 8, read back from the DME"))
+        self.assertEqual(self.writes(dme), ["3e144005e10018" + "f0" * 24, "3e144005e0990101"])
+        self.assertEqual(self.identified(dme)[2:], ["23144005e10018", "23144005e09901"])
+        self.assertEqual((dme.memory[TIMING], dme.memory[BURBLES]), (b"\xf0" * 24, b"\x01"))
+
+    def test_burbles_off_turns_off_before_clearing(self):
+        dme = FakeDme(legacy_marker("R1C900000"))
+        dme.memory[BURBLES], dme.memory[TIMING] = b"\x01", b"\xe8" * 24
+        self.assertEqual(self.run_worker(dme, "--burbles", "0"), (0, "Burbles off, read back from the DME"))
+        self.assertEqual(self.writes(dme), ["3e144005e0990100", "3e144005e10018" + "00" * 24])
+        self.assertEqual((dme.memory[TIMING], dme.memory[BURBLES]), (bytes(24), b"\0"))
+
+    def test_burbles_not_taken_are_reported(self):
+        dme = FakeDme(legacy_marker("R1C900000"), stuck=True)
+        self.assertEqual(self.run_worker(dme, "--burbles", "3"),
+                         (1, "Burble change not confirmed. Try again before driving."))
+
+    def test_refused_burbles_stop_at_the_first_write(self):
+        dme = FakeDme(legacy_marker("R1C900000"), refuse={0x3E})
+        self.assertEqual(self.run_worker(dme, "--burbles", "1"), (1, "The DME refused the burble change (NRC 31)"))
+        self.assertEqual(self.writes(dme), ["3e144005e10018" + "f8" * 24])
+
+    def test_one_control_per_run(self):
+        dme = FakeDme(legacy_marker("R1C900000"))
+        self.assertEqual(self.run_worker(dme, "--burbles", "1", "--sound", "1")[0], 2)
+        self.assertEqual(self.run_worker(dme, "--flap", "1")[0], 2)  # the flap isn't a control here
+        self.assertEqual(self.run_worker(dme, "--burbles", "4")[0], 2)
+        self.assertEqual(dme.requests, [])
 
 
 if __name__ == "__main__":

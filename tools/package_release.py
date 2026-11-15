@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Build one release archive per plugin, which Flare Drive and setup.sh install on their own:
-dist/<id>-<version>-armhf.tar for boostdeck, shiftdeck and bm3-maps.
+dist/<id>-<version>-armhf.tar for boostdeck, shiftdeck, bm3-maps and engine-codes.
 
 Build the ARM programs and the screens first (bash toolchain/tc.sh make arm, make assets). Each archive holds one
 folder, <id>-<version>/, laid out like the head unit:
@@ -34,14 +34,19 @@ ELF_ARM = b"\x7fELF\x01\x01\x01"
 
 
 class Plugin:
-    def __init__(self, id, app, name, worker, settings=""):
+    """former_name: the name before a rename. setup.sh still recognises the firewall rule an install under that name
+    left, by its first line. The id, folder and worker keep their old names, so installs and feeds carry on."""
+
+    def __init__(self, id, app, name, worker, settings="", former_name=""):
         self.id, self.app, self.name, self.worker, self.settings = id, app, name, worker, settings
+        self.former_name = former_name
 
 
 PLUGINS = [
     Plugin("boostdeck", "BoostDeck", "BoostDeck", "boostdeck-collector", "boostdeck-temperature"),
-    Plugin("shiftdeck", "ShiftDeck", "ShiftDeck", "shift-deck"),
-    Plugin("bm3-maps", "Bm3Maps", "BM3 Maps", "bm3-maps", "bm3-marker-address"),
+    Plugin("shiftdeck", "ShiftDeck", "ShiftDeck", "shift-deck", "shiftdeck-speed"),
+    Plugin("bm3-maps", "Bm3Maps", "Bootmod3 Suite", "bm3-maps", "bm3-marker-address", former_name="BM3 Maps"),
+    Plugin("engine-codes", "EngineCodes", "Engine Fault Codes", "engine-codes"),
 ]
 
 
@@ -70,12 +75,13 @@ def unix_text(path: Path) -> bytes:
 
 
 def filled(path: Path, plugin: Plugin) -> bytes:
-    """A template with the plugin's details in place of @ID@, @APP@, @NAME@, @WORKER@ and @SETTINGS@."""
+    """A template with the plugin's details in place of @ID@, @APP@, @NAME@, @FORMER_NAME@, @WORKER@ and
+    @SETTINGS@."""
     text = unix_text(path).decode()
-    for key, value in (("ID", plugin.id), ("APP", plugin.app), ("NAME", plugin.name), ("WORKER", plugin.worker),
-                       ("SETTINGS", plugin.settings)):
+    for key, value in (("ID", plugin.id), ("APP", plugin.app), ("NAME", plugin.name),
+                       ("FORMER_NAME", plugin.former_name), ("WORKER", plugin.worker), ("SETTINGS", plugin.settings)):
         text = text.replace(f"@{key}@", value)
-    left = re.search(r"@[A-Z]+@", text)
+    left = re.search(r"@[A-Z_]+@", text)
     if left:
         fail(f"{path.relative_to(ROOT)}: {left.group(0)} has no value")
     return text.encode()

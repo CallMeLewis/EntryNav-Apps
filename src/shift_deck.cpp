@@ -2,6 +2,7 @@
 #include "diagnostic_worker.h"
 #include "drive_frame.h"
 #include "gauge_core.h"
+#include "settings.h"
 #include "shift_assets.h"
 #include <arpa/inet.h>
 #include <stdio.h>
@@ -11,6 +12,13 @@
 namespace {
 const unsigned kShiftPoll=0x53484654u;
 const char kShiftWorker[]=ENA_SHIFTDECK_WORKER;
+// The screen redraws every 16 ms while visible. The bar eases from the shown revs to each new reading over kEaseMs,
+// so it sweeps instead of jumping between the worker's readings (about every 20 ms).
+const unsigned kVisiblePollMs=16u, kHiddenPollMs=150u, kEaseMs=50u;
+const unsigned kBarFullRpm=8000u;
+// The Speed setting: M (MPH, upstream's unit, until one is picked) or K (km/h) on one line.
+const char kSpeedFile[]=ENA_DATA_DIR "/shiftdeck-speed";
+const char* const kSpeedUnits[]={"MPH","km/h"};
 }
 
 class ShiftDeck : public bmw::PluginApp {
@@ -24,8 +32,16 @@ class ShiftDeck : public bmw::PluginApp {
     unsigned bar_, lights_;
     int rpm_,kph_;
     bool shift_;
+    bool metric_;
+    double rpm_from_;      // the revs shown when the latest reading arrived
+    uint64_t rpm_started_; // when it arrived; 0 shows the reading as it is
 
     void label(unsigned id,const char* value) { updateModel(id,bmw::BasicString<char>(value)); }
+    double animatedRpm(uint64_t now) const {
+        if (!rpm_started_ || now-rpm_started_>=kEaseMs) return frame_.rpm;
+        const double remaining=1.-static_cast<double>(now-rpm_started_)/kEaseMs;
+        return frame_.rpm+(rpm_from_-frame_.rpm)*remaining*remaining;
+    }
     void reap() {
         if (child_<=0) return;
         pid_t ended=waitpid(child_,0,WNOHANG);
@@ -45,7 +61,7 @@ class ShiftDeck : public bmw::PluginApp {
         bmw::Parcel data;
         data.writeUInt32(kShiftPoll);
         data.writeUInt32(generation_);
-        post(bmw::Message(0x40000003u,data),visible_ ? 40u : 150u);
+        post(bmw::Message(0x40000003u,data),visible_ ? kVisiblePollMs : kHiddenPollMs);
     }
     void digits(unsigned model, unsigned width, const char* text, unsigned base, bool center) {
         unsigned length=static_cast<unsigned>(strlen(text));
@@ -62,9 +78,10 @@ class ShiftDeck : public bmw::PluginApp {
         int kph=live ? frame_.kph : -1;
         int target=static_cast<int>(kShiftTargets[target_]);
         bool shift=rpm>=target;
-        unsigned bars=rpm>0 ? static_cast<unsigned>(rpm+125)/250 : 0;
-        if (bars>32) bars=32;
-        unsigned image=(shift ? kBarWarn : kBarBase)+bars;
+        int shown=rpm>=0 ? static_cast<int>(animatedRpm(now)+.5) : -1;
+        unsigned bars=shown>0 ? (static_cast<unsigned>(shown)*kSweepSteps+kBarFullRpm/2)/kBarFullRpm : 0;
+        if (bars>kSweepSteps) bars=kSweepSteps;
+        unsigned image=(shift ? kSweepAlert : kSweepBase)+bars;
         if (image!=bar_) {
             updateModel(54u,bmw::ImageID(image));
             bar_=image;
@@ -76,7 +93,8 @@ class ShiftDeck : public bmw::PluginApp {
             lights_=lights;
         }
         char text[48];
-        int displayed_rpm=rpm<0 ? -1 : (rpm+5)/10*10;
+        // The digits follow the eased revs too, to the nearest 10 so the last digit doesn't flicker.
+        int displayed_rpm=shown<0 ? -1 : (shown+5)/10*10;
         if (displayed_rpm!=rpm_ || shift!=shift_) {
             if (displayed_rpm<0) strcpy(text,"--");
             else snprintf(text,sizeof text,"%d",displayed_rpm>9999 ? 9999 : displayed_rpm);
@@ -85,7 +103,7 @@ class ShiftDeck : public bmw::PluginApp {
         }
         if (kph!=kph_) {
             if (kph<0) strcpy(text,"--");
-            else snprintf(text,sizeof text,"%d",(kph*621371+500000)/1000000);
+            else snprintf(text,sizeof text,"%d",metric_ ? kph : (kph*621371+500000)/1000000);
             digits(70u,3u,text,kDigitBase,false);
             kph_=kph;
         }
@@ -99,6 +117,7 @@ class ShiftDeck : public bmw::PluginApp {
         if (!event.readBool(show) || show==visible_) return true;
         visible_=show;
         frame_.sampled_ms=0;
+        rpm_started_=0;
         if (show) retry_at_=0;
         else stopChild();
         draw(bd_mono_ms());
@@ -117,13 +136,28 @@ class ShiftDeck : public bmw::PluginApp {
         updateModel(56u,bmw::ImageID(kTargetBase+target_));
         updateModel(68u,bmw::ImageID(kMarkBase+target_));
     }
+    // The Speed screen's buttons (tools/make_drive_apps.py): MPH is action 46, km/h 47.
+    template <bool Metric> bool setSpeedUnit(const bmw::Parcel&) {
+        selectSpeedUnit(Metric);
+        save_setting(kSpeedFile,Metric ? "K\n" : "M\n");
+        return true;
+    }
+    void selectSpeedUnit(bool metric) {
+        char text[48];
+        metric_=metric;
+        kph_=-2; // redraw the speed in the new unit
+        snprintf(text,sizeof text,"Selected: %s",kSpeedUnits[metric ? 1 : 0]);
+        label(58u,text);
+        updateModel(64u,bmw::ImageID(metric ? kSpeedLegendKmh : kSpeedLegendMph));
+        draw(bd_mono_ms());
+    }
 
 public:
     ShiftDeck(bmw::IDispatcher& d,bmw::BasicString<char> name,unsigned maj,unsigned min,
               bmw::RHMIInterfaceVersion version,const bmw::Bundle& cfg,const bmw::Bundle& res)
         : PluginApp(d,name,maj,min,version,cfg,res),socket_(-1),child_(-1),generation_(0),
           visible_(false),target_(kDefaultTarget),retry_at_(0),bar_(0),lights_(0),
-          rpm_(-2),kph_(-2),shift_(false) {
+          rpm_(-2),kph_(-2),shift_(false),metric_(false),rpm_from_(0),rpm_started_(0) {
         memset(&frame_,0,sizeof frame_);
     }
     virtual ~ShiftDeck() { shutdown(); }
@@ -163,9 +197,14 @@ public:
         addHandler(44u,action);
         action.m_exec=&Action::execImpl<ShiftDeck,&ShiftDeck::setTarget<4> >;
         addHandler(45u,action);
+        action.m_exec=&Action::execImpl<ShiftDeck,&ShiftDeck::setSpeedUnit<false> >;
+        addHandler(46u,action);
+        action.m_exec=&Action::execImpl<ShiftDeck,&ShiftDeck::setSpeedUnit<true> >;
+        addHandler(47u,action);
+        rpm_started_=0;
         updateModel(57u,bmw::ImageID(kShiftOff));
         showTarget();
-        draw(bd_mono_ms());
+        selectSpeedUnit(load_setting(kSpeedFile,'M')=='K');
         if (socket_>=0) postPoll();
         return true;
     }
@@ -190,7 +229,16 @@ public:
             if (n<=0) break;
             if (n==sizeof next && visible_ && next.sampled_ms>=frame_.sampled_ms &&
                 next.sampled_ms<=now && next.rpm>=-1 && next.rpm<=16383 &&
-                next.kph>=-1 && next.kph<=255) frame_=next;
+                next.kph>=-1 && next.kph<=255) {
+                if (next.rpm!=frame_.rpm) {
+                    // Ease only between two live readings; after a gap the bar shows the new one at once.
+                    const bool continuous=next.rpm>=0 && frame_.rpm>=0 && frame_.sampled_ms &&
+                                          now-frame_.sampled_ms<DRIVE_STALE_MS;
+                    rpm_from_=continuous ? animatedRpm(now) : next.rpm;
+                    rpm_started_=continuous ? now : 0;
+                }
+                frame_=next;
+            }
         }
         draw(now);
         postPoll();

@@ -1,9 +1,9 @@
-"""Generate RHMI resources for the standalone ShiftDeck and BM3 Maps apps."""
+"""Generate RHMI resources for the standalone ShiftDeck, Bootmod3 Suite and Engine Fault Codes apps."""
 from pathlib import Path
 from io import BytesIO
 from xml.etree import ElementTree as ET
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 import shift_art as art
 
 ROOT = Path(__file__).resolve().parents[1] / "plugin"
@@ -11,7 +11,9 @@ ROOT = Path(__file__).resolve().parents[1] / "plugin"
 
 def save(doc, name):
     ET.indent(doc, space="  ")
-    ET.ElementTree(doc).write(ROOT / name, encoding="utf-8", xml_declaration=True)
+    # LF on every system: tools/package_release.py refuses Windows line endings.
+    with open(ROOT / name, "w", encoding="utf-8", newline="\n") as out:
+        ET.ElementTree(doc).write(out, encoding="unicode", xml_declaration=True)
 
 
 def entry(name, title, weight, connector, root_id, images=False):
@@ -50,16 +52,25 @@ def button(group, identifier, action, text):
     ET.SubElement(group, "button", id=str(identifier), action=str(action), text=text)
 
 
+# ShiftDeck's Speed screen, in the order of its actions (46, 47); src/shift_deck.cpp keeps the same order.
+SPEED_UNITS = ("MPH", "km/h")
+
+
 def shift_app():
     name="ShiftDeck"
     doc, actions, models, states, page = entry(name,"ShiftDeck",207,104,100,images=True)
     ET.SubElement(actions,"hmiAction",id="40",target="101")
     for i in range(len(art.TARGETS)):
         ET.SubElement(actions,"raAction",id=str(41+i))
+    ET.SubElement(actions,"hmiAction",id="48",target="102")
+    for i in range(len(SPEED_UNITS)):
+        ET.SubElement(actions,"raAction",id=str(46+i))
     ET.SubElement(models,"raDataModel",id="53",modelType="Richtext")
+    ET.SubElement(models,"raDataModel",id="58",modelType="Richtext")
 
     options=ET.SubElement(page,"optionComponents")
     button(options,30,40,"Shift light setting")
+    button(options,31,48,"Speed")
     content=ET.SubElement(page,"components")
 
     def graphic(model, asset, x, y, w, h):
@@ -70,7 +81,7 @@ def shift_app():
         ET.SubElement(props,"property",id="2",value="false")
         ET.SubElement(props,"property",id="3",value="true")
 
-    graphic(54,art.BAR_BASE,52,287,art.BAR_WIDTH,90)
+    graphic(54,art.SWEEP_BASE,52,287,art.BAR_WIDTH,90)
     graphic(55,art.LIGHT_BASE,52,10,1104,76)
     graphic(56,art.TARGET_BASE+art.DEFAULT_INDEX,1003,113,153,135)
     graphic(57,art.SHIFT_OFF,454,215,350,42)
@@ -90,14 +101,44 @@ def shift_app():
     for i,rpm in enumerate(art.TARGETS):
         button(items,301+i,41+i,f"{rpm:,} RPM")
 
+    speed=ET.SubElement(states,"hmiState",id="102",parentId="100",text="Speed")
+    items=ET.SubElement(speed,"components")
+    ET.SubElement(items,"label",id="310",model="58")
+    for i,unit in enumerate(SPEED_UNITS):
+        button(items,311+i,46+i,unit)
+
     save(doc,f"{name}.xml")
     art.save_assets(ROOT/f"{name}_ALL_Images.zip",ROOT.parent/"src"/"shift_assets.h")
 
 
+# Bootmod3 Suite's option screens: (action that opens it, its state, its result model, title, [(action, button text)]).
+# The worker's arguments for each button are in src/bm3_maps.cpp.
+# No exhaust flap screen: bootmod3 sets the flap in each map, and the DME lets a tester's flap request go after about
+# 20 s (idrive7-apps' notes), so a one-off request would undo itself.
+BM3_SCREENS = (
+    (13, 103, 52, "Active Sound", ((28, "Off"), (29, "On"))),
+    (14, 104, 53, "Burbles", ((30, "Off"), (31, "Aggression 4"), (32, "Aggression 8"), (33, "Aggression 12"))),
+)
+
+
 def map_app():
     name="Bm3Maps"
-    doc, actions, models, _, page = entry(name,"BM3 Maps",208,103,100,images=True)
+    # Shown as Bootmod3 Suite; the plugin keeps its 0.1.0 name, Bm3Maps, so installs update in place.
+    doc, actions, models, states, page = entry(name,"Bootmod3 Suite",208,103,100,images=True)
     ET.SubElement(models,"raDataModel",id="50",modelType="Richtext")
+    options=ET.SubElement(page,"optionComponents")
+    for i,(opener,state,model,title,choices) in enumerate(BM3_SCREENS):
+        ET.SubElement(actions,"hmiAction",id=str(opener),target=str(state))
+        for action,_ in choices:
+            ET.SubElement(actions,"raAction",id=str(action))
+        ET.SubElement(models,"raDataModel",id=str(model),modelType="Richtext")
+        button(options,312+i,opener,title)
+        screen=ET.SubElement(states,"hmiState",id=str(state),parentId="100",text=title)
+        items=ET.SubElement(screen,"components")
+        for j,(action,text) in enumerate(choices):
+            button(items,400+10*i+j,action,text)
+        # The result under the choices: empty until the first press, so it leaves no gap above them.
+        ET.SubElement(items,"label",id=str(320+i),model=str(model))
     content=ET.SubElement(page,"components")
     def graphic(component, model, asset, x, y, w, h):
         ET.SubElement(models,"imageIdModel",id=str(model),imageId=str(asset))
@@ -106,30 +147,118 @@ def map_app():
         ET.SubElement(image.find("properties"),"property",id="2",value="false")
         ET.SubElement(image.find("properties"),"property",id="3",value="true")
 
-    graphic(200,60,56000,420,35,360,48)
-    graphic(201,61,56001,174,118,852,192)
-    ET.SubElement(models,"imageIdModel",id="62",imageId="56002")
+    tiles_x=(1220-(4*MAP_TILE+3*MAP_GAP))//2
+    graphic(200,60,MAP_LOGO,(1220-420)//2,30,420,48)
+    graphic(201,61,MAP_TILES,tiles_x,96,4*MAP_TILE+3*MAP_GAP,MAP_TILE_H)
+    ET.SubElement(models,"imageIdModel",id="62",imageId=str(MAP_BLANK))
     for slot in range(1,5):
         ET.SubElement(actions,"raAction",id=str(20+slot))
         # iDrive places native button text at the top left. Keep its focus
         # outline and action, and draw the centered labels on the tile art.
         tile=ET.SubElement(content,"button",id=str(150+slot),action=str(20+slot),imageModel="62")
-        position(tile,174+(slot-1)*220,118,192,192)
-    position(ET.SubElement(content,"label",id="150",model="50"),174,337,850,53)
+        position(tile,tiles_x+(slot-1)*(MAP_TILE+MAP_GAP),96,MAP_TILE,MAP_TILE_H)
+    position(ET.SubElement(content,"label",id="150",model="50"),tiles_x,96+MAP_TILE_H+22,4*MAP_TILE+3*MAP_GAP,53)
     save(doc,f"{name}.xml")
 
-    arial=Path("/System/Library/Fonts/Supplemental/Arial.ttf")
-    font=ImageFont.truetype(str(arial) if arial.is_file() else "DejaVuSans.ttf",39)
-    logo=Image.new("RGBA",(360,48))
-    ImageDraw.Draw(logo).text((180,24),"BM3 Maps",font=font,anchor="mm",fill="#f0f4fb")
-    tiles=Image.new("RGBA",(852,192))
-    draw=ImageDraw.Draw(tiles)
-    for slot,x in enumerate(range(0,4*220,220),1):
-        draw.rounded_rectangle((x,0,x+191,191),radius=9,fill="#192331",outline="#475c74",width=2)
-        draw.text((x+96,96),f"Map {slot}",font=font,anchor="mm",fill="#f0f4fb")
     with ZipFile(ROOT/f"{name}_ALL_Images.zip","w",ZIP_DEFLATED) as archive:
-        transparent_icon=Image.new("RGBA",(1,1))
-        for identifier,image in ((56000,logo),(56001,tiles),(56002,transparent_icon)):
+        for identifier,image in ((MAP_LOGO,map_logo()),(MAP_BLANK,Image.new("RGBA",(1,1))),
+                                 *((MAP_TILES+active,map_tiles(active)) for active in range(5))):
+            data=BytesIO()
+            image.save(data,format="PNG",optimize=True)
+            archive.writestr(ZipInfo(f"{identifier}.png"),data.getvalue(),ZIP_DEFLATED)
+
+
+# Bootmod3 Suite's pictures. MAP_TILES is the four tiles with none active, MAP_TILES + n the same with map n marked active;
+# src/bm3_maps.cpp shows the one that matches the worker's last answer.
+MAP_LOGO, MAP_TILES, MAP_BLANK = 56000, 56010, 56002
+MAP_TILE, MAP_TILE_H, MAP_GAP = 250, 230, 20
+MAP_ACCENT = "#58ceff"
+
+
+def map_logo():
+    logo=Image.new("RGBA",(420,48))
+    draw=ImageDraw.Draw(logo)
+    draw.text((210,24),"BOOTMOD3 SUITE",font=art.font(34),anchor="mm",fill=art.WHITE)
+    return logo
+
+
+def map_tiles(active):
+    tiles=Image.new("RGBA",(4*MAP_TILE+3*MAP_GAP,MAP_TILE_H))
+    draw=ImageDraw.Draw(tiles)
+    for slot in range(1,5):
+        x=(slot-1)*(MAP_TILE+MAP_GAP)
+        on=slot==active
+        draw.rounded_rectangle((x,0,x+MAP_TILE-1,MAP_TILE_H-1),radius=14,fill="#1b2a3a" if on else "#18202a",
+                               outline=MAP_ACCENT if on else "#3a4b5f",width=3 if on else 2)
+        draw.text((x+MAP_TILE//2,92),str(slot),font=art.font(112),anchor="mm",fill=MAP_ACCENT if on else art.WHITE)
+        draw.text((x+MAP_TILE//2,166),"MAP",font=art.font(28),anchor="mm",fill=art.DIM)
+        if on:
+            draw.rounded_rectangle((x+MAP_TILE//2-58,186,x+MAP_TILE//2+58,214),radius=14,fill=MAP_ACCENT)
+            draw.text((x+MAP_TILE//2,200),"ACTIVE",font=art.font(22),anchor="mm",fill="#0b1520")
+    return tiles
+
+
+CODE_ROWS = 4  # codes per page; src/engine_codes.cpp's kCodePageSize
+CODES_PANEL = 56700
+CODE_STATE = 56701  # then stored, pending and active, in CODE_STATE_COLORS order
+CODE_STATE_COLORS = ("#5f8fbf", "#ffc34d", art.RED)
+
+
+def codes_app():
+    """Engine Fault Codes, laid out as upstream's: a header line, then four rows of code, state and description."""
+    name="EngineCodes"
+    doc, actions, models, states, page = entry(name,"Engine Fault Codes",209,102,100,images=True)
+    ET.SubElement(actions,"hmiAction",id="25",target="101")
+    for identifier in (23,27,29):
+        ET.SubElement(actions,"raAction",id=str(identifier))
+    for identifier in (80,*range(81,81+CODE_ROWS),89,90,*range(91,91+CODE_ROWS)):
+        ET.SubElement(models,"raDataModel",id=str(identifier),modelType="Richtext")
+    ET.SubElement(models,"imageIdModel",id="95",imageId=str(CODES_PANEL))
+
+    options=ET.SubElement(page,"optionComponents")
+    button(options,312,29,"Next page")
+    button(options,313,25,"Clear engine codes...")
+    content=ET.SubElement(page,"components")
+    panel=ET.SubElement(content,"image",id="328",model="95")
+    position(panel,36,9,1120,352)
+    ET.SubElement(panel.find("properties"),"property",id="2",value="false")
+    ET.SubElement(panel.find("properties"),"property",id="3",value="true")
+    position(ET.SubElement(content,"label",id="320",model="80"),58,20,1067,55)
+    for i in range(CODE_ROWS):
+        position(ET.SubElement(content,"label",id=str(321+i),model=str(81+i)),62,83+67*i,255,55)
+    read=ET.SubElement(content,"button",id="310",action="23",text="Read engine codes")
+    position(read,49,370,460,52)
+    for i in range(CODE_ROWS):
+        position(ET.SubElement(content,"label",id=str(330+i),model=str(91+i)),326,83+67*i,801,58)
+    # Each row's state mark, recoloured by src/engine_codes.cpp: CODE_STATE + none, stored, pending, active.
+    for i in range(CODE_ROWS):
+        ET.SubElement(models,"imageIdModel",id=str(96+i),imageId=str(CODE_STATE))
+        mark=ET.SubElement(content,"image",id=str(334+i),model=str(96+i))
+        position(mark,42,88+67*i,8,40)
+        ET.SubElement(mark.find("properties"),"property",id="2",value="false")
+        ET.SubElement(mark.find("properties"),"property",id="3",value="true")
+
+    confirm=ET.SubElement(states,"hmiState",id="101",parentId="100",text="Clear engine codes?")
+    items=ET.SubElement(confirm,"components")
+    button(items,340,27,"Confirm clear engine codes")
+    for identifier,model in ((350,89),(360,90),(370,80)):
+        ET.SubElement(items,"label",id=str(identifier),model=str(model))
+    save(doc,f"{name}.xml")
+
+    panel=Image.new("RGBA",(1120,352))
+    draw=ImageDraw.Draw(panel)
+    draw.rounded_rectangle((0,0,1119,62),radius=12,fill="#222d3b")
+    for i in range(CODE_ROWS):
+        top=69+67*i
+        draw.rounded_rectangle((0,top,1119,top+60),radius=10,fill="#181c23")
+        draw.line((281,top+10,281,top+50),fill="#2c3542",width=2)
+    marks=[Image.new("RGBA",(8,40))]
+    for color in CODE_STATE_COLORS:
+        mark=Image.new("RGBA",(8,40))
+        ImageDraw.Draw(mark).rounded_rectangle((0,0,7,39),radius=3,fill=color)
+        marks.append(mark)
+    with ZipFile(ROOT/f"{name}_ALL_Images.zip","w",ZIP_DEFLATED) as archive:
+        for identifier,image in ((CODES_PANEL,panel),*((CODE_STATE+i,mark) for i,mark in enumerate(marks))):
             data=BytesIO()
             image.save(data,format="PNG",optimize=True)
             archive.writestr(ZipInfo(f"{identifier}.png"),data.getvalue(),ZIP_DEFLATED)
@@ -138,3 +267,4 @@ def map_app():
 if __name__=="__main__":
     shift_app()
     map_app()
+    codes_app()

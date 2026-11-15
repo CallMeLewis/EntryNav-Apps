@@ -155,11 +155,30 @@ size_t bm3_write_memory(unsigned char *out, size_t cap, const bm3_profile *profi
     return 7 + length;
 }
 
+size_t bm3_sound_request(unsigned char *out, int on) {
+    out[0] = 0x2E;
+    out[1] = 0x5F;
+    out[2] = 0xFD;
+    out[3] = on ? 0x00 : 0x01;
+    return 4;
+}
+
+int bm3_burble_table(const bm3_profile *profile, unsigned preset, unsigned char *table) {
+    unsigned degrees;
+    if (!profile || preset > BM3_BURBLE_PRESETS || !profile->factor ||
+        BM3_BURBLE_PRESETS * BM3_BURBLE_STEP * profile->factor > 127)
+        return 0;
+    degrees = preset * BM3_BURBLE_STEP * profile->factor;
+    memset(table, (unsigned char)(0x100u - degrees), BM3_BURBLE_TABLE); /* the two's complement byte of -degrees */
+    return 1;
+}
+
 size_t bm3_reply_prefix(const unsigned char *request, unsigned char *prefix) {
     prefix[0] = (unsigned char)(request[0] + 0x40);
     switch (request[0]) {
     case 0x2C: memcpy(prefix + 1, request + 1, 3); return 4; /* 6C 0X F3 01 */
     case 0x22: memcpy(prefix + 1, request + 1, 2); return 3; /* 62 F3 01 */
+    case 0x2E: memcpy(prefix + 1, request + 1, 2); return 3; /* 6E 5F FD */
     case 0x3E: prefix[1] = 0x3D; return 2;                   /* 7E 3D: bootmod3 answers its write this way */
     default: return 1;                                       /* 63, 7D */
     }

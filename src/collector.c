@@ -270,6 +270,11 @@ static inline int gateway_search_after_failure(struct gateway_search *search, ch
 }
 
 #ifdef ENGINE_CODES_ONLY
+/* engine-codes: the DME's fault memory, for the Engine Fault Codes app. It prints a header line, then one line per
+ * code, "XXXXXX  status SS", which the app pages through and describes (src/dme_descriptions.h).
+ *   engine-codes --host IPv4 --codes   reads the codes; only reads
+ *   engine-codes --host IPv4 --clear   clears the fault memory (UDS 14 FF FF FF), then reads the codes again
+ * --search-dev, --search-port and --gateway-file are for the tests, as in the other workers. */
 static void fault_codes(int fd, int clear) {
     /* Fault, pending, confirmed, failed since clear, or warning requested.
      * Bits 0x10 and 0x40 only report incomplete tests. */
@@ -282,9 +287,22 @@ static void fault_codes(int fd, int clear) {
     int n, i, count=0, shown=0;
     if (fd<0) { puts("Diagnostic gateway unavailable"); return; }
     if (clear) {
-        n=exchange(fd,0x12,clear_request,4,clear_reply,1,reply,sizeof reply,1800,&negative);
+        n=exchange(fd,0x12,clear_request,4,clear_reply,1,reply,sizeof reply,8000,&negative);
+        /* A DME that wants the extended session for a clear: open it, clear once more and go back to the default
+         * session. Only after a session-related refusal, and only when the DME accepts the session. */
+        if (n==-2 && (negative==0x22 || negative==0x31 || negative==0x7e || negative==0x7f)) {
+            const unsigned char extended[]={0x10,0x03}, extended_reply[]={0x50,0x03};
+            const unsigned char normal[]={0x10,0x01}, normal_reply[]={0x50,0x01};
+            unsigned session_negative;
+            if (exchange(fd,0x12,extended,2,extended_reply,2,reply,sizeof reply,2000,&session_negative)>=2) {
+                n=exchange(fd,0x12,clear_request,4,clear_reply,1,reply,sizeof reply,8000,&negative);
+                exchange(fd,0x12,normal,2,normal_reply,2,reply,sizeof reply,2000,&session_negative);
+            }
+        }
         if (n!=1) {
-            if (n==-2) printf("Clear rejected (NRC %02X)\n",negative);
+            if (n==-2 && (negative==0x22 || negative==0x83 || negative==0x88))
+                printf("Clear refused (NRC %02X). Try with the ignition on and the engine off.\n",negative);
+            else if (n==-2) printf("Clear rejected (NRC %02X)\n",negative);
             else puts("Clear result unknown: read codes again");
             return;
         }
@@ -306,37 +324,53 @@ static void fault_codes(int fd, int clear) {
 }
 
 int main(int argc, char **argv) {
-    const char *host=0;
+    const char *host_option=0;
+    char host[INET_ADDRSTRLEN]="";
     unsigned port=6801;
     int mode=0, lock, gw, i;
+    uint64_t deadline;
+    struct gateway_search search;
+    gateway_search_init(&search);
     for (i=1;i<argc;++i) {
-        if (!strcmp(argv[i],"--host") && i+1<argc && !host) host=argv[++i];
+        if (!strcmp(argv[i],"--host") && i+1<argc && !host_option) host_option=argv[++i];
         else if (!strcmp(argv[i],"--port") && i+1<argc) port=number(argv[++i],1,65535);
         else if (!strcmp(argv[i],"--codes") && !mode) mode=1;
         else if (!strcmp(argv[i],"--clear") && !mode) mode=2;
-        else break;
+        else if (!gateway_search_option(&search,argc,argv,&i)) break;
     }
-    if (i!=argc || !host || !mode) {
+    if (host_option && strlen(host_option)<sizeof host) strcpy(host,host_option);
+    if (i!=argc || !host[0] || !mode) {
         fprintf(stderr,"Usage: %s --host IPv4 [--port 6801] (--codes | --clear)\n",argv[0]);
         return 2;
     }
     signal(SIGINT,stop); signal(SIGTERM,stop); signal(SIGPIPE,SIG_IGN);
+    /* A gauge app still holding the gateway gives it up within a lease once asked (reserve_gateway asks). */
     lock=reserve_gateway();
+    deadline=bd_mono_ms()+650;
+    while (running && lock<0 && errno==EADDRINUSE && bd_mono_ms()<deadline) {
+        poll(0,0,25);
+        lock=reserve_gateway();
+    }
     if (lock<0) {
         puts(errno==EADDRINUSE ? "Diagnostics busy. Wait a moment and try again."
                                : "Could not reserve the diagnostics connection");
         return 0;
     }
     gw=connect_gw(host,port);
+    if (gw<0) {
+        search.failures=GATEWAY_SEARCH_FAILURES-1; /* a one-shot run searches at once */
+        if (gateway_search_after_failure(&search,host,port)) gw=connect_gw(host,port);
+    }
     fault_codes(gw,mode==2);
-    if (gw>=0) close(gw);
-    close(lock);
+    release_gateway(&gw,&lock);
     return 0;
 }
 #elif defined(BM3_MAPS_ONLY)
-/* bm3-maps: bootmod3 CustomROM map slots (src/bm3.h). It prints one line for the app's status label.
- *   bm3-maps --host IPv4 --status      identifies the ROM and reads the active slot; only reads
- *   bm3-maps --host IPv4 --map 1..4    identifies the ROM, writes the slot and reads it back
+/* bm3-maps: bootmod3 CustomROM controls (src/bm3.h). It prints one line for the app's status label.
+ *   bm3-maps --host IPv4 --status       identifies the ROM and reads the active slot; only reads
+ *   bm3-maps --host IPv4 --map 1..4     identifies the ROM, writes the slot and reads it back
+ *   bm3-maps --host IPv4 --sound 0|1    Active Sound off or on
+ *   bm3-maps --host IPv4 --burbles 0..3 burbles off, or aggression 4, 8 or 12; written and read back
  * Every run identifies the ROM again, and nothing is written unless the marker names a known ROM.
  * --marker HEX sets the marker's address; otherwise ENA_DATA_DIR/bm3-marker-address, otherwise each address bootmod3's
  * own app tries (bm3_marker_addresses). --dump shows each step and the marker's bytes on stderr; it only adds output.
@@ -344,11 +378,22 @@ int main(int argc, char **argv) {
 #include "bm3.h"
 #include "paths.h"
 
+/* idrive7-apps' timeouts: 4.5 s for most requests and 8 s for Active Sound. */
+static int bm3_exchange_within(int fd, const unsigned char *uds, size_t size, unsigned char *reply, unsigned cap,
+                               unsigned *negative, unsigned timeout_ms) {
+    unsigned char prefix[8];
+    size_t length;
+    if (!size) { /* a request builder refused its arguments */
+        *negative = 0;
+        return -1;
+    }
+    length = bm3_reply_prefix(uds, prefix);
+    return exchange(fd, BM3_DME, uds, (unsigned)size, prefix, (unsigned)length, reply, cap, timeout_ms, negative);
+}
+
 static int bm3_exchange(int fd, const unsigned char *uds, size_t size, unsigned char *reply, unsigned cap,
                         unsigned *negative) {
-    unsigned char prefix[8];
-    size_t length = bm3_reply_prefix(uds, prefix);
-    return exchange(fd, BM3_DME, uds, (unsigned)size, prefix, (unsigned)length, reply, cap, 4500, negative);
+    return bm3_exchange_within(fd, uds, size, reply, cap, negative, 4500);
 }
 
 static int bm3_dumping = 0; /* --dump: each identification step's result and the marker's bytes, on stderr */
@@ -460,6 +505,92 @@ static int bm3_read_slot(int fd, const bm3_profile *profile) {
     return n > 0 ? bm3_slot_reply(reply, (size_t)n) : -1;
 }
 
+/* Writes size bytes at address with the profile's memory-write service; the exchange's result. */
+static int bm3_write(int fd, const bm3_profile *profile, uint32_t address, const unsigned char *data, unsigned size,
+                     unsigned *negative) {
+    unsigned char request[8 + BM3_BURBLE_TABLE], reply[8];
+    return bm3_exchange(fd, request, bm3_write_memory(request, sizeof request, profile, address, data, size),
+                        reply, sizeof reply, negative);
+}
+
+/* Whether the DME's memory at address reads back as data. */
+static int bm3_holds(int fd, uint32_t address, const unsigned char *data, unsigned size) {
+    unsigned char request[16], reply[8 + BM3_BURBLE_TABLE];
+    unsigned negative;
+    int n = bm3_exchange(fd, request, bm3_read_memory(request, address, size), reply, sizeof reply, &negative);
+    return n == (int)size + 1 && !memcmp(reply + 1, data, size);
+}
+
+/* Map slot 1..4: written with its activation flag, then read back. Exit status for main. */
+static int bm3_set_map(int fd, const bm3_profile *profile, unsigned slot) {
+    const unsigned char data[2] = {(unsigned char)(slot - 1), 0x01}; /* the slot, then activate */
+    unsigned negative;
+    int active;
+    if (bm3_write(fd, profile, profile->map_address, data, sizeof data, &negative) == -2) {
+        printf("The DME refused the map change (NRC %02X)\n", negative);
+        return 1;
+    }
+    active = bm3_read_slot(fd, profile);
+    if (active < 0) {
+        puts("Map change not confirmed. Check the active map before trying again.");
+        return 1;
+    }
+    if ((unsigned)active != slot - 1) {
+        printf("Map change not confirmed: the DME reports map %d\n", active + 1);
+        return 1;
+    }
+    printf("Map %d active\n", active + 1);
+    return 0;
+}
+
+/* Burble preset 0..3 (bm3_burble_table). Off stops the DME using the table before clearing it; on fills the table
+ * before turning it on. Both are read back. */
+static int bm3_set_burbles(int fd, const bm3_profile *profile, unsigned preset) {
+    unsigned char table[BM3_BURBLE_TABLE];
+    const unsigned char enabled = preset != 0;
+    unsigned negative = 0;
+    int n;
+    if (!bm3_burble_table(profile, preset, table)) {
+        puts("No burble table for this ROM");
+        return 1;
+    }
+    if (enabled) {
+        n = bm3_write(fd, profile, profile->timing_address, table, sizeof table, &negative);
+        if (n > 0) n = bm3_write(fd, profile, profile->burble_address, &enabled, 1, &negative);
+    } else {
+        n = bm3_write(fd, profile, profile->burble_address, &enabled, 1, &negative);
+        if (n > 0) n = bm3_write(fd, profile, profile->timing_address, table, sizeof table, &negative);
+    }
+    if (n == -2) {
+        printf("The DME refused the burble change (NRC %02X)\n", negative);
+        return 1;
+    }
+    if (!bm3_holds(fd, profile->timing_address, table, sizeof table) ||
+        !bm3_holds(fd, profile->burble_address, &enabled, 1)) {
+        puts("Burble change not confirmed. Try again before driving.");
+        return 1;
+    }
+    if (preset) printf("Burbles at aggression %u, read back from the DME\n", preset * BM3_BURBLE_STEP);
+    else puts("Burbles off, read back from the DME");
+    return 0;
+}
+
+/* Active Sound off (0) or on (1): one request the DME acknowledges. It can't be read back. */
+static int bm3_set_sound(int fd, unsigned on) {
+    unsigned char request[16], reply[16];
+    unsigned negative;
+    const char *what = on ? "Active Sound on" : "Active Sound off";
+    int n = bm3_exchange_within(fd, request, bm3_sound_request(request, (int)on), reply, sizeof reply, &negative,
+                                8000);
+    if (n > 0) {
+        printf("The DME accepted: %s\n", what);
+        return 0;
+    }
+    if (n == -2) printf("The DME refused %s (NRC %02X)\n", what, negative);
+    else printf("No answer from the DME for %s\n", what);
+    return 1;
+}
+
 /* The marker address set by hand (--marker, or ENA_DATA_DIR/bm3-marker-address): 1 and *address, or 0 for none. */
 static int bm3_marker_address(const char *option, uint32_t *address) {
     char text[32] = "";
@@ -480,26 +611,34 @@ static int bm3_marker_address(const char *option, uint32_t *address) {
 }
 
 int main(int argc, char **argv) {
+    enum { NONE, STATUS, MAP, SOUND, BURBLES } action = NONE;
     const char *host_option = 0, *marker_option = 0;
     char host[INET_ADDRSTRLEN] = "";
-    unsigned port = 6801, slot = 0, negative;
-    int status = 0, fd, lock, i, n, active, marker_set;
+    unsigned port = 6801, value = 0;
+    int fd, lock, i, active, marker_set, result;
     uint32_t marker_address = 0;
     const bm3_profile *profile;
     struct gateway_search search;
     gateway_search_init(&search);
     for (i = 1; i < argc; ++i) {
+        int has_value = i + 1 < argc && action == NONE;
         if (!strcmp(argv[i], "--host") && i + 1 < argc && !host_option) host_option = argv[++i];
         else if (!strcmp(argv[i], "--port") && i + 1 < argc) port = number(argv[++i], 1, 65535);
         else if (!strcmp(argv[i], "--marker") && i + 1 < argc) marker_option = argv[++i];
-        else if (!strcmp(argv[i], "--map") && i + 1 < argc && !slot && !status) slot = number(argv[++i], 1, BM3_SLOTS);
-        else if (!strcmp(argv[i], "--status") && !slot) status = 1;
+        else if (!strcmp(argv[i], "--status") && action == NONE) action = STATUS;
+        else if (!strcmp(argv[i], "--map") && has_value) { action = MAP; value = number(argv[++i], 1, BM3_SLOTS); }
+        else if (!strcmp(argv[i], "--sound") && has_value) { action = SOUND; value = number(argv[++i], 0, 1); }
+        else if (!strcmp(argv[i], "--burbles") && has_value) {
+            action = BURBLES;
+            value = number(argv[++i], 0, BM3_BURBLE_PRESETS);
+        }
         else if (!strcmp(argv[i], "--dump")) bm3_dumping = 1;
         else if (!gateway_search_option(&search, argc, argv, &i)) return 2;
     }
     if (host_option && strlen(host_option) < sizeof host) strcpy(host, host_option);
-    if (!host[0] || (!slot && !status)) {
-        fprintf(stderr, "Usage: %s --host IPv4 [--port 6801] [--marker HEX] [--dump] (--status | --map 1-4)\n", argv[0]);
+    if (!host[0] || action == NONE) {
+        fprintf(stderr, "Usage: %s --host IPv4 [--port 6801] [--marker HEX] [--dump] "
+                        "(--status | --map 1-4 | --sound 0-1 | --burbles 0-3)\n", argv[0]);
         return 2;
     }
     marker_set = bm3_marker_address(marker_option, &marker_address);
@@ -515,32 +654,19 @@ int main(int argc, char **argv) {
     profile = marker_set ? bm3_find(fd, &marker_address, 1)
                          : bm3_find(fd, bm3_marker_addresses, sizeof bm3_marker_addresses / sizeof *bm3_marker_addresses);
     if (!profile) { release_gateway(&fd, &lock); return 1; }
-    if (slot) {
-        unsigned char request[16], reply[8], data[2];
-        data[0] = (unsigned char)(slot - 1);
-        data[1] = 0x01; /* activate */
-        n = bm3_exchange(fd, request,
-                         bm3_write_memory(request, sizeof request, profile, profile->map_address, data, sizeof data),
-                         reply, sizeof reply, &negative);
-        if (n == -2) {
-            printf("The DME refused the map change (NRC %02X)\n", negative);
-            release_gateway(&fd, &lock);
-            return 1;
-        }
+    fprintf(stderr, "ROM %s\n", profile->rom); /* for a run by hand; the app shows only the line on stdout */
+    switch (action) {
+    case MAP: result = bm3_set_map(fd, profile, value); break;
+    case BURBLES: result = bm3_set_burbles(fd, profile, value); break;
+    case SOUND: result = bm3_set_sound(fd, value); break;
+    default:
+        active = bm3_read_slot(fd, profile);
+        if (active < 0) puts("Could not read the active map");
+        else printf("Map %d active\n", active + 1);
+        result = active < 0;
     }
-    active = bm3_read_slot(fd, profile);
     release_gateway(&fd, &lock);
-    if (active < 0) {
-        puts(slot ? "Map change not confirmed. Check the active map before trying again."
-                  : "Could not read the active map");
-        return 1;
-    }
-    if (slot && (unsigned)active != slot - 1) {
-        printf("Map change not confirmed: the DME reports map %d\n", active + 1);
-        return 1;
-    }
-    printf("Map %d active (%s)\n", active + 1, profile->rom);
-    return 0;
+    return result;
 }
 #elif defined(SHIFT_DECK_ONLY)
 #include "drive_frame.h"
@@ -554,6 +680,10 @@ static int read_live_pid(int fd, unsigned char pid, int width, int *value) {
     return n!=-1;
 }
 
+/* Engine speed on every pass, at most every DRIVE_CYCLE_MS, so the bar follows the revs; road speed changes slowly
+ * and is read every DRIVE_SPEED_MS. */
+enum { DRIVE_CYCLE_MS = 20, DRIVE_SPEED_MS = 65, DRIVE_IDLE_MS = 25 };
+
 int main(int argc, char **argv) {
     const char *host_option=0;
     char host[INET_ADDRSTRLEN];
@@ -561,8 +691,8 @@ int main(int argc, char **argv) {
     pid_t parent=getppid();
     struct sockaddr_in dest;
     struct gateway_search search;
-    int fd=-1, sock, lock=-1, i;
-    uint64_t lease_until=0, retry_at=0;
+    int fd=-1, sock, lock=-1, i, last_kph=-1;
+    uint64_t lease_until=0, retry_at=0, speed_due=0;
     gateway_search_init(&search);
     for (i=1;i<argc;++i) {
         if (!strcmp(argv[i],"--host") && i+1<argc && !host_option) host_option=argv[++i];
@@ -595,11 +725,18 @@ int main(int argc, char **argv) {
                 } else {
                     lease_until=bd_mono_ms()+DIAGNOSTIC_LEASE_MS;
                     search.failures=0;
+                    speed_due=0; /* a new connection reads the speed at once */
                 }
             }
         }
         if (fd>=0) {
-            if (!read_live_pid(fd,0x0c,2,&rpm) || !read_live_pid(fd,0x0d,1,&kph)) {
+            int ok=read_live_pid(fd,0x0c,2,&rpm);
+            if (ok && start>=speed_due) {
+                ok=read_live_pid(fd,0x0d,1,&last_kph);
+                speed_due=start+DRIVE_SPEED_MS;
+            }
+            kph=last_kph;
+            if (!ok) {
                 release_gateway(&fd,&lock);
                 retry_at=bd_mono_ms()+DIAGNOSTIC_RETRY_MS;
             } else {
@@ -615,7 +752,7 @@ int main(int argc, char **argv) {
         }
         ++count;
         elapsed=bd_mono_ms()-start;
-        if (running) poll(0,0,elapsed<70 ? (int)(70-elapsed) : 10);
+        if (running) poll(0,0,fd<0 ? DRIVE_IDLE_MS : elapsed<DRIVE_CYCLE_MS ? (int)(DRIVE_CYCLE_MS-elapsed) : 2);
     }
     release_gateway(&fd,&lock);
     close(sock);
@@ -742,8 +879,9 @@ int main(int argc, char **argv) {
     double ambient = 0;
     uint64_t ambient_time = 0;
     int have_ambient = 0;
-    const unsigned tick_ms = 150;
-    const unsigned minimum_idle_ms = 10;
+    /* A pass every 35 ms at most: the fast gauges are read as quickly as the gateway answers them. */
+    const unsigned tick_ms = 35;
+    const unsigned minimum_idle_ms = 3;
     /* Each slow signal has its own deadline. Stagger temperature reads
      * after the first scan so they do not delay the fast gauges together. */
     const unsigned dids[] = {0x4201,0x4205,0x5889,0x4a49,0x580f,0xda12,0x56d7,0x586f,0x4300};

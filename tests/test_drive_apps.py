@@ -55,6 +55,17 @@ class DriveAppsTest(unittest.TestCase):
             self.assertGreater(sampled_ms, 0)
             self.assertEqual((rpm,kph), (6250,100))
 
+    def test_shift_worker_reads_speed_less_often(self):
+        """Engine speed on every pass, road speed at most every 65 ms; frames between carry the last speed."""
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as listener:
+            listener.bind(("127.0.0.1", 0))
+            listener.settimeout(2)
+            self.run_worker("shift-deck", ["--cycles", "3", "--udp-port", str(listener.getsockname()[1])],
+                            [("010c", ["410c61a8"]), ("010d", ["410d64"]), ("010c", ["410c6590"]),
+                             ("010c", ["410c6978"])])
+            frames = [struct.unpack("=Qii", listener.recv(64))[1:] for _ in range(3)]
+            self.assertEqual(frames, [(6250,100), (6500,100), (6750,100)])
+
 
     def test_shift_worker_waits_for_a_busy_gateway(self):
         with socket.socket() as gateway, socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as lock:
@@ -63,8 +74,9 @@ class DriveAppsTest(unittest.TestCase):
             gateway.settimeout(0.2)
             lock.bind(("127.0.0.1", 42861))
             with subprocess.Popen(
+                # It waits 25 ms a pass for the lock: enough passes to outlast the 0.2 s check below.
                 [BUILD/"shift-deck", "--host", "127.0.0.1",
-                 "--port", str(gateway.getsockname()[1]), "--cycles", "6"],
+                 "--port", str(gateway.getsockname()[1]), "--cycles", "60"],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             ) as worker:
                 try:

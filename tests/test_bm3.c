@@ -180,7 +180,34 @@ int main(void) {
         CHECK(bm3_slot_reply((const unsigned char *)"\x63\x04", 2) == -1);
         CHECK(bm3_slot_reply((const unsigned char *)"\x63\x01\x00", 3) == -1);
     }
+
+    /* Active Sound and burbles, as bm3_protocol.js sends them (setAsd, setBurbles) */
+    {
+        unsigned char table[BM3_BURBLE_TABLE], expected[BM3_BURBLE_TABLE];
+        n = bm3_sound_request(r, 1); CHECK(n == 4 && !memcmp(r, "\x2E\x5F\xFD\x00", 4));
+        CHECK(bm3_reply_prefix(r, prefix) == 3 && !memcmp(prefix, "\x6E\x5F\xFD", 3));
+        n = bm3_sound_request(r, 0); CHECK(n == 4 && !memcmp(r, "\x2E\x5F\xFD\x01", 4));
+
+        /* factor 2: aggression 4, 8 and 12 are -8, -16 and -24; off is 0 */
+        memset(expected, 0, sizeof expected);
+        CHECK(bm3_burble_table(p, 0, table) && !memcmp(table, expected, sizeof table));
+        memset(expected, 0xF8, sizeof expected);
+        CHECK(bm3_burble_table(p, 1, table) && !memcmp(table, expected, sizeof table));
+        memset(expected, 0xF0, sizeof expected);
+        CHECK(bm3_burble_table(p, 2, table) && !memcmp(table, expected, sizeof table));
+        memset(expected, 0xE8, sizeof expected);
+        CHECK(bm3_burble_table(p, 3, table) && !memcmp(table, expected, sizeof table));
+        CHECK(!bm3_burble_table(p, 4, table));
+        {
+            bm3_profile d = *p;
+            d.factor = 11; /* 12 * 11 > 127: the byte would wrap */
+            CHECK(!bm3_burble_table(&d, 1, table));
+            d.factor = 0;
+            CHECK(!bm3_burble_table(&d, 0, table));
+        }
+        for (i = 0; i < BM3_PROFILE_COUNT; ++i) CHECK(bm3_burble_table(&bm3_profiles[i], BM3_BURBLE_PRESETS, table));
+    }
     if (failures) return 1;
-    puts("BM3: marker layouts, all 150 profiles, requests and replies passed.");
+    puts("BM3: marker layouts, all 150 profiles, requests, replies and burble tables passed.");
     return 0;
 }

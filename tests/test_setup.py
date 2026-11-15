@@ -15,7 +15,7 @@ from headunit import Unit
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "VERSION").read_text().strip()
-PLUGINS = {"boostdeck": "BoostDeck", "shiftdeck": "ShiftDeck", "bm3-maps": "Bm3Maps"}
+PLUGINS = {"boostdeck": "BoostDeck", "shiftdeck": "ShiftDeck", "bm3-maps": "Bm3Maps", "engine-codes": "EngineCodes"}
 MARK = ".installed-by-entrynav-apps"
 RULE_HSFZ = "OUTPUT -o vbr0 -p tcp --dport 6801 -j ACCEPT"
 RULE_HSFZ_OLD = "OUTPUT -d 169.254.0.0/16 -p tcp --dport 6801 -j ACCEPT"  # 0.1.0-test.1
@@ -121,6 +121,17 @@ class SetupTest(unittest.TestCase):
         out = self.sh(f"{setup('shiftdeck')} check", 1)
         self.assertIn("/etc/firewall/entrynav-shiftdeck.rules exists and was not installed", out)
 
+    def test_update_takes_over_the_rule_from_before_the_rename(self):
+        """BM3 Maps became Bootmod3 Suite: the rule file 0.1.0 installed still names BM3 Maps on its first line."""
+        self.install("bm3-maps")
+        rules = self.unit.path("etc/firewall/entrynav-bm3-maps.rules")
+        old_mark = "# EntryNav-Apps BM3 Maps: lets it reach the car's diagnostic gateway."
+        self.unit.put("etc/firewall/entrynav-bm3-maps.rules", old_mark + "\n" + rules.read_text().split("\n", 1)[1])
+        self.sh(f"{setup('bm3-maps')} check")
+        self.install("bm3-maps")
+        self.assertEqual(rules.read_text().split("\n")[0],
+                         "# EntryNav-Apps Bootmod3 Suite: lets it reach the car's diagnostic gateway.")
+
     # ---- one plugin at a time ------------------------------------------------------------------------------------
     def test_install_one_and_its_status(self):
         out = self.install("shiftdeck")
@@ -156,6 +167,7 @@ class SetupTest(unittest.TestCase):
         self.assertEqual(self.unit.rules(), RULES)  # the others still need them
         self.sh(f"{installed('boostdeck')} uninstall")
         self.assertEqual(self.unit.rules(), RULES)
+        self.sh(f"{installed('engine-codes')} uninstall")
         self.sh(f"{installed('shiftdeck')} uninstall --purge")  # the last one
         for plugin in PLUGINS:
             self.assert_absent(plugin)

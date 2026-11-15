@@ -4,6 +4,7 @@
 #include "gauge_core.h"
 #include "dial_scales.h"
 #include "diagnostic_worker.h"
+#include "settings.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -30,7 +31,8 @@ namespace {
 // Parcel and dispatches through the primary invokeDataUpdate virtual.
 const unsigned kDataUpdateMessage = 0x40000003u;
 const unsigned kPollKey = 0x4244504cu; // BDPL, private to this app
-const unsigned kActivePollIntervalMs = 40u;
+// Upstream's faster timing: the screen takes a new frame every 25 ms while the collector runs.
+const unsigned kActivePollIntervalMs = 25u;
 const unsigned kIdlePollIntervalMs = 250u;
 const char kCollector[] = ENA_BOOSTDECK_WORKER;
 // The Temperature setting: C or F on one line. Fahrenheit, upstream's unit, until one is picked.
@@ -41,28 +43,8 @@ typedef char unit_count_check[sizeof(kTemperatureUnits)/sizeof(kTemperatureUnits
 
 bool temperature_reading(unsigned i) { return i==BD_IAT || i==BD_TRANS || i==BD_COOLANT; }
 
-unsigned load_temperature_unit() {
-    char line[8] = "";
-    FILE *file = fopen(kTemperatureFile, "r");
-    if (file) {
-        if (!fgets(line, sizeof line, file)) line[0] = 0;
-        fclose(file);
-    }
-    return line[0]=='C' ? kCelsius : kFahrenheit;
-}
-
-// Written whole and renamed into place, so a power cut leaves the old setting or the new one.
-void save_temperature_unit(unsigned unit) {
-    char temporary[sizeof kTemperatureFile + 4];
-    snprintf(temporary, sizeof temporary, "%s.new", kTemperatureFile);
-    mkdir(ENA_DATA_DIR, 0755);
-    FILE *file = fopen(temporary, "w");
-    if (!file) return;
-    bool written = fputs(unit==kCelsius ? "C\n" : "F\n", file) >= 0;
-    written = fflush(file) == 0 && fsync(fileno(file)) == 0 && written;
-    if (fclose(file) == 0 && written) rename(temporary, kTemperatureFile);
-    else unlink(temporary);
-}
+unsigned load_temperature_unit() { return load_setting(kTemperatureFile, 'F')=='C' ? kCelsius : kFahrenheit; }
+void save_temperature_unit(unsigned unit) { save_setting(kTemperatureFile, unit==kCelsius ? "C\n" : "F\n"); }
 }
 
 class BoostDeck : public bmw::PluginApp {
@@ -278,12 +260,11 @@ void BoostDeck::refresh() {
             const bool celsius = temperature_reading(i) && temperature_unit_==kCelsius;
             const char *unit = temperature_reading(i) ? kTemperatureUnits[temperature_unit_].unit : scale.unit;
             const char *unit_space = *unit ? " " : "";
-            const char *format = i==BD_BOOST ? "%s%s   %+.1f%s%s"
-                                : i==BD_RAIL ? "%s%s   %.0f%s%s"
-                                : "%s%s   %.1f%s%s";
+            // The card's picture has the name (tools/make_bars.py); the label has the value and its unit.
+            const char *format = i==BD_BOOST ? "%s%+.1f%s%s" : i==BD_RAIL ? "%s%.0f%s%s" : "%s%.1f%s%s";
             double reading = bd_display_value(i,x,celsius ? 1 : 0); // metric only changes temperatures here
             if (i==BD_BOOST && fabs(reading)<0.05) reading=0;
-            snprintf(label,sizeof label,format,prefix,scale.name,reading,unit_space,unit);
+            snprintf(label,sizeof label,format,prefix,reading,unit_space,unit);
             double fraction=(x-scale.minimum)/(scale.maximum-scale.minimum);
             if (fraction<0) fraction=0;
             if (fraction>1) fraction=1;
@@ -293,7 +274,7 @@ void BoostDeck::refresh() {
                 image += palette*kDialSteps+step;
             }
         } else {
-            snprintf(label,sizeof label,"%s   --",scale.name);
+            strcpy(label,"--");
         }
         if (image!=images_[i]) {
             updateModel(60u+i,bmw::ImageID(image));

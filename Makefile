@@ -1,4 +1,5 @@
-# EntryNav-Apps: BoostDeck, ShiftDeck and BM3 Maps for the EntryNav2 (ARMv7 hard-float Linux, glibc 2.15).
+# EntryNav-Apps: BoostDeck, ShiftDeck, Bootmod3 Suite and Engine Fault Codes for the EntryNav2 (ARMv7 hard-float Linux,
+# glibc 2.15).
 #
 #   make test        host tests: the decoders and the workers against a simulated gateway (cc, python3)
 #   make assets      the screens' XML and image archives (python3 with Pillow)
@@ -37,18 +38,23 @@ build/bm3-maps: src/collector.c $(CORE) $(HEADERS) $(BM3) src/paths.h | build
 build/ena-gateway: src/collector.c $(CORE) $(HEADERS) | build
 	$(CC) $(CFLAGS) -Isrc -DGATEWAY_TOOL $(filter %.c,$^) -lm -o $@
 
+build/engine-codes: src/collector.c $(CORE) $(HEADERS) src/paths.h | build
+	$(CC) $(CFLAGS) -Isrc -DENGINE_CODES_ONLY $(filter %.c,$^) -lm -o $@
+
 build/test-core: tests/test_core.c $(CORE) $(HEADERS) | build
 	$(CC) $(CFLAGS) -Isrc $(filter %.c,$^) -lm -o $@
 
 build/test-bm3: tests/test_bm3.c $(BM3) | build
 	$(CC) $(CFLAGS) -Isrc $(filter %.c,$^) -o $@
 
-test: build/boostdeck-collector build/shift-deck build/bm3-maps build/ena-gateway build/test-core build/test-bm3
+test: build/boostdeck-collector build/shift-deck build/bm3-maps build/ena-gateway build/engine-codes build/test-core \
+      build/test-bm3
 	./build/test-core
 	./build/test-bm3
 	$(PYTHON) -B tests/test_transport.py
 	$(PYTHON) -B tests/test_drive_apps.py
 	$(PYTHON) -B tests/test_bm3_worker.py
+	$(PYTHON) -B tests/test_engine_codes.py
 	$(PYTHON) -B tests/test_gateway_tool.py
 	$(PYTHON) -B tests/test_probe_signals.py
 
@@ -79,6 +85,8 @@ build-arm/libShiftDeck.so: src/shift_deck.cpp build-arm/core.o src/*.h sdk/bmw_l
 	    $(PLUGIN_LINK) -lm
 build-arm/libBm3Maps.so: src/bm3_maps.cpp src/*.h sdk/bmw_list.h | build-arm
 	$(ARM_CXX) $(ARM_CXXFLAGS) -Isrc -Isdk src/bm3_maps.cpp -o $@ -Wl,-soname,libBm3Maps.so $(PLUGIN_LINK)
+build-arm/libEngineCodes.so: src/engine_codes.cpp src/*.h sdk/bmw_list.h | build-arm
+	$(ARM_CXX) $(ARM_CXXFLAGS) -Isrc -Isdk src/engine_codes.cpp -o $@ -Wl,-soname,libEngineCodes.so $(PLUGIN_LINK)
 
 build-arm/boostdeck-collector: src/collector.c $(CORE) $(HEADERS) | build-arm
 	$(ARM_CC) $(ARM_CFLAGS) -Isrc src/collector.c $(CORE) -o $@ $(LIBDIRS) -lm -lrt
@@ -88,6 +96,8 @@ build-arm/bm3-maps: src/collector.c $(CORE) $(HEADERS) $(BM3) src/paths.h | buil
 	$(ARM_CC) $(ARM_CFLAGS) -Isrc -DBM3_MAPS_ONLY src/collector.c src/bm3.c $(CORE) -o $@ $(LIBDIRS) -lm -lrt
 build-arm/ena-gateway: src/collector.c $(CORE) $(HEADERS) | build-arm
 	$(ARM_CC) $(ARM_CFLAGS) -Isrc -DGATEWAY_TOOL src/collector.c $(CORE) -o $@ $(LIBDIRS) -lm -lrt
+build-arm/engine-codes: src/collector.c $(CORE) $(HEADERS) src/paths.h | build-arm
+	$(ARM_CC) $(ARM_CFLAGS) -Isrc -DENGINE_CODES_ONLY src/collector.c $(CORE) -o $@ $(LIBDIRS) -lm -lrt
 
 build-arm/test-plugin-load: tests/test_plugin_load.cpp | build-arm
 	$(ARM_CXX) -O2 -Wall -Wextra -Werror $(ARCH) tests/test_plugin_load.cpp -o $@ $(LIBDIRS) -ldl
@@ -96,8 +106,8 @@ build-arm/test-spawn: tests/test_spawn.cpp src/diagnostic_worker.h src/paths.h |
 build-arm/test-bm3: tests/test_bm3.c $(BM3) | build-arm
 	$(ARM_CC) $(ARM_CFLAGS) -Isrc tests/test_bm3.c src/bm3.c -o $@ $(LIBDIRS)
 
-arm: build-arm/libBoostDeck.so build-arm/libShiftDeck.so build-arm/libBm3Maps.so \
-     build-arm/boostdeck-collector build-arm/shift-deck build-arm/bm3-maps build-arm/ena-gateway \
+arm: build-arm/libBoostDeck.so build-arm/libShiftDeck.so build-arm/libBm3Maps.so build-arm/libEngineCodes.so \
+     build-arm/boostdeck-collector build-arm/shift-deck build-arm/bm3-maps build-arm/ena-gateway build-arm/engine-codes \
      build-arm/test-plugin-load build-arm/test-spawn build-arm/test-bm3
 
 clean:

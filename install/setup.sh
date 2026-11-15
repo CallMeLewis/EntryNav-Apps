@@ -1,6 +1,7 @@
 #!/bin/sh
-# Checks, installs, updates and removes one EntryNav-Apps plugin (BoostDeck, ShiftDeck or BM3 Maps) on an EntryNav2,
-# with the car's bash 3.2 and BusyBox 1.21. Each plugin is installed on its own; Flare Drive runs the same commands.
+# Checks, installs, updates and removes one EntryNav-Apps plugin (BoostDeck, ShiftDeck, Bootmod3 Suite or Engine
+# Fault Codes) on an EntryNav2, with the car's bash 3.2 and BusyBox 1.21. Each plugin is installed on its own; Flare Drive
+# runs the same commands.
 #
 #   sh setup.sh check                every check of the installation; writes nothing
 #   sh setup.sh install              the same checks, then the installation, if and only if they all pass
@@ -33,6 +34,7 @@ umask 022
 ID=@ID@
 APP=@APP@
 NAME="@NAME@"
+FORMER_NAME="@FORMER_NAME@"  # its name before a rename, or empty
 WORKER=@WORKER@
 SETTINGS="@SETTINGS@"
 # -----------------------------------------------------------------------------------------------------------------------
@@ -43,12 +45,13 @@ NEW=/opt/.entrynav-$ID.new
 OLD=/opt/.entrynav-$ID.old
 SOURCE=opt/hmi/data/ro/Plugins/$APP
 # Every EntryNav-Apps plugin's folder name: the gateway's address is theirs to share.
-SIBLINGS="BoostDeck ShiftDeck Bm3Maps"
+SIBLINGS="BoostDeck ShiftDeck Bm3Maps EngineCodes"
 MARK=.installed-by-entrynav-apps
 RULES_DIR=/etc/firewall
 RULES=$RULES_DIR/entrynav-$ID.rules
 RULES_NEW=$RULES_DIR/.entrynav-$ID.rules.new
 RULES_MARK="# EntryNav-Apps $NAME: lets it reach the car's diagnostic gateway."
+FORMER_RULES_MARK="# EntryNav-Apps $FORMER_NAME: lets it reach the car's diagnostic gateway."
 FIREWALL=/usr/local/bin/iptables-firewall
 DATA=/var/local/data/EntryNavApps
 GATEWAY_FILE=$DATA/gateway-ip.txt
@@ -173,12 +176,15 @@ ours_or_missing() {
     [ -d "$1" ] && [ ! -L "$1" ] && [ -f "$1/$MARK" ]
 }
 
-# A rules file this script may replace or delete: missing, or a real file whose first line is the mark.
+# A rules file this script may replace or delete: missing, or a real file whose first line is the mark, or the mark
+# with the plugin's former name (an install from before the rename).
 rules_ours_or_missing() {
     if [ ! -e "$1" ] && [ ! -L "$1" ]; then
         return 0
     fi
-    [ -f "$1" ] && [ ! -L "$1" ] && [ "$(sed -n 1p "$1")" = "$RULES_MARK" ]
+    [ -f "$1" ] && [ ! -L "$1" ] || return 1
+    _first=$(sed -n 1p "$1")
+    [ "$_first" = "$RULES_MARK" ] || { [ -n "$FORMER_NAME" ] && [ "$_first" = "$FORMER_RULES_MARK" ]; }
 }
 
 # Whether a running program maps, holds open or stands in a folder.

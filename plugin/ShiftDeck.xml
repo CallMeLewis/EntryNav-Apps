@@ -14,10 +14,14 @@
       <raAction id="43" />
       <raAction id="44" />
       <raAction id="45" />
+      <hmiAction id="48" target="102" />
+      <raAction id="46" />
+      <raAction id="47" />
     </actions>
     <models>
       <raDataModel id="53" modelType="Richtext" />
-      <imageIdModel id="54" imageId="55800" />
+      <raDataModel id="58" modelType="Richtext" />
+      <imageIdModel id="54" imageId="56400" />
       <imageIdModel id="55" imageId="55866" />
       <imageIdModel id="56" imageId="55883" />
       <imageIdModel id="57" imageId="55914" />
@@ -38,6 +42,7 @@
       <hmiState id="100" text="ShiftDeck">
         <optionComponents>
           <button id="30" action="40" text="Shift light setting" />
+          <button id="31" action="48" text="Speed" />
         </optionComponents>
         <components>
           <image id="200" model="54">
@@ -210,6 +215,13 @@
           <button id="303" action="43" text="6,250 RPM" />
           <button id="304" action="44" text="6,500 RPM" />
           <button id="305" action="45" text="6,700 RPM" />
+        </components>
+      </hmiState>
+      <hmiState id="102" parentId="100" text="Speed">
+        <components>
+          <label id="310" model="58" />
+          <button id="311" action="46" text="MPH" />
+          <button id="312" action="47" text="km/h" />
         </components>
       </hmiState>
     </hmiStates>

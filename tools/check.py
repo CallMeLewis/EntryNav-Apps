@@ -24,7 +24,7 @@ def run(*args):
 
 
 def main():
-    missing = [app for app in ("BoostDeck", "ShiftDeck", "Bm3Maps") if not (ROOT / f"plugin/{app}_ALL_Images.zip").is_file()]
+    missing = [app for app in ("BoostDeck", "ShiftDeck", "Bm3Maps", "EngineCodes") if not (ROOT / f"plugin/{app}_ALL_Images.zip").is_file()]
     if missing:
         sys.exit(f"FAIL: plugin/{missing[0]}_ALL_Images.zip is missing. Run make assets (Python with Pillow) first.")
     run("bash", "toolchain/tc.sh", "make", "arm")

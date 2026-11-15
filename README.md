@@ -4,9 +4,11 @@ Gauge apps for BMWs with the **EntryNav2** head unit, the one with a 1280×480 s
 appear under **My Vehicle** in iDrive and read the engine and gearbox through the car's diagnostic gateway.
 
 - **BoostDeck**: boost, air-fuel ratio, ignition timing, intake air, gearbox, rail pressure, oil pressure and coolant.
-- **ShiftDeck**: a full-width RPM bar with a shift light, and road speed.
-- **BM3 Maps**: switches between the four map slots of a bootmod3 multi-map CustomROM and shows which one is active.
-  It replaces upstream's MHD Maps.
+- **ShiftDeck**: a full-width RPM bar with a shift light, and road speed in MPH or km/h.
+- **Bootmod3 Suite**: switches between the four map slots of a bootmod3 multi-map CustomROM and shows which one is
+  active. Its OPTIONS menu has Active Sound and burbles. It replaces upstream's MHD Maps, and was called BM3 Maps
+  until 0.1.0.
+- **Engine Fault Codes**: reads the engine computer's fault codes with a description of each, and clears them.
 
 > [!WARNING]
 > Work in progress. The apps build and pass their checks against a copy of the EntryNav2's system, but they have not
@@ -33,7 +35,8 @@ Each app is its own plugin: install any of them, in any order, and remove one wi
 |---|---|---|
 | BoostDeck | `boostdeck-VERSION-armhf.tar` | `/opt/hmi/data/ro/Plugins/BoostDeck` |
 | ShiftDeck | `shiftdeck-VERSION-armhf.tar` | `/opt/hmi/data/ro/Plugins/ShiftDeck` |
-| BM3 Maps | `bm3-maps-VERSION-armhf.tar` | `/opt/hmi/data/ro/Plugins/Bm3Maps` |
+| Bootmod3 Suite | `bm3-maps-VERSION-armhf.tar` | `/opt/hmi/data/ro/Plugins/Bm3Maps` |
+| Engine Fault Codes | `engine-codes-VERSION-armhf.tar` | `/opt/hmi/data/ro/Plugins/EngineCodes` |
 
 Flare Drive support is in progress. Until then, install by hand. You need an ENET cable, a PC with an SSH client, the
 head unit's root password and the plugin's archive (`tools/package_release.py` builds them). Do it parked, with the
@@ -79,9 +82,9 @@ scale them differently. Compare each reading with a logger you trust before rely
 
 ShiftDeck uses standard OBD engine speed and road speed, which nearly every car answers.
 
-## BM3 Maps
+## Bootmod3 Suite
 
-Map switching isn't a BMW function: bootmod3's code in the DME does it. BM3 Maps reads bootmod3's CustomROM marker
+Map switching isn't a BMW function: bootmod3's code in the DME does it. Bootmod3 Suite reads bootmod3's CustomROM marker
 from the DME's memory and goes on only if the marker names one of the 150 ROMs in
 [`src/bm3_profiles.h`](src/bm3_profiles.h). It then writes the slot to that ROM's address and reads it back. Opening
 the page shows the active map. A stock DME, an MHD tune or an unlisted ROM gets a message and nothing is written.
@@ -91,10 +94,27 @@ the page shows the active map. A stock DME, an MHD tune or an unlisted ROM gets 
 - The marker's address in DME memory depends on the DME. It defaults to upstream's `807FFE50`, and
   `/var/local/data/EntryNavApps/bm3-marker-address` (eight hex digits) overrides it.
 
+OPTIONS has two more screens. Each checks the marker the same way first, so a stock DME, an MHD tune or an unlisted
+ROM gets nothing written. There's no exhaust flap screen: bootmod3 sets the flap in each map.
+
+| Screen | Choices | What it sends |
+|---|---|---|
+| Active Sound | Off, On | a write of DID `5FFD`. Shows whether the DME accepted it |
+| Burbles | Off, Aggression 4, 8, 12 | the ROM's burble timing table and switch, written to its addresses and read back |
+
 The protocol and the ROM profiles come from
 [cauliflowermossgrape/idrive7-apps](https://github.com/cauliflowermossgrape/idrive7-apps) (MIT), itself from BM3 Live
 by ezl0l. `tools/make_bm3_profiles.py` regenerates the table from upstream's `bm3_profiles.js`. This project is
 independent of and unaffiliated with bootmod3.
+
+## Engine Fault Codes
+
+**Read engine codes** reads the DME's fault memory (UDS `19 02`) and shows four codes a page, each as Active, Pending
+or Stored, with a description when [`src/dme_descriptions.h`](src/dme_descriptions.h) has one. Upstream collected
+those descriptions on a 340i's DME, so other engines show more codes without one. OPTIONS has **Next page** and
+**Clear engine codes...**, which asks first, then clears the fault memory (`14 FF FF FF`) and reads it again. A DME that
+refuses the clear in the default session gets the clear once more in the extended session. Clear with the ignition on
+and the engine off.
 
 ## Build
 
