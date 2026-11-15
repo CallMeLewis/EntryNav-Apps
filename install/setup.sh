@@ -63,9 +63,13 @@ NEEDED_COMMANDS="cat cp date df du grep id iptables ls md5sum mkdir mount mv rm 
 SAFE_FILESYSTEMS="ext3 ext4 ubifs jffs2 yaffs yaffs2 f2fs btrfs xfs"
 # Firewall rules, as iptables arguments: the one the rules file makes at start-up, and the two that discovery opens
 # for a moment (the gateway answers a broadcast from its own address, which the ESTABLISHED rule does not match).
-RULE_HSFZ="OUTPUT -d 169.254.0.0/16 -p tcp --dport 6801 -j ACCEPT"
-RULE_IDENT_OUT="OUTPUT -d 169.254.255.255 -p udp --dport 6811 -j ACCEPT"
-RULE_IDENT_IN="INPUT -s 169.254.0.0/16 -p udp --sport 6811 -j ACCEPT"
+# They name vbr0, the head unit's car-side Ethernet, not an address: the gateway is usually link-local, but takes an
+# address from a laptop's DHCP server on the ENET cable and keeps it for a while after the laptop goes.
+RULE_HSFZ="OUTPUT -o vbr0 -p tcp --dport 6801 -j ACCEPT"
+RULE_IDENT_OUT="OUTPUT -o vbr0 -p udp --dport 6811 -j ACCEPT"
+RULE_IDENT_IN="INPUT -i vbr0 -p udp --sport 6811 -j ACCEPT"
+# The rule 0.1.0-test.1 installed. Removed with the new one, so an update leaves no stale copy after the restart.
+RULE_HSFZ_OLD="OUTPUT -d 169.254.0.0/16 -p tcp --dport 6801 -j ACCEPT"
 
 STOPS=0
 WARNS=0
@@ -488,6 +492,9 @@ do_install() {
     fi
     # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
     iptables_add $RULE_HSFZ
+    # The new rule covers every app, an older one still installed included.
+    # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
+    iptables_del $RULE_HSFZ_OLD
     if ! gateway_setup ""; then
         say "Without the gateway the app shows no data. Run 'sh $TARGET/setup.sh gateway' with the ignition on."
     fi
@@ -540,6 +547,8 @@ do_uninstall() {
     if ! sibling_installed; then
         # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
         iptables_del $RULE_HSFZ
+        # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
+        iptables_del $RULE_HSFZ_OLD
     fi
     if [ "$PURGE" = 1 ]; then
         for _s in $SETTINGS; do
@@ -662,16 +671,30 @@ close_discovery() {
     fi
 }
 
-valid_link_local() {
+# Whether $1 can be the gateway on vbr0: link-local (169.254.1.0 to 169.254.254.255), or private (10/8, 172.16/12,
+# 192.168/16) when a laptop's DHCP server handed it out. The apps (src/diagnostic_worker.h) and Flare Drive agree.
+valid_gateway_address() {
     case $1 in
-        169.254.*.*) ;;
+        *[!0-9.]* | *..* | .* | *.) return 1 ;;
+    esac
+    _old_ifs=$IFS
+    IFS=.
+    # shellcheck disable=SC2086 # split on the dots
+    set -- $1
+    IFS=$_old_ifs
+    [ $# -eq 4 ] || return 1
+    for _octet in "$@"; do
+        case $_octet in
+            0 | [1-9] | [1-9][0-9] | 1[0-9][0-9] | 2[0-4][0-9] | 25[0-5]) ;;
+            *) return 1 ;;
+        esac
+    done
+    case $1.$2 in
+        169.254) [ "$3" -ge 1 ] && [ "$3" -le 254 ] ;;
+        10.* | 192.168) return 0 ;;
+        172.*) [ "$2" -ge 16 ] && [ "$2" -le 31 ] ;;
         *) return 1 ;;
     esac
-    _rest=${1#169.254.}
-    case $_rest in
-        *[!0-9.]* | *.*.* | .* | *.) return 1 ;;
-    esac
-    [ "${_rest%.*}" -ge 1 ] 2>/dev/null && [ "${_rest%.*}" -le 254 ] && [ "${_rest#*.}" -le 255 ]
 }
 
 save_gateway() {
@@ -691,8 +714,8 @@ gateway_setup() {
     # shellcheck disable=SC2086 # a rule's words are separate iptables arguments
     iptables_add $RULE_HSFZ
     if [ -n "$1" ]; then
-        if ! valid_link_local "$1"; then
-            say "$1 is not an ENET address (169.254.x.y)."
+        if ! valid_gateway_address "$1"; then
+            say "$1 can't be the gateway: it is neither link-local (169.254.x.y) nor a private address."
             return 1
         fi
         _candidates=$1
@@ -714,7 +737,7 @@ gateway_setup() {
     fi
     for _ip in $_candidates; do
         _line=
-        if valid_link_local "$_ip" && _line=$("$_tool" check --host "$_ip" 2>>"$LOG"); then
+        if valid_gateway_address "$_ip" && _line=$("$_tool" check --host "$_ip" 2>>"$LOG"); then
             if save_gateway "$_ip"; then
                 say "$_line. Saved for the apps."
                 return 0

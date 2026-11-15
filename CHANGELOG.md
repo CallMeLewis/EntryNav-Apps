@@ -4,6 +4,13 @@ Each release's section holds one Flare Drive note per plugin, the paragraph the 
 as `<!-- Flare Drive boostdeck: ... -->`, `<!-- Flare Drive shiftdeck: ... -->` and `<!-- Flare Drive bm3-maps: ... -->`.
 `tools/publish_release.py publish` refuses a version without the notes of the plugins it publishes.
 
+## [Unreleased]
+
+- **Finding the gateway works after a phone or laptop has been on the ENET cable.** With Ethernet tethering or a
+  laptop's DHCP server on the cable, the gateway takes an address from it, such as 10.x.y.54, and keeps it for a while
+  after the cable comes out. The search only asked the 169.254 network and never found it there. It now asks every
+  network on the head unit's car-side Ethernet, and the apps and the firewall rule accept the address it saves.
+
 ## [0.1.0-test.1]
 
 <!-- Flare Drive boostdeck: The first test build. BoostDeck shows live engine readings under My Vehicle in iDrive: boost, air-fuel ratio, ignition timing, intake air, gearbox, rail pressure, oil pressure and coolant. Restart the head unit after installing it to see it. -->

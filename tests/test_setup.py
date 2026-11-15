@@ -17,7 +17,8 @@ ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "VERSION").read_text().strip()
 PLUGINS = {"boostdeck": "BoostDeck", "shiftdeck": "ShiftDeck", "bm3-maps": "Bm3Maps"}
 MARK = ".installed-by-entrynav-apps"
-RULE_HSFZ = "OUTPUT -d 169.254.0.0/16 -p tcp --dport 6801 -j ACCEPT"
+RULE_HSFZ = "OUTPUT -o vbr0 -p tcp --dport 6801 -j ACCEPT"
+RULE_HSFZ_OLD = "OUTPUT -d 169.254.0.0/16 -p tcp --dport 6801 -j ACCEPT"  # 0.1.0-test.1
 GATEWAY = "169.254.10.3"
 DATA = "var/local/data/EntryNavApps"
 
@@ -217,10 +218,22 @@ class SetupTest(unittest.TestCase):
         self.assertEqual(self.unit.path(f"{DATA}/gateway-ip.txt").read_text(), GATEWAY + "\n")
         self.assertIn(f"gateway: {GATEWAY}", self.sh(f"{installed('boostdeck')} status"))
 
-    def test_gateway_refuses_an_address_off_the_enet_network(self):
+    def test_gateway_refuses_an_address_off_the_diagnostic_link(self):
         self.install("boostdeck")
-        for address in ("10.0.0.1", "169.254.300.1", "169.254.0.5"):
-            self.assertIn("is not an ENET address", self.sh(f"{installed('boostdeck')} gateway {address}", 1))
+        for address in ("160.48.199.97", "8.8.8.8", "172.32.0.1", "169.254.300.1", "169.254.0.5", "10.1.2", "10.01.2.3"):
+            self.assertIn("can't be the gateway", self.sh(f"{installed('boostdeck')} gateway {address}", 1))
+
+    def test_gateway_takes_an_address_from_a_laptops_dhcp_network(self):
+        self.install("boostdeck")
+        for address in ("10.126.134.54", "172.16.0.9", "192.168.2.3"):
+            out = self.sh(f"{installed('boostdeck')} gateway {address}", 1)  # nothing answers in the container
+            self.assertNotIn("can't be the gateway", out)
+            self.assertIn(f"No connection to {address}", out)
+
+    def test_install_replaces_the_rule_of_0_1_0_test_1(self):
+        self.unit.sh(f"iptables -A {RULE_HSFZ_OLD}")
+        self.install("shiftdeck")
+        self.assertEqual(self.unit.rules(), [RULE_HSFZ])
 
 
 if __name__ == "__main__":

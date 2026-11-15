@@ -40,6 +40,32 @@ class DiscoverTest(unittest.TestCase):
         result = self.discover([reply, reply])
         self.assertEqual((result.returncode, result.stdout), (0, "127.0.0.1\n"))
 
+    def test_asks_every_network_on_the_device(self):
+        """Without --to it broadcasts on each of the device's networks: lo's is 127.0.0.0/8, so 127.255.255.255."""
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as responder:
+            responder.bind(("0.0.0.0", 0))  # a broadcast reaches only sockets bound to the wildcard address
+            responder.settimeout(3)
+            received = []
+
+            def answer():
+                data, sender = responder.recvfrom(64)
+                received.append(data)
+                responder.sendto(struct.pack(">IH", len(IDENT), 0x11) + IDENT, sender)
+
+            thread = threading.Thread(target=answer, daemon=True)
+            thread.start()
+            result = subprocess.run([TOOL, "discover", "--dev", "lo", "--port", str(responder.getsockname()[1]),
+                                     "--wait", "400"], capture_output=True, text=True, timeout=5)
+            thread.join(2)
+        self.assertEqual(received, [bytes.fromhex("000000000011")])
+        self.assertEqual((result.returncode, result.stdout), (0, "127.0.0.1\n"))
+
+    def test_a_device_without_an_address(self):
+        result = subprocess.run([TOOL, "discover", "--dev", "nonexistent0", "--wait", "100"],
+                                capture_output=True, text=True, timeout=5)
+        self.assertEqual((result.returncode, result.stdout), (1, ""))
+        self.assertIn("nonexistent0 has no IPv4 address", result.stderr)
+
     def test_ignores_other_controllers_and_other_messages(self):
         other = b"DIAGADR62BMWMAC001122334455"
         result = self.discover([struct.pack(">IH", len(other), 0x11) + other,

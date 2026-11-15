@@ -375,41 +375,85 @@ int main(int argc, char **argv) {
 }
 #elif defined(GATEWAY_TOOL)
 /* ena-gateway: finds the diagnostic gateway from the head unit and checks the route to it, for setup.sh.
- *   ena-gateway discover [--to IPv4] [--port 6811] [--wait MS]
- *     HSFZ vehicle identification: sends 00 00 00 00 00 11 to the ENET broadcast address and prints each
- *     responder that calls itself the gateway (DIAGADR10), one per line. Exit 0 if one answered, 1 if none.
- *     A --to other than the default accepts any responder, for tests.
+ *   ena-gateway discover [--dev NAME | --to IPv4] [--port 6811] [--wait MS]
+ *     HSFZ vehicle identification: sends 00 00 00 00 00 11 to the broadcast address of every IPv4 network on the
+ *     head unit's car-side Ethernet (vbr0, or --dev) and prints each responder from those networks that calls itself
+ *     the gateway (DIAGADR10), one per line. Exit 0 if one answered, 1 if none.
+ *     The gateway is usually on the link-local network (169.254.0.0/16). While a laptop on the ENET cable runs a DHCP
+ *     server, the gateway and the head unit both take an address from it, and keep it for a while after the laptop
+ *     goes: the gateway then answers only on that network. Seen on an F20 on 15 November 2026.
+ *     --to sends to one address instead and accepts any responder, for tests.
  *   ena-gateway check --host IPv4 [--port 6801]
  *     Reads OBD 01 00 (the DME's supported PIDs) through the gateway. It only reads. Exit 0 on a positive reply. */
-static int link_local(struct in_addr address) { return (ntohl(address.s_addr) >> 16) == 0xa9feu; }
+#include <ifaddrs.h>
 
-static int discover(const char *to, unsigned port, unsigned wait_ms, int any_source) {
+#define MAX_NETWORKS 8
+
+struct network { uint32_t address, mask; };
+
+/* The IPv4 networks on device: the interface itself and its labelled aliases (vbr0:1), not its VLANs (vbr0.73). */
+static unsigned device_networks(const char *device, struct network *networks, unsigned capacity) {
+    struct ifaddrs *list, *i;
+    size_t length = strlen(device);
+    unsigned count = 0;
+    if (getifaddrs(&list) < 0) { perror("getifaddrs"); return 0; }
+    for (i = list; i && count < capacity; i = i->ifa_next) {
+        if (!i->ifa_addr || i->ifa_addr->sa_family != AF_INET || !i->ifa_netmask) continue;
+        if (strncmp(i->ifa_name, device, length) || (i->ifa_name[length] && i->ifa_name[length] != ':')) continue;
+        networks[count].address = ntohl(((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr);
+        networks[count].mask = ntohl(((struct sockaddr_in *)i->ifa_netmask)->sin_addr.s_addr);
+        ++count;
+    }
+    freeifaddrs(list);
+    return count;
+}
+
+static int on_networks(struct in_addr address, const struct network *networks, unsigned count) {
+    uint32_t host = ntohl(address.s_addr);
+    unsigned i;
+    for (i = 0; i < count; ++i)
+        if ((host & networks[i].mask) == (networks[i].address & networks[i].mask)) return 1;
+    return 0;
+}
+
+static int discover(const char *device, const char *to, unsigned port, unsigned wait_ms) {
     const unsigned char request[] = {0, 0, 0, 0, 0, 0x11};
+    struct network networks[MAX_NETWORKS];
     struct sockaddr_in dest, from;
     unsigned char reply[2048];
     char seen[16][INET_ADDRSTRLEN];
-    unsigned found = 0, i;
+    unsigned found = 0, count = 0, sent = 0, i;
     int on = 1;
-    uint64_t deadline = bd_mono_ms() + wait_ms;
-    int fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd < 0) { perror("socket"); return 2; }
-    setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &on, sizeof on);
+    uint64_t deadline;
+    int fd;
     memset(&dest, 0, sizeof dest);
     dest.sin_family = AF_INET;
     dest.sin_port = htons((uint16_t)port);
-    if (inet_pton(AF_INET, to, &dest.sin_addr) != 1) { fprintf(stderr, "Invalid address: %s\n", to); close(fd); return 2; }
-    if (sendto(fd, request, sizeof request, 0, (struct sockaddr *)&dest, sizeof dest) < 0) {
-        perror("sendto");
-        close(fd);
-        return 2;
+    if (to && inet_pton(AF_INET, to, &dest.sin_addr) != 1) { fprintf(stderr, "Invalid address: %s\n", to); return 2; }
+    if (!to) {
+        count = device_networks(device, networks, MAX_NETWORKS);
+        if (!count) { fprintf(stderr, "%s has no IPv4 address\n", device); return 1; }
     }
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd < 0) { perror("socket"); return 2; }
+    setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &on, sizeof on);
+    for (i = 0; i < (to ? 1u : count); ++i) {
+        if (!to) dest.sin_addr.s_addr = htonl(networks[i].address | ~networks[i].mask);
+        if (sendto(fd, request, sizeof request, 0, (struct sockaddr *)&dest, sizeof dest) < 0) {
+            char text[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &dest.sin_addr, text, sizeof text);
+            fprintf(stderr, "sendto %s: %s\n", text, strerror(errno));
+        } else ++sent;
+    }
+    if (!sent) { close(fd); return 2; }
+    deadline = bd_mono_ms() + wait_ms;
     while (running && ready(fd, POLLIN, deadline)) {
         socklen_t length = sizeof from;
         ssize_t n = recvfrom(fd, reply, sizeof reply - 1, 0, (struct sockaddr *)&from, &length);
         char text[INET_ADDRSTRLEN];
         int duplicate = 0;
         if (n < 6 || reply[4] != 0 || reply[5] != 0x11) continue;
-        if (!any_source && !link_local(from.sin_addr)) continue;
+        if (!to && !on_networks(from.sin_addr, networks, count)) continue;
         reply[n] = 0;
         /* The identification is text (DIAGADR10BMWMAC...BMWVIN...); the gateway's diagnostic address is 10. */
         for (i = 6; i + 9 <= (unsigned)n; ++i)
@@ -448,24 +492,25 @@ static int check(const char *host, unsigned port) {
 }
 
 int main(int argc, char **argv) {
-    const char *host = 0, *to = "169.254.255.255";
+    const char *host = 0, *to = 0, *device = "vbr0";
     unsigned port = 0, wait_ms = 1800;
-    int discovering, any_source = 0, i;
+    int discovering, i;
     if (argc < 2 || (strcmp(argv[1], "discover") && strcmp(argv[1], "check"))) {
-        fprintf(stderr, "Usage: %s discover [--to IPv4] [--port 6811] [--wait MS] | check --host IPv4 [--port 6801]\n",
-                argv[0]);
+        fprintf(stderr, "Usage: %s discover [--dev NAME | --to IPv4] [--port 6811] [--wait MS] | "
+                        "check --host IPv4 [--port 6801]\n", argv[0]);
         return 2;
     }
     discovering = !strcmp(argv[1], "discover");
     for (i = 2; i < argc; ++i) {
         if (!discovering && !strcmp(argv[i], "--host") && i + 1 < argc && !host) host = argv[++i];
-        else if (discovering && !strcmp(argv[i], "--to") && i + 1 < argc) { to = argv[++i]; any_source = 1; }
+        else if (discovering && !strcmp(argv[i], "--to") && i + 1 < argc && !to) to = argv[++i];
+        else if (discovering && !strcmp(argv[i], "--dev") && i + 1 < argc) device = argv[++i];
         else if (discovering && !strcmp(argv[i], "--wait") && i + 1 < argc) wait_ms = number(argv[++i], 100, 10000);
         else if (!strcmp(argv[i], "--port") && i + 1 < argc) port = number(argv[++i], 1, 65535);
         else { fprintf(stderr, "Unknown argument: %s\n", argv[i]); return 2; }
     }
     signal(SIGINT, stop); signal(SIGTERM, stop); signal(SIGPIPE, SIG_IGN);
-    if (discovering) return discover(to, port ? port : 6811, wait_ms, any_source);
+    if (discovering) return discover(device, to, port ? port : 6811, wait_ms);
     if (!host) { fprintf(stderr, "check needs --host\n"); return 2; }
     return check(host, port ? port : 6801);
 }
