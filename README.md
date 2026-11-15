@@ -119,6 +119,13 @@ as they do in the car. iptables is replaced by a recorder, because the car's doe
 plugin's 34 virtual functions with the car's `bmw::PluginApp`, slot by slot. It also starts a worker with the car's C
 library and the signal settings iDrive's process needs.
 
+## Publishing
+
+Each plugin has its own signed feed for Flare Drive, at `https://updates.darkzone.dev/<id>/`.
+`tools/publish_release.py publish` runs `tools/check.py` (every check above), then uploads each archive and its signed
+index. It refuses a dirty or unpushed tree, a version already published, and a version whose `CHANGELOG.md` section
+lacks a plugin's Flare Drive note. It needs the release signing key and a Wrangler login.
+
 ## Licence
 
 MIT, like the upstream project. See [LICENSE](LICENSE) and [third-party](third-party/).
