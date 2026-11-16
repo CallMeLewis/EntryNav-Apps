@@ -202,10 +202,13 @@ CI can't hold the copy of the car's system, so the ARM build and its checks run 
 
 ### Publishing a release
 
-`tools/publish_release.py publish` runs `tools/check.py`, then uploads each archive and its signed index to the feeds
-Flare Drive reads, at `https://updates.darkzone.dev/<id>/`. It needs the release signing key and a Wrangler login, and
-refuses a dirty or unpushed tree, a version already published, and a version whose CHANGELOG section lacks an app's
-Flare Drive note.
+`tools/publish_release.py publish` runs `tools/check.py`, then sends each app's archive to Flare Drive's plugin catalog
+with `flare-publish`, and `plugins/<id>.toml` is each app's manifest. The publishing Worker checks and stores the
+archive and signs the catalog, and the list older Flare Drive versions read (`https://updates.darkzone.dev/<id>/`) is
+rebuilt from it. It needs Flare Drive's repo cloned beside this one (or `FLARE_DRIVE_REPO`), the publishing service
+token and the release signing key, and refuses a dirty or unpushed tree, a version already published, and a version
+whose CHANGELOG section lacks an app's Flare Drive note. `stability` changes a release in the catalog; `retire` is
+refused. Flare Drive's `docs/publishing.md` describes the whole process.
 
 ## Credits and licence
 
