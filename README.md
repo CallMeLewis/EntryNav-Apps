@@ -74,7 +74,8 @@ system partition is already writable.
 
 ### BoostDeck
 
-Eight engine readings, each on its own card, updated about every 35 ms while the page is open.
+Eight engine readings in two iDrive-style lists, each with a bar along its row, updated about every 35 ms while the
+page is open.
 
 | Under OPTIONS | |
 |---|---|

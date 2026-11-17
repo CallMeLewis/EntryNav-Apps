@@ -6,8 +6,6 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from PIL import Image, ImageDraw
 
-import shift_art as art
-
 ROOT = Path(__file__).resolve().parents[1]
 BARS = (
     ('Boost', 'psi', 0, 35), ('AFR', '', 9, 19), ('Timing', 'deg', -20, 50),
@@ -25,29 +23,43 @@ THEMES = tuple(name for name, _ in COLORS) + ('Multicolor',)
 TEMPERATURE_UNITS = (('Celsius', r'\260C'), ('Fahrenheit', r'\260F'))
 STEPS, FIRST = 32, 55000
 
-# The gauge page: one card per reading in a 4 x 2 grid. The cards and the names are drawn in one picture (CARDS); a
-# label shows each value and a bar its level. The engine readings take the top row, the temperatures and oil the
-# bottom one. CARD_ORDER lists BARS indices by grid position, left to right, then the second row.
-CARDS = 55590
-CARD_ORDER = (0, 1, 2, 5, 3, 4, 6, 7)
-GRID_X, GRID_Y, GRID_W, GRID_H, GAP = 24, 13, 1172, 400, 12
-CARD_W, CARD_H = (GRID_W - 3*GAP) // 4, (GRID_H - GAP) // 2
-BAR_W, BAR_H = 252, 14
-CARD_FILL, CARD_EDGE, NAME_COLOR, TRACK = '#18202a', '#2a3644', '#90a4ba', '#263342'
+# The gauge page is laid out like an iDrive list: two columns of four rows, the engine readings on the left and the
+# temperatures and oil on the right. Each row has the name and the value as labels, so the head unit draws both in its
+# own font, and a thin bar along the bottom that is also the row's divider. The picture behind (DIVIDER) is only the
+# line between the columns. ROW_ORDER lists BARS indices by position, down the left column, then the right one.
+DIVIDER = 55590
+ROW_ORDER = (0, 1, 2, 5, 3, 4, 6, 7)
+GRID_X, GRID_Y, GRID_W, GRID_H = 24, 13, 1172, 400
+COLUMN_GAP, ROW_H = 60, 100
+COLUMN_W = (GRID_W - COLUMN_GAP) // 2
+NAME_X, VALUE_X, LABEL_Y, LABEL_H = 6, 270, 12, 66
+BAR_W, BAR_H, BAR_Y = COLUMN_W, 4, 88
+# The bar's track is the divider: a light line that fades out over its last third, like iDrive's list dividers.
+TRACK, TRACK_END, LINE_ALPHA = (255, 255, 255, 56), (255, 255, 255, 8), 52
 
-def card_origin(position):
-    """The top left corner of the card at a grid position, in screen coordinates."""
-    return GRID_X + (position % 4)*(CARD_W + GAP), GRID_Y + (position // 4)*(CARD_H + GAP)
+def row_origin(position):
+    """The top left corner of the row at a position, in screen coordinates."""
+    return GRID_X + (position // 4)*(COLUMN_W + COLUMN_GAP), GRID_Y + (position % 4)*ROW_H
 
-def card_picture():
-    font = art.font(26)
-    image = Image.new('RGBA', (GRID_W, GRID_H))
+def divider_picture():
+    """The line between the columns, faded out at both ends."""
+    image = Image.new('RGBA', (2, GRID_H))
+    for y in range(GRID_H):
+        fade = min(1, y / 80, (GRID_H - 1 - y) / 80)
+        image.putpixel((0, y), (255, 255, 255, round(LINE_ALPHA*fade)))
+        image.putpixel((1, y), (255, 255, 255, round(LINE_ALPHA*fade)))
+    return image
+
+def bar_picture(fill, step):
+    image = Image.new('RGBA', (BAR_W, BAR_H))
     draw = ImageDraw.Draw(image)
-    for position, index in enumerate(CARD_ORDER):
-        x, y = card_origin(position)
-        x, y = x - GRID_X, y - GRID_Y
-        draw.rounded_rectangle((x, y, x+CARD_W-1, y+CARD_H-1), radius=12, fill=CARD_FILL, outline=CARD_EDGE, width=2)
-        draw.text((x+16, y+14), BARS[index][0].upper(), font=font, fill=NAME_COLOR)
+    fade_from = BAR_W*2 // 3
+    for x in range(BAR_W):
+        t = max(0, (x - fade_from) / (BAR_W - 1 - fade_from))
+        color = tuple(round(a + (b - a)*t) for a, b in zip(TRACK, TRACK_END))
+        draw.line((x, 0, x, BAR_H-1), fill=color)
+    if step:
+        draw.rectangle((0, 0, round(BAR_W*step/STEPS)-1, BAR_H-1), fill=fill)
     return image
 
 def add_props(component, x, y, w, h, image=False):
@@ -72,14 +84,8 @@ def build_assets():
             for step in range(STEPS+1):
                 if color and not step:
                     continue
-                image = Image.new('RGBA',(BAR_W,BAR_H))
-                draw = ImageDraw.Draw(image)
-                draw.rounded_rectangle((0,0,BAR_W-1,BAR_H-1),radius=BAR_H//2,fill=TRACK)
-                if step:
-                    width = max(BAR_H, round(BAR_W*step/STEPS))
-                    draw.rounded_rectangle((0,0,width-1,BAR_H-1),radius=BAR_H//2,fill=fill)
-                store(archive, FIRST+color*STEPS+step, image)
-        store(archive, CARDS, card_picture())
+                store(archive, FIRST+color*STEPS+step, bar_picture(fill, step))
+        store(archive, DIVIDER, divider_picture())
 
 def main():
     root = ET.Element('pluginApps')
@@ -100,17 +106,20 @@ def main():
     button(options,33,31,'Gauge color')
     button(options,34,32,'Temperature')
     content = ET.SubElement(gauges,'components')
-    # The cards first, so the values and bars draw over them.
-    ET.SubElement(models,'imageIdModel',id='69',imageId=str(CARDS))
-    add_props(ET.SubElement(content,'image',id='209',model='69'),GRID_X,GRID_Y,GRID_W,GRID_H,True)
+    ET.SubElement(models,'imageIdModel',id='69',imageId=str(DIVIDER))
+    add_props(ET.SubElement(content,'image',id='209',model='69'),GRID_X+COLUMN_W+COLUMN_GAP//2-1,GRID_Y,2,GRID_H,True)
+    # Each name is a label the app fills once from kDialScales (models 120 on), so the head unit draws it.
     for i in range(len(BARS)):
         ET.SubElement(models,'raDataModel',id=str(50+i),modelType='Richtext')
         ET.SubElement(models,'imageIdModel',id=str(60+i),imageId=str(FIRST))
+        ET.SubElement(models,'raDataModel',id=str(120+i),modelType='Richtext')
         bar = ET.SubElement(content,'image',id=str(200+i),model=str(60+i))
+        name = label(content,160+i,120+i)
         reading = label(content,150+i,50+i)
-        x,y = card_origin(CARD_ORDER.index(i))
-        add_props(reading,x+14,y+58,CARD_W-28,66)
-        add_props(bar,x+16,y+CARD_H-40,BAR_W,BAR_H,True)
+        x,y = row_origin(ROW_ORDER.index(i))
+        add_props(name,x+NAME_X,y+LABEL_Y,VALUE_X-NAME_X-10,LABEL_H)
+        add_props(reading,x+VALUE_X,y+LABEL_Y,COLUMN_W-VALUE_X,LABEL_H)
+        add_props(bar,x,y+BAR_Y,BAR_W,BAR_H,True)
     ET.SubElement(models,'raDataModel',id='110',modelType='Richtext')
     color_screen = ET.SubElement(states,'hmiState',id='104',parentId='100',text='Gauge color')
     content = ET.SubElement(color_screen,'components')

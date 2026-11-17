@@ -7,6 +7,15 @@ so on.
 
 Each version says whether it is verified or unverified. Verified means this exact build has run in a car.
 
+## [0.1.2] · Unverified
+
+<!-- Flare Drive boostdeck: A new look that matches the rest of iDrive: the readings sit in two lists of four, the names and values are in the car's own font, and each bar runs along the bottom of its row. -->
+
+- **BoostDeck looks like an iDrive list.** The rounded cards are gone. The readings sit in two columns of four rows,
+  engine readings on the left and temperatures and oil on the right. The names are labels now, so the head unit draws
+  them in its own font instead of a bold font from the PC that made the pictures. Each bar is a thin line along the
+  bottom of its row and doubles as the divider, fading out at its right end like iDrive's own.
+
 ## [0.1.1] · Verified, except MHD+ Suite
 
 <!-- Flare Drive boostdeck: A new look: each reading has its own card, in two rows of four. The gauges update faster too: BoostDeck now reads the engine about every 35 milliseconds while its page is open. -->

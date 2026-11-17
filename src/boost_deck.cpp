@@ -156,6 +156,8 @@ bool BoostDeck::onInit() {
     addHandler(70u,action);
     action.m_exec=&Action::execImpl<BoostDeck,&BoostDeck::changeTemperatureUnit<kFahrenheit> >;
     addHandler(71u,action);
+    // Each row's name is a label too (tools/make_bars.py), so the head unit draws it in its own font.
+    for (unsigned i=0;i<BD_COUNT;++i) updateModel(120u+i,bmw::BasicString<char>(kDialScales[i].name));
     selectTemperatureUnit(load_temperature_unit());
     selectColor(color_);
     bmw::Parcel visible(true);
@@ -260,7 +262,7 @@ void BoostDeck::refresh() {
             const bool celsius = temperature_reading(i) && temperature_unit_==kCelsius;
             const char *unit = temperature_reading(i) ? kTemperatureUnits[temperature_unit_].unit : scale.unit;
             const char *unit_space = *unit ? " " : "";
-            // The card's picture has the name (tools/make_bars.py); the label has the value and its unit.
+            // The row's name has its own label (set in onInit); this one has the value and its unit.
             const char *format = i==BD_BOOST ? "%s%+.1f%s%s" : i==BD_RAIL ? "%s%.0f%s%s" : "%s%.1f%s%s";
             double reading = bd_display_value(i,x,celsius ? 1 : 0); // metric only changes temperatures here
             if (i==BD_BOOST && fabs(reading)<0.05) reading=0;
