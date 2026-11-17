@@ -5,9 +5,7 @@ as `<!-- Flare Drive boostdeck: ... -->`, `<!-- Flare Drive bm3-maps: ... -->`, 
 so on.
 `tools/publish_release.py publish` refuses a version without the notes of the plugins it publishes.
 
-Each version says whether it is verified or unverified. Verified means this exact build has run in a car.
-
-## [0.1.2] · Unverified
+## [0.1.2]
 
 <!-- Flare Drive boostdeck: A new look that matches the rest of iDrive: the readings sit in two lists of four, the names and values are in the car's own font, and each bar runs along the bottom of its row. -->
 
@@ -16,7 +14,7 @@ Each version says whether it is verified or unverified. Verified means this exac
   them in its own font instead of a bold font from the PC that made the pictures. Each bar is a thin line along the
   bottom of its row and doubles as the divider, fading out at its right end like iDrive's own.
 
-## [0.1.1] · Verified, except MHD+ Suite
+## [0.1.1]
 
 <!-- Flare Drive boostdeck: A new look: each reading has its own card, in two rows of four. The gauges update faster too: BoostDeck now reads the engine about every 35 milliseconds while its page is open. -->
 <!-- Flare Drive shiftdeck: The rev bar sweeps smoothly in 128 steps and follows the engine more closely. Road speed can show in MPH or km/h: pick one under OPTIONS, Speed. -->
@@ -41,16 +39,16 @@ Ported from upstream's 14 November update (inotbarnacle/ID6_apps_prerelease, `69
 - **Bootmod3 Suite's tiles are larger and show the active map**, outlined with an ACTIVE tag, whenever the last read
   confirmed it. Any other answer leaves no tile marked.
 - **Engine Fault Codes colours each row's mark by its state**: red for Active, amber for Pending, blue for Stored.
-- **MHD+ Suite, a new plugin (mhd-maps)**, added to 0.1.1 after its release, from `81f41fa`. It is unverified: it
-  hasn't run in a car yet. It is for cars on MHD rather than bootmod3. Its four tiles switch an MHD+ multi-map tune's
-  maps with MHD's own request, `2F 01 <map - 1>`, and OPTIONS has Max Cooling, `2F 03 01` or `00`. Max Cooling goes on
-  only while the engine runs above 500 rpm. The commands are the ones cauliflowermossgrape's Live Adjustments sends,
+- **MHD+ Suite, a new plugin (mhd-maps)**, added to 0.1.1 after its release, from `81f41fa`. It is for
+  cars on MHD rather than bootmod3. Its four tiles switch an MHD+ multi-map tune's maps with MHD's own request,
+  `2F 01 <map - 1>`, and OPTIONS has Max Cooling, `2F 03 01` or `00`. Max Cooling goes on only while the engine runs
+  above 500 rpm. The commands are the ones cauliflowermossgrape's Live Adjustments sends,
   checked there on one MG1. A request counts only when the DME echoes it, and nothing is read first: MHD's marker sits
   at a ROM-dependent address, and no read-back of the active map is known. It installs beside Bootmod3 Suite with its
   own connector (105), folder `MhdMaps` and firewall rule. Upstream's MHD exhaust flap (`2F 02`) and BoostDeck's
   ethanol reading are left out: neither is documented outside upstream, and neither has been tried on an EntryNav2.
 
-## [0.1.0] · Verified
+## [0.1.0]
 
 <!-- Flare Drive boostdeck: The first stable release. BoostDeck shows live engine readings under My Vehicle in iDrive: boost, air-fuel ratio, ignition timing, intake air, gearbox, rail pressure, oil pressure and coolant, in Celsius or Fahrenheit. Restart the head unit after installing it to see it. -->
 <!-- Flare Drive shiftdeck: The first stable release. ShiftDeck shows a full-width rev bar with a shift light, and road speed, under My Vehicle in iDrive. Restart the head unit after installing it to see it. -->
