@@ -294,7 +294,11 @@ def publish(args):
     out = ROOT / "dist"
     out.mkdir(exist_ok=True)
     archives = []
+    if plugins:
+        run(sys.executable, "tools/check.py")
+        run(sys.executable, "tools/package_release.py", out, *plugins)
     # Reuse the published bytes, including on retries after upload succeeded but legacy sync failed.
+    # Do this after check.py, which packages every app into dist as part of its checks.
     for plugin, entry in existing.items():
         data = fetch(plugin, entry["file"])
         if data is None or len(data) != entry["size"] or hashlib.sha256(data).hexdigest() != entry["sha256"]:
@@ -302,9 +306,6 @@ def publish(args):
         archive = out / f"{plugin}-{version}-armhf.tar"
         archive.write_bytes(data)
         archives.append(archive)
-    if plugins:
-        run(sys.executable, "tools/check.py")
-        run(sys.executable, "tools/package_release.py", out, *plugins)
     for plugin in plugins:
         archive = out / f"{plugin}-{version}-armhf.tar"
         data = archive.read_bytes()
