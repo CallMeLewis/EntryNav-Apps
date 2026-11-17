@@ -11,11 +11,14 @@
 """
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+# The bash on PATH: on Windows a bare "bash" finds System32's WSL launcher before PATH, and WSL may have no Docker.
+BASH = shutil.which("bash") or "bash"
 
 
 def run(*args):
@@ -27,8 +30,8 @@ def main():
     missing = [app for app in ("BoostDeck", "ShiftDeck", "Bm3Maps", "MhdMaps", "EngineCodes") if not (ROOT / f"plugin/{app}_ALL_Images.zip").is_file()]
     if missing:
         sys.exit(f"FAIL: plugin/{missing[0]}_ALL_Images.zip is missing. Run make assets (Python with Pillow) first.")
-    run("bash", "toolchain/tc.sh", "make", "arm")
-    run("bash", "toolchain/qemu.sh", "python3", "tests/run_arm.py")
+    run(BASH, "toolchain/tc.sh", "make", "arm")
+    run(BASH, "toolchain/qemu.sh", "python3", "tests/run_arm.py")
     if os.name == "nt":
         run("wsl", "-e", "sh", "-c", f'cd "$(wslpath "{ROOT}")" && make test')
     else:
