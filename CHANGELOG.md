@@ -8,11 +8,17 @@ so on.
 ## [0.1.2]
 
 <!-- Flare Drive boostdeck: A new look that matches the rest of iDrive: the readings sit in two lists of four, the names and values are in the car's own font, and each bar runs along the bottom of its row. -->
+<!-- Flare Drive shiftdeck: Nothing changes in ShiftDeck. It moves to 0.1.2 so every app has the same version. -->
+<!-- Flare Drive bm3-maps: Nothing changes in Bootmod3 Suite. It moves to 0.1.2 so every app has the same version. -->
+<!-- Flare Drive mhd-maps: Nothing changes in MHD+ Suite. It moves to 0.1.2 so every app has the same version. -->
+<!-- Flare Drive engine-codes: Nothing changes in Engine Fault Codes. It moves to 0.1.2 so every app has the same version. -->
 
 - **BoostDeck looks like an iDrive list.** The rounded cards are gone. The readings sit in two columns of four rows,
   engine readings on the left and temperatures and oil on the right. The names are labels now, so the head unit draws
   them in its own font instead of a bold font from the PC that made the pictures. Each bar is a thin line along the
   bottom of its row and doubles as the divider, fading out at its right end like iDrive's own.
+- **ShiftDeck, Bootmod3 Suite, MHD+ Suite and Engine Fault Codes are unchanged.** They move to 0.1.2 so every app has
+  the same version.
 
 ## [0.1.1]
 
