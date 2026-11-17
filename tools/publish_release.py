@@ -4,11 +4,17 @@ https://updates.darkzone.dev/boostdeck/, /shiftdeck/, /bm3-maps/, /mhd-maps/ and
 
   uv run --no-project --with cryptography python tools/publish_release.py init [ID...]      an empty signed index, once
   uv run --no-project --with cryptography python tools/publish_release.py verify [ID...]    check the live indexes
-  uv run --no-project --with cryptography python tools/publish_release.py publish [ID...] [--stable]
+  uv run --no-project --with cryptography python tools/publish_release.py publish [--stable] [--experimental ID...]
   uv run --no-project --with cryptography python tools/publish_release.py stability ID VERSION stable|experimental
   uv run --no-project --with cryptography python tools/publish_release.py retire ID VERSION...   refused, see below
 
-Without IDs, a command covers boostdeck, shiftdeck, bm3-maps, mhd-maps and engine-codes.
+Without IDs, init and verify cover boostdeck, shiftdeck, bm3-maps, mhd-maps and engine-codes.
+
+The repo has one version, VERSION, for every app. `publish` releases every app at it, so the apps never drift apart:
+a change to one app raises VERSION, and the others ship again unchanged. Apps already published at VERSION are left
+out, so a publish that stopped part way can run again. It then tags v<version> at HEAD and pushes the tag (an existing
+tag is never moved, and once one exists nothing an archive is built from may change), and puts the new archives and
+their .sha256 files on the tag's GitHub Release, creating it if needed, with VERSION's CHANGELOG.md section as text.
 
 Releases reach Flare Drive through its plugin catalog, which only the publishing Worker writes. `publish` sends each
 plugin's archive there with flare-publish (Flare Drive's tools/flare_publish.py, in its repo beside this one, or
@@ -20,7 +26,8 @@ Flare Drive 2.2.2 and later read only the catalog.
 
 `publish` refuses a dirty tree, a HEAD that is not pushed, a version already published and a version whose CHANGELOG.md
 section lacks a plugin's Flare Drive note (<!-- Flare Drive <id>: ... -->). It runs tools/check.py first, then sends
-each plugin's archive. Each release is experimental unless --stable; `stability` changes that later in the catalog.
+each plugin's archive. Each release is experimental unless --stable, and --experimental keeps the apps it names
+experimental; `stability` changes that later in the catalog.
 `retire` is refused: the catalog would keep listing the release, and the Worker can't take one off yet.
 """
 
@@ -45,6 +52,10 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 ROOT = Path(__file__).resolve().parents[1]
 BUCKET = "darkzone-updates"
+REPO = "CallMeLewis/EntryNav-Apps"  # gh would otherwise pick the upstream fork parent
+# What the archives are built from. Once v<version> is tagged, none of it may change before the rest of the apps publish.
+APP_PATHS = ("VERSION", "Makefile", "src", "plugin", "plugins", "install", "sdk", "third-party", "images", "toolchain",
+             "tools/package_release.py")
 BASE_URL = "https://updates.darkzone.dev"
 PLUGINS = ("boostdeck", "shiftdeck", "bm3-maps", "mhd-maps", "engine-codes")
 # flare-publish, which sends releases to Flare Drive's plugin catalog (docs/publishing.md in Flare Drive).
@@ -186,13 +197,62 @@ def verify(args):
             print("  (no releases yet)")
 
 
+def release_text(version: str) -> str:
+    """The GitHub Release's text: VERSION's CHANGELOG.md section without its heading and Flare Drive notes, each
+    paragraph or bullet on one line, since GitHub shows hard line breaks, then how to install."""
+    text = CHANGELOG.read_text(encoding="utf-8")
+    match = re.search(rf"^## \[{re.escape(version)}\][^\n]*\n(.*?)(?=^## \[|\Z)", text, re.M | re.S)
+    blocks = []  # paragraphs and bullets, unwrapped; "" for a blank line
+    for line in re.sub(r"<!--.*?-->", "", match.group(1), flags=re.S).splitlines():
+        line = line.strip()
+        if not line or line.startswith(("- ", "#")) or not blocks or not blocks[-1]:
+            blocks.append(line)
+        else:
+            blocks[-1] += " " + line
+    body = re.sub(r"\n{3,}", "\n\n", "\n".join(blocks)).strip()
+    return (f"{body}\n\nEach app is its own archive. Install it with Flare Drive, or by hand with the setup.sh inside it: "
+            "see Installing in the README. Each .sha256 file holds its archive's SHA-256.\n")
+
+
+def tag_and_release(version, head, archives):
+    """Tags v<version> at HEAD and pushes the tag, unless it is there already, then puts archives and their .sha256 files
+    on its GitHub Release, which it creates if needed, and sets the Release's text from CHANGELOG.md. A failure is
+    reported, never fatal: the apps are already published."""
+    tag = f"v{version}"
+    if not output("git", "tag", "--list", tag):
+        run("git", "tag", "-a", tag, head, "-m", f"EntryNav-Apps {version}")
+    if subprocess.run(["git", "push", "origin", f"refs/tags/{tag}"], cwd=ROOT, check=False).returncode:
+        print(f"WARN: {tag} is tagged here but not on GitHub. Push it with: git push origin {tag}")
+        return
+    files = []
+    for archive in archives:
+        sums = archive.with_name(archive.name + ".sha256")
+        sums.write_text(f"{hashlib.sha256(archive.read_bytes()).hexdigest()}  {archive.name}\n", newline="\n")
+        files += [archive, sums]
+    with tempfile.TemporaryDirectory() as folder:
+        notes = Path(folder) / "notes.md"
+        notes.write_text(release_text(version), encoding="utf-8", newline="\n")
+        if subprocess.run(["gh", "release", "view", tag, "-R", REPO], capture_output=True, check=False).returncode == 0:
+            steps = [["gh", "release", "upload", tag, *files, "-R", REPO],
+                     ["gh", "release", "edit", tag, "-R", REPO, "--notes-file", notes]]
+        else:
+            steps = [["gh", "release", "create", tag, *files, "-R", REPO, "--verify-tag",
+                      "--title", f"EntryNav-Apps {version}", "--notes-file", notes,
+                      *(["--prerelease"] if "-" in version else [])]]
+        for step in steps:
+            if subprocess.run([str(a) for a in step], cwd=ROOT, check=False).returncode:
+                print(f"WARN: {' '.join(str(a) for a in step[:3])} failed, above. Finish {tag}'s GitHub Release by hand.")
+                return
+    print(f"{tag}'s GitHub Release has {', '.join(a.name for a in archives)}.")
+
+
 def publish(args):
+    """Publishes every app at VERSION. Apps already published at VERSION are left out, so a publish that stopped part
+    way can be run again."""
     key = load_key()
-    plugins = chosen(args.ids)
-    indexes = {plugin: live_index(key, plugin) for plugin in plugins}
-    for plugin, index in indexes.items():
-        if index is None:
-            sys.exit(f"FAIL: no index is published for {plugin} yet. Run init first.")
+    unknown = sorted(set(args.experimental) - set(PLUGINS))
+    if unknown:
+        sys.exit(f"FAIL: no plugin called {', '.join(unknown)}. They are {', '.join(PLUGINS)}.")
     if output("git", "status", "--porcelain"):
         sys.exit("FAIL: the working tree has changes. Publish only what is committed.")
     head = output("git", "rev-parse", "HEAD")
@@ -201,11 +261,26 @@ def publish(args):
     version = (ROOT / "VERSION").read_text().strip()
     if not VERSION.match(version):
         sys.exit(f"FAIL: VERSION says {version}, which is not X.Y.Z, X.Y.Z-beta.N or X.Y.Z-test.N.")
-    for plugin, index in indexes.items():
-        if any(r["version"] == version for r in index["releases"]):
-            sys.exit(f"FAIL: {plugin} {version} is already published. Raise VERSION; a version is never replaced.")
     if args.stable and "-" in version:
         sys.exit(f"FAIL: {version} is a beta or test build: it is always experimental.")
+    tag = f"v{version}"
+    if output("git", "tag", "--list", tag):
+        # A version is one build of every app: once tagged, nothing that goes into an archive may change.
+        changed = subprocess.run(["git", "diff", "--quiet", tag, head, "--", *APP_PATHS], cwd=ROOT, check=False)
+        if changed.returncode:
+            sys.exit(f"FAIL: {tag} is on {output('git', 'rev-parse', '--short', tag)}, and the apps have changed since. "
+                     "Raise VERSION: every app ships at the new version.")
+    plugins = []
+    for plugin in PLUGINS:
+        index = live_index(key, plugin)
+        if index is None:
+            sys.exit(f"FAIL: no index is published for {plugin} yet. Run init first.")
+        if any(r["version"] == version for r in index["releases"]):
+            print(f"{plugin} {version} is already published; left out.", flush=True)
+        else:
+            plugins.append(plugin)
+    if not plugins:
+        sys.exit(f"FAIL: every app is already published at {version}. Raise VERSION; a version is never replaced.")
     notes = {plugin: flare_drive_note(version, plugin) for plugin in plugins}
     for plugin, note in notes.items():
         print(f"{plugin} note: {note}", flush=True)
@@ -213,6 +288,7 @@ def publish(args):
     out = ROOT / "dist"
     shutil.rmtree(out, ignore_errors=True)
     run(sys.executable, "tools/package_release.py", out, *plugins)
+    archives = []
     for plugin in plugins:
         archive = out / f"{plugin}-{version}-armhf.tar"
         data = archive.read_bytes()
@@ -221,28 +297,20 @@ def publish(args):
             described = json.loads(tar.extractfile(f"{plugin}-{version}/plugin.json").read())
         if recorded != version or described["version"] != version or described["id"] != plugin:
             sys.exit(f"FAIL: the {plugin} archive says {described['id']} {recorded}, not {plugin} {version}.")
-        entry = {
-            "version": version,
-            "file": f"releases/{version}/{plugin}-{version}-armhf.tar",
-            "size": len(data),
-            "sha256": hashlib.sha256(data).hexdigest(),
-            "sourceCommit": head,
-            "published": now(),
-            "firmware": described["firmware"],
-            "stability": "stable" if args.stable else "experimental",
-            "minApp": MIN_APP,
-            "notes": notes[plugin],
-        }
+        label = "stable" if args.stable and plugin not in args.experimental else "experimental"
         # The Worker checks, stores and adds it to the catalog; flare-publish then rebuilds this plugin's list.
         with tempfile.TemporaryDirectory() as folder:
             notes_file = Path(folder) / "notes.txt"
-            notes_file.write_text(entry["notes"], encoding="utf-8", newline="\n")
+            notes_file.write_text(notes[plugin], encoding="utf-8", newline="\n")
             flare_publish("release", str(archive), "--manifest", str(ROOT / "plugins" / f"{plugin}.toml"),
-                          "--stability", entry["stability"], "--notes-file", str(notes_file),
+                          "--stability", label, "--notes-file", str(notes_file),
                           "--source-commit", head, "--min-app", str(MIN_APP))
-        if fetch(plugin, entry["file"]) != data:
+        if fetch(plugin, f"releases/{version}/{archive.name}") != data:
             sys.exit(f"FAIL: the published {plugin} archive doesn't read back as {archive.name}. Check with flare-publish verify.")
-        print(f"Published {plugin} {version} ({entry['sha256'][:12]}…) from {head[:7]}.", flush=True)
+        print(f"Published {plugin} {version} ({label}, {hashlib.sha256(data).hexdigest()[:12]}…) from {head[:7]}.", flush=True)
+        archives.append(archive)
+    tag_and_release(version, head, archives)
+    args.ids = []
     verify(args)
 
 
@@ -277,8 +345,8 @@ def main():
         p.add_argument("ids", nargs="*")
         p.set_defaults(func=func)
     p = commands.add_parser("publish")
-    p.add_argument("ids", nargs="*")
-    p.add_argument("--stable", action="store_true")
+    p.add_argument("--stable", action="store_true", help="label the apps stable in Flare Drive (default: experimental)")
+    p.add_argument("--experimental", nargs="+", default=[], metavar="ID", help="apps that stay experimental with --stable")
     p.set_defaults(func=publish)
     p = commands.add_parser("stability")
     p.add_argument("id")

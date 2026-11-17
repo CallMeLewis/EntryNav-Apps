@@ -203,10 +203,12 @@ CI can't hold the copy of the car's system, so the ARM build and its checks run 
 
 ### Publishing a release
 
-`tools/publish_release.py publish` runs `tools/check.py`, then sends each app's archive to Flare Drive's plugin catalog
-with `flare-publish`, and `plugins/<id>.toml` is each app's manifest. The publishing Worker checks and stores the
-archive and signs the catalog, and the list older Flare Drive versions read (`https://updates.darkzone.dev/<id>/`) is
-rebuilt from it. It needs Flare Drive's repo cloned beside this one (or `FLARE_DRIVE_REPO`), the publishing service
+Every app shares one version, `VERSION`, and every release ships all of them: a change to one app raises `VERSION`, and
+the others ship again unchanged. `tools/publish_release.py publish` runs `tools/check.py`, then sends each app's archive
+to Flare Drive's plugin catalog with `flare-publish`, and `plugins/<id>.toml` is each app's manifest. It then tags
+`vX.Y.Z` and puts the archives on its GitHub Release, with the version's CHANGELOG section as its text. The publishing
+Worker checks and stores the archive and signs the catalog, and the list older Flare Drive versions read
+(`https://updates.darkzone.dev/<id>/`) is rebuilt from it. It needs Flare Drive's repo cloned beside this one (or `FLARE_DRIVE_REPO`), the publishing service
 token and the release signing key, and refuses a dirty or unpushed tree, a version already published, and a version
 whose CHANGELOG section lacks an app's Flare Drive note. `stability` changes a release in the catalog; `retire` is
 refused. Flare Drive's `docs/publishing.md` describes the whole process.

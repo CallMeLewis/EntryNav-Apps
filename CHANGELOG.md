@@ -3,7 +3,8 @@
 Each release's section holds one Flare Drive note per plugin, the paragraph the app shows with that plugin's release,
 as `<!-- Flare Drive boostdeck: ... -->`, `<!-- Flare Drive bm3-maps: ... -->`, `<!-- Flare Drive mhd-maps: ... -->` and
 so on.
-`tools/publish_release.py publish` refuses a version without the notes of the plugins it publishes.
+`tools/publish_release.py publish` releases every app at each version, and refuses a version without every app's note.
+The text before the bullets opens the version's GitHub Release.
 
 ## [0.1.2]
 
@@ -12,6 +13,8 @@ so on.
 <!-- Flare Drive bm3-maps: Nothing changes in Bootmod3 Suite. It moves to 0.1.2 so every app has the same version. -->
 <!-- Flare Drive mhd-maps: Nothing changes in MHD+ Suite. It moves to 0.1.2 so every app has the same version. -->
 <!-- Flare Drive engine-codes: Nothing changes in Engine Fault Codes. It moves to 0.1.2 so every app has the same version. -->
+
+BoostDeck gets a new look that matches the rest of iDrive. The other apps are unchanged and move to 0.1.2 with it.
 
 - **BoostDeck looks like an iDrive list.** The rounded cards are gone. The readings sit in two columns of four rows,
   engine readings on the left and temperatures and oil on the right. The names are labels now, so the head unit draws
