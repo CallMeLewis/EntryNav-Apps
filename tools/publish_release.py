@@ -12,7 +12,8 @@ Without IDs, init and verify cover boostdeck, shiftdeck, bm3-maps, mhd-maps and 
 
 The repo has one version, VERSION, for every app. `publish` releases every app at it, so the apps never drift apart:
 a change to one app raises VERSION, and the others ship again unchanged. Apps already published at VERSION are left
-out, so a publish that stopped part way can run again. It then tags v<version> at HEAD and pushes the tag (an existing
+out, so a publish that stopped part way can run again. Their archives are downloaded and checked against the catalog
+to finish the GitHub Release, even when every app is already published. It then tags v<version> at HEAD and pushes the tag (an existing
 tag is never moved, and once one exists nothing an archive is built from may change), and puts the new archives and
 their .sha256 files on the tag's GitHub Release, creating it if needed, with VERSION's CHANGELOG.md section as text.
 
@@ -24,7 +25,7 @@ signs it with the release key (~/.flare-drive/release-signing-key, or FLARE_DRIV
 and earlier. Flare Drive's docs/publishing.md describes the whole process. Never upload to the bucket any other way:
 Flare Drive 2.2.2 and later read only the catalog.
 
-`publish` refuses a dirty tree, a HEAD that is not pushed, a version already published and a version whose CHANGELOG.md
+`publish` refuses a dirty tree, a HEAD that is not pushed and a version whose CHANGELOG.md
 section lacks a plugin's Flare Drive note (<!-- Flare Drive <id>: ... -->). It runs tools/check.py first, then sends
 each plugin's archive. Each release is experimental unless --stable, and --experimental keeps the apps it names
 experimental; `stability` changes that later in the catalog.
@@ -37,6 +38,7 @@ import hashlib
 import json
 import os
 import re
+import runpy
 import shutil
 import subprocess
 import sys
@@ -95,6 +97,14 @@ def flare_publish(*args):
         sys.exit(f"FAIL: no flare-publish at {FLARE_PUBLISH}. Clone Flare Drive beside this repo, or set FLARE_DRIVE_REPO.")
     if subprocess.run([sys.executable, str(FLARE_PUBLISH), *args], cwd=FLARE_DRIVE).returncode:
         sys.exit(f"FAIL: flare-publish {args[0]} failed, above.")
+
+
+def live_catalog():
+    """Read the authoritative catalog through the publishing Worker's authenticated API."""
+    result = runpy.run_path(str(FLARE_PUBLISH))["call"]("GET", "/api/catalog")
+    if not result.get("catalog") or not result.get("signatureValid"):
+        sys.exit("FAIL: the live catalog is missing or its signature doesn't check.")
+    return {p["id"]: p for p in result["catalog"]["plugins"]}
 
 
 def wrangler_object(plugin, action, key, *options):
@@ -183,13 +193,13 @@ def init(args):
 
 
 def verify(args):
-    key = load_key()
+    catalog = live_catalog()
     for plugin in chosen(args.ids):
-        index = live_index(key, plugin)
+        index = catalog.get(plugin)
         if index is None:
-            print(f"{BASE_URL}/{plugin}/index.json: none published yet. Run init.")
+            print(f"{plugin}: not in the catalog yet.")
             continue
-        print(f"{BASE_URL}/{plugin}/index.json: signature OK, published {index['published']}")
+        print(f"{plugin}: catalog signature OK")
         for release in index["releases"]:
             print(f"  {release['version']}  {release['sha256'][:12]}…  {release['size']} bytes  "
                   f"{release.get('stability') or 'no label'}  {release['published']}")
@@ -233,7 +243,7 @@ def tag_and_release(version, head, archives):
         notes = Path(folder) / "notes.md"
         notes.write_text(release_text(version), encoding="utf-8", newline="\n")
         if subprocess.run(["gh", "release", "view", tag, "-R", REPO], capture_output=True, check=False).returncode == 0:
-            steps = [["gh", "release", "upload", tag, *files, "-R", REPO],
+            steps = [["gh", "release", "upload", tag, *files, "-R", REPO, "--clobber"],
                      ["gh", "release", "edit", tag, "-R", REPO, "--notes-file", notes]]
         else:
             steps = [["gh", "release", "create", tag, *files, "-R", REPO, "--verify-tag",
@@ -249,7 +259,6 @@ def tag_and_release(version, head, archives):
 def publish(args):
     """Publishes every app at VERSION. Apps already published at VERSION are left out, so a publish that stopped part
     way can be run again."""
-    key = load_key()
     unknown = sorted(set(args.experimental) - set(PLUGINS))
     if unknown:
         sys.exit(f"FAIL: no plugin called {', '.join(unknown)}. They are {', '.join(PLUGINS)}.")
@@ -270,25 +279,32 @@ def publish(args):
         if changed.returncode:
             sys.exit(f"FAIL: {tag} is on {output('git', 'rev-parse', '--short', tag)}, and the apps have changed since. "
                      "Raise VERSION: every app ships at the new version.")
-    plugins = []
+    catalog = live_catalog()
+    plugins, existing = [], {}
     for plugin in PLUGINS:
-        index = live_index(key, plugin)
-        if index is None:
-            sys.exit(f"FAIL: no index is published for {plugin} yet. Run init first.")
-        if any(r["version"] == version for r in index["releases"]):
+        entry = next((r for r in catalog.get(plugin, {}).get("releases", []) if r["version"] == version), None)
+        if entry:
             print(f"{plugin} {version} is already published; left out.", flush=True)
+            existing[plugin] = entry
         else:
             plugins.append(plugin)
-    if not plugins:
-        sys.exit(f"FAIL: every app is already published at {version}. Raise VERSION; a version is never replaced.")
-    notes = {plugin: flare_drive_note(version, plugin) for plugin in plugins}
+    notes = {plugin: flare_drive_note(version, plugin) for plugin in PLUGINS}
     for plugin, note in notes.items():
         print(f"{plugin} note: {note}", flush=True)
-    run(sys.executable, "tools/check.py")
     out = ROOT / "dist"
-    shutil.rmtree(out, ignore_errors=True)
-    run(sys.executable, "tools/package_release.py", out, *plugins)
+    out.mkdir(exist_ok=True)
     archives = []
+    # Reuse the published bytes, including on retries after upload succeeded but legacy sync failed.
+    for plugin, entry in existing.items():
+        data = fetch(plugin, entry["file"])
+        if data is None or len(data) != entry["size"] or hashlib.sha256(data).hexdigest() != entry["sha256"]:
+            sys.exit(f"FAIL: {plugin} {version}'s archive doesn't match the catalog.")
+        archive = out / f"{plugin}-{version}-armhf.tar"
+        archive.write_bytes(data)
+        archives.append(archive)
+    if plugins:
+        run(sys.executable, "tools/check.py")
+        run(sys.executable, "tools/package_release.py", out, *plugins)
     for plugin in plugins:
         archive = out / f"{plugin}-{version}-armhf.tar"
         data = archive.read_bytes()
@@ -315,8 +331,7 @@ def publish(args):
 
 
 def stability(args):
-    key = load_key()
-    index = live_index(key, chosen([args.id])[0])
+    index = live_catalog().get(chosen([args.id])[0])
     entries = [r for r in (index or {}).get("releases", []) if r["version"] == args.version]
     if not entries:
         sys.exit(f"FAIL: {args.id} {args.version} is not published.")

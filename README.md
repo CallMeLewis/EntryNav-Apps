@@ -209,9 +209,13 @@ to Flare Drive's plugin catalog with `flare-publish`, and `plugins/<id>.toml` is
 `vX.Y.Z` and puts the archives on its GitHub Release, with the version's CHANGELOG section as its text. The publishing
 Worker checks and stores the archive and signs the catalog, and the list older Flare Drive versions read
 (`https://updates.darkzone.dev/<id>/`) is rebuilt from it. It needs Flare Drive's repo cloned beside this one (or `FLARE_DRIVE_REPO`), the publishing service
-token and the release signing key, and refuses a dirty or unpushed tree, a version already published, and a version
+token and the release signing key, and refuses a dirty or unpushed tree and a version
 whose CHANGELOG section lacks an app's Flare Drive note. `stability` changes a release in the catalog; `retire` is
 refused. Flare Drive's `docs/publishing.md` describes the whole process.
+
+A retry checks the catalog, publishes only missing apps, and downloads the existing archives with size and SHA-256
+checks to complete the GitHub Release. This also works when all apps are already published. MHD+ Suite uses the
+catalog alone; older Flare Drive versions have no per-plugin list for it.
 
 ## Credits and licence
 
