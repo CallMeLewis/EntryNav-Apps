@@ -220,7 +220,7 @@ def release_text(version: str) -> str:
         else:
             blocks[-1] += " " + line
     body = re.sub(r"\n{3,}", "\n\n", "\n".join(blocks)).strip()
-    return (f"{body}\n\nEach app is its own archive. Install it with Flare Drive, or by hand with the setup.sh inside it: "
+    return (f"{body}\n\nEach app is its own archive. Install it with [Flare Drive](https://github.com/CallMeLewis/flare-drive-app), or by hand with the setup.sh inside it: "
             "see Installing in the README. Each .sha256 file holds its archive's SHA-256.\n")
 
 

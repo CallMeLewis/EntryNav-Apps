@@ -30,7 +30,7 @@ port runs on the EntryNav2 only: on an NBT Evo, use the originals.
 
 ## Installing
 
-The easy way is **Flare Drive** 2.2.0 or later, the companion Android app. Each app has its own page under *Plugins*,
+The easy way is **[Flare Drive](https://github.com/CallMeLewis/flare-drive-app)** 2.2.0 or later, the companion Android app. Each app has its own page under *Plugins*,
 where Flare Drive downloads a signed release, checks that your car can run it, installs it and finds the diagnostic
 gateway. Updates and removal happen there too. The [CHANGELOG](CHANGELOG.md) lists what changed in each release, and
 [Releases](https://github.com/CallMeLewis/EntryNav-Apps/releases) has every archive with its SHA-256.
