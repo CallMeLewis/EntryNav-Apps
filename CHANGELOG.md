@@ -6,6 +6,23 @@ so on.
 `tools/publish_release.py publish` releases every app at each version, and refuses a version without every app's note.
 The text before the bullets opens the version's GitHub Release.
 
+## [0.1.3]
+
+<!-- Flare Drive boostdeck: BoostDeck now installs on any head unit firmware, at your own risk. If iDrive's app framework isn't the version it was checked against, the install report warns and the install goes ahead. -->
+<!-- Flare Drive shiftdeck: ShiftDeck now installs on any head unit firmware, at your own risk. If iDrive's app framework isn't the version it was checked against, the install report warns and the install goes ahead. -->
+<!-- Flare Drive bm3-maps: Bootmod3 Suite now installs on any head unit firmware, at your own risk. If iDrive's app framework isn't the version it was checked against, the install report warns and the install goes ahead. -->
+<!-- Flare Drive mhd-maps: MHD+ Suite now installs on any head unit firmware, at your own risk. If iDrive's app framework isn't the version it was checked against, the install report warns and the install goes ahead. -->
+<!-- Flare Drive engine-codes: Engine Fault Codes now installs on any head unit firmware, at your own risk. If iDrive's app framework isn't the version it was checked against, the install report warns and the install goes ahead. -->
+
+Every app now installs on any head unit firmware, at your own risk.
+
+- **A different app framework is a warning.** `setup.sh check` used to stop unless iDrive's app framework was the
+  exact version the apps were checked against. It now warns and the install goes ahead. It still stops when a library
+  or function an app needs is missing on the car.
+- **No firmware list.** The release no longer names firmware, so older versions of Flare Drive don't refuse it either.
+- **`status` reports a software update.** The install records the car's app framework, and `status` says when it has
+  changed since.
+
 ## [0.1.2]
 
 <!-- Flare Drive boostdeck: A new look that matches the rest of iDrive: the readings sit in two lists of four, the names and values are in the car's own font, and each bar runs along the bottom of its row. -->
