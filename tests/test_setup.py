@@ -100,9 +100,24 @@ class SetupTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("the system partition is writable right now", result.stdout)
 
-    def test_check_stops_on_another_app_framework(self):
-        self.unit.put("opt/hmi/lib/libAppFramework.A.so", b"another build")
-        self.assertIn("app framework differs", self.sh(f"{setup('shiftdeck')} check", 1))
+    def another_framework(self):
+        """Another build of iDrive's app framework: the car's own library with a byte more, which still loads."""
+        path = self.unit.path("opt/hmi/lib/libAppFramework.A.so")
+        self.unit.put("opt/hmi/lib/libAppFramework.A.so", path.read_bytes() + b"\0")
+
+    def test_another_app_framework_warns_and_installs(self):
+        self.another_framework()
+        out = self.sh(f"{setup('shiftdeck')} check")
+        self.assertIn("warn  iDrive's app framework differs", out)
+        self.assertIn("Every check passed", out)
+        self.install("shiftdeck")
+        self.assert_installed("shiftdeck")
+        self.assertIn("app framework: as checked", self.sh(f"{installed('shiftdeck')} status"))
+
+    def test_status_reports_a_framework_changed_since_the_install(self):
+        self.install("shiftdeck")
+        self.another_framework()
+        self.assertIn("app framework: changed since the installation", self.sh(f"{installed('shiftdeck')} status"))
 
     def test_install_stops_on_a_damaged_release(self):
         path = self.unit.path(f"tmp/bm3-maps-{VERSION}/opt/hmi/data/ro/Plugins/Bm3Maps/bm3-maps")

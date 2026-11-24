@@ -298,12 +298,13 @@ check_layout() {
     fi
 }
 
-# The app runs inside iDrive: it was built and checked against this exact version of iDrive's app framework.
+# The app runs inside iDrive: it was built and checked against one version of iDrive's app framework. Another version
+# doesn't stop the install, at the owner's own risk; check_libraries still stops when something the app needs is missing.
 check_frameworks() {
     if md5sum -c "$SRC/frameworks.md5" >/dev/null 2>>"$LOG"; then
         ok "iDrive's app framework is the version the app was checked against"
     else
-        stop "iDrive's app framework differs from the version the app was checked against (firmware $(firmware))"
+        warn "iDrive's app framework differs from the version the app was checked against (firmware $(firmware)): it installs anyway, at your own risk"
     fi
 }
 
@@ -434,9 +435,21 @@ stage() {
     mkdir "$NEW" 2>>"$LOG" || return 1
     : >"$NEW/$MARK" || return 1
     cp -R "$SRC/$SOURCE/." "$NEW/" 2>>"$LOG" || return 1
-    cp "$SRC/MD5SUMS" "$SRC/frameworks.md5" "$NEW/" 2>>"$LOG" || return 1
+    cp "$SRC/MD5SUMS" "$NEW/" 2>>"$LOG" || return 1
+    record_frameworks || return 1
     verify_dir "$SRC/MD5SUMS" "$SOURCE" "$NEW" || return 1
     sync
+}
+
+# The sums of iDrive's app framework on this car now, which status compares with to tell a software update since the
+# install. The release's own sums name the version the app was checked against, which this car may not have.
+record_frameworks() {
+    _files=$(sed -n 's/^[0-9a-f]\{32\}  //p' "$SRC/frameworks.md5")
+    [ -n "$_files" ] || return 1
+    # A file this car lacks is left out: check_libraries has already stopped if the app needs it.
+    # shellcheck disable=SC2086 # one path per word; the framework's paths hold no spaces
+    md5sum $_files >"$NEW/frameworks.md5" 2>>"$LOG"
+    [ -f "$NEW/frameworks.md5" ]
 }
 
 # The installed folder aside, the new one in place, the old one back if that fails.
@@ -624,6 +637,7 @@ do_status() {
     else
         say "firewall rule: missing"
     fi
+    # Against the sums recorded at the install (record_frameworks); "as checked" is the line Flare Drive reads.
     if md5sum -c "$TARGET/frameworks.md5" >/dev/null 2>>"$LOG"; then
         say "app framework: as checked"
     else
@@ -783,7 +797,9 @@ printf '\n== %s %s %s\n' "$ID" "$command" "$(date '+%Y-%m-%d %H:%M:%S' 2>/dev/nu
 
 case $command in
     check)
-        if do_checks; then
+        if do_checks && [ "$WARNS" != 0 ]; then
+            say "Every check passed, with $WARNS warning(s): install can go ahead."
+        elif [ "$STOPS" = 0 ]; then
             say "Every check passed: install can go ahead."
         else
             say "$STOPS check(s) failed: install would stop."

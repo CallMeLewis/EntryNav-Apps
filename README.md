@@ -64,9 +64,11 @@ Once installed, each app's `setup.sh` sits in its folder, for example `/opt/hmi/
 | `tidy` | Deletes an earlier version iDrive was still using, after a restart |
 | `uninstall [--purge]` | Removes the app. `--purge` also deletes its settings, and the gateway's address once no other app is left |
 
-`check` stops unless iDrive's app framework is the exact version the apps were checked against
-(`install/frameworks.md5`). It also stops when anything in the way wasn't installed by EntryNav-Apps, or when the
-system partition is already writable.
+The apps install on any firmware, at your own risk. `check` warns when iDrive's app framework isn't the version the
+apps were checked against (`install/frameworks.md5`), and still stops when a library or function the app needs is
+missing on the car. It also stops when anything in the way wasn't installed by EntryNav-Apps, or when the system
+partition is already writable. `status` reports when iDrive's app framework has changed since the install, as a
+software update does.
 
 </details>
 

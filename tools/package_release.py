@@ -96,7 +96,8 @@ def release_files(plugin: Plugin, version):
         "id": plugin.id,
         "name": plugin.name,
         "version": version,
-        "firmware": unix_text(ROOT / "install/firmware.txt").decode().split(),
+        # Empty: the apps install on any firmware. Flare Drive 2.2.7 and older refuse firmware a non-empty list leaves out.
+        "firmware": [],
         "installed_in": f"/opt/hmi/data/ro/Plugins/{plugin.app}",
     }
     meta = {
