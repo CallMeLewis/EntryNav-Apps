@@ -11,9 +11,10 @@ The head unit is a disposable aa-entrynav-qemu:local container, started with --p
 system from the Docker volume entrynav2-rootfs (HU_ROOTFS to use another) read-only under an overlay, entered with
 chroot. Every command runs with the car's own bash 3.2, BusyBox 1.21 and openssl, and its ARM programs run through the
 kernel's binfmt registration for QEMU. As on the car, /tmp is a tmpfs that allows programs, /var/local a noexec tmpfs
-with the apps' saved gateway, and /opt/hmi/data/ro/Plugins/EngineCodes holds the C engine-codes and ena-gateway from
-build-arm. A dummy vbr0 carries the head unit's address and the gateway's, 169.254.10.2 and 169.254.10.3, where a
-simulated gateway answers HSFZ on TCP 6801 and vehicle identification on UDP 6811.
+with the apps' saved gateway, and /opt/hmi/data/ro/Plugins holds the C engine-codes and ena-gateway (EngineCodes),
+boostdeck-collector (BoostDeck) and shift-deck (ShiftDeck) from build-arm. A dummy vbr0 carries the head unit's
+address and the gateway's, 169.254.10.2 and 169.254.10.3, where a simulated gateway answers HSFZ on TCP 6801 (the
+fault codes, the supported PIDs and the gauges' readings) and vehicle identification on UDP 6811.
 
 The SSH server runs on this computer (paramiko) and passes each command to the container's chroot. It takes root with
 the password fixture-only. tests/test_try_on_car.py uses it to test the trial script.
@@ -34,7 +35,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PASSWORD = "fixture-only"
 HEAD_UNIT, GATEWAY = "169.254.10.2", "169.254.10.3"
-PLUGIN = "/hu/opt/hmi/data/ro/Plugins/EngineCodes"
+PLUGINS = "/hu/opt/hmi/data/ro/Plugins"
+# Which C workers the head unit has installed, and where: build-arm's, in each app's folder.
+INSTALLED = {"EngineCodes": ("engine-codes", "ena-gateway"), "BoostDeck": ("boostdeck-collector",),
+             "ShiftDeck": ("shift-deck",)}
+INSTALL = "\n".join(f"mkdir -p {PLUGINS}/{app} && cp " + " ".join(f"/work/build-arm/{w}" for w in workers)
+                    + f" {PLUGINS}/{app}/ && chmod 755 " + " ".join(f"{PLUGINS}/{app}/{w}" for w in workers)
+                    for app, workers in INSTALLED.items())
 # Inside the container: what the gateway was asked, and how long it waits before each answer (seconds, a file).
 REQUESTS_LOG, DELAY_FILE = "/var/tmp/gateway-requests", "/var/tmp/gateway-delay"
 # How a command runs on the head unit: in the chroot, with the environment an SSH login gives root.
@@ -53,9 +60,8 @@ mount --bind /dev /hu/dev
 mount -t tmpfs tmpfs /hu/tmp
 mount -t tmpfs tmpfs /hu/run
 mount -t tmpfs -o noexec tmpfs /hu/var/local
-mkdir -p {PLUGIN} /hu/var/local/data/EntryNavApps
-cp /work/build-arm/engine-codes /work/build-arm/ena-gateway {PLUGIN}/
-chmod 755 {PLUGIN}/engine-codes {PLUGIN}/ena-gateway
+mkdir -p /hu/var/local/data/EntryNavApps
+{INSTALL}
 echo {GATEWAY} > /hu/var/local/data/EntryNavApps/gateway-ip.txt
 cp /work/build-arm/boostdeck-collector /hu/run/boostdeck-collector
 chroot /hu /bin/sh -c 'ip link add vbr0 type dummy && ip addr add {HEAD_UNIT}/16 dev vbr0 &&
@@ -67,12 +73,20 @@ echo 0 > {DELAY_FILE}
 
 # ---- the simulated gateway, run inside the container ---------------------------------------------------------------
 
+# BoostDeck's DIDs (22) as a 2016 340i answers them, standing with the engine at idle, and ShiftDeck's OBD speeds (01).
+READINGS = {"224201": "63ca", "224205": "31e5", "225889": "104e", "224a49": "004e", "22580f": "82", "22da12": "008e",
+            "2256d7": "1169", "22586f": "09c1", "224300": "0bf8", "010c": "0ae0", "010d": "00"}
+
+
 def answer(uds):
-    """The DME's answer to one UDS request: two fault codes, the supported PIDs, and a refusal of anything else."""
+    """The answer to one UDS request: two fault codes, the supported PIDs, the gauges' readings, and a refusal of
+    anything else."""
     if uds == bytes.fromhex("1902af"):
         return bytes.fromhex("5902ff" "1a2f0f2f" "30fe0108")
     if uds == bytes.fromhex("0100"):
         return bytes.fromhex("4100be3fa813")
+    if uds.hex() in READINGS:
+        return bytes([uds[0] + 0x40]) + uds[1:] + bytes.fromhex(READINGS[uds.hex()])
     return bytes([0x7f, uds[0] if uds else 0, 0x11])
 
 
@@ -125,7 +139,7 @@ def docker(*args, check=True, **kwargs):
 
 class HeadUnitContainer:
     def __init__(self):
-        for worker in ("engine-codes", "ena-gateway", "boostdeck-collector"):
+        for worker in ("engine-codes", "ena-gateway", "boostdeck-collector", "shift-deck"):
             if not (ROOT / "build-arm" / worker).is_file():
                 raise SystemExit(f"build-arm/{worker} is missing: bash toolchain/tc.sh make arm")
         self.name = f"ena-fake-headunit-{secrets.token_hex(4)}"

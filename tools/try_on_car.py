@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Tries the Rust ports of ena-gateway and engine-codes on a car, from a laptop, beside the installed C workers. It
-installs nothing and needs no Flare Drive.
+"""Tries the Rust ports of the workers on a car, from a laptop, beside the installed C workers. It installs nothing
+and needs no Flare Drive.
 
-    uv run --no-project --with paramiko tools/try_on_car.py --host HEAD_UNIT_ADDRESS [--worker all]
+    uv run --no-project --with paramiko tools/try_on_car.py --host HEAD_UNIT_ADDRESS [--worker all] [--seconds 20]
 
 It logs in over SSH as root, with the password from HEADUNIT_PASSWORD or a prompt. The password is never printed or
 saved. Then it:
@@ -15,8 +15,15 @@ saved. Then it:
    same arguments: engine-codes --host GATEWAY --codes, as Engine Fault Codes runs it, and ena-gateway check --host
    GATEWAY and ena-gateway discover, as setup.sh gateway runs them. engine-codes also gets --gateway-file in the
    folder, so that a worker that finds the gateway at a new address saves it there instead of in the apps' settings;
-4. prints both results side by side, with exit code, run time and peak memory, and whether they match;
-5. deletes its folder, also after an error or Ctrl-C.
+4. runs the gauge workers as BoostDeck and ShiftDeck run them (boostdeck-collector --host GATEWAY --session and
+   shift-deck --host GATEWAY), the Rust one and then the C one, for --seconds each, since two can't hold the gateway at
+   once. Each sends its frames to ena-capture, a listener uploaded with them, on a free port of its own (--udp-port),
+   so the apps' ports stay untouched; each also gets --gateway-file in the folder. Then SIGTERM stops it, as the app
+   does. Every second the script checks that no app's worker has started; if one has, it stops its own and ends;
+5. prints both results side by side, with exit code, run time and peak memory, and whether they match. For the gauge
+   workers it compares the frames: their format, the readings given, the frame rate (within RATE_TOLERANCE) and each
+   reading's median (within its tolerance in READINGS or SPEEDS, as live readings change between runs);
+6. deletes its folder, also after an error or Ctrl-C.
 
 It never writes outside its folder, never changes /opt, restarts nothing, and refuses --clear and every argument that
 isn't one of the workers' read-only ones. --worker-args runs one worker with other read-only arguments.
@@ -33,6 +40,8 @@ import os
 import re
 import shlex
 import signal
+import statistics
+import struct
 import sys
 import time
 from pathlib import Path
@@ -40,22 +49,43 @@ from pathlib import Path
 import paramiko
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKERS = ("engine-codes", "ena-gateway")
+ONE_SHOT = ("engine-codes", "ena-gateway")
+GAUGES = ("boostdeck-collector", "shift-deck")
+WORKERS = (*ONE_SHOT, *GAUGES)
+CAPTURE = "ena-capture"  # records what a gauge worker sends; uploaded with the gauge workers
 PLUGINS = "/opt/hmi/data/ro/Plugins"
 # Where each app has its C worker (src/paths.h), and the plugin folders setup.sh puts ena-gateway in.
 INSTALLED = {"engine-codes": [f"{PLUGINS}/EngineCodes/engine-codes"],
              "ena-gateway": [f"{PLUGINS}/{app}/ena-gateway"
-                             for app in ("EngineCodes", "BoostDeck", "ShiftDeck", "Bm3Maps", "MhdMaps")]}
+                             for app in ("EngineCodes", "BoostDeck", "ShiftDeck", "Bm3Maps", "MhdMaps")],
+             "boostdeck-collector": [f"{PLUGINS}/BoostDeck/boostdeck-collector"],
+             "shift-deck": [f"{PLUGINS}/ShiftDeck/shift-deck"]}
 GATEWAY_FILE = "/var/local/data/EntryNavApps/gateway-ip.txt"
 GAUGE_WORKERS = ("boostdeck-collector", "shift-deck", "engine-codes", "bm3-maps", "mhd-maps")
 FOLDER = re.compile(r"^/tmp/ena-rust\.[A-Za-z0-9]{6}$")
 GATEWAY = "GATEWAY"  # replaced by the saved gateway address
+PORT = "@PORT@"  # replaced on the head unit by ena-capture's port
 # The jobs the apps give each worker: what it does, and its arguments.
 JOBS = {"engine-codes": [("read the engine's fault codes, as Engine Fault Codes does", ["--host", GATEWAY, "--codes"])],
         "ena-gateway": [("check the route to the gateway, as setup.sh gateway does", ["check", "--host", GATEWAY]),
-                        ("look for the gateway on vbr0, as setup.sh gateway does", ["discover"])]}
+                        ("look for the gateway on vbr0, as setup.sh gateway does", ["discover"])],
+        "boostdeck-collector": [("stream the eight readings, as BoostDeck does", ["--host", GATEWAY, "--session"])],
+        "shift-deck": [("stream engine and road speed, as ShiftDeck does", ["--host", GATEWAY])]}
+# How each upload is tried before it runs: these arguments make it exit 2 at once, with its usage when it has one.
+PROBES = {"engine-codes": ([], True), "ena-gateway": ([], True), "boostdeck-collector": (["--help"], True),
+          "shift-deck": (["--help"], False), CAPTURE: (["--help"], True)}
 LEASE_HELD = "Diagnostics busy"
 EXIT_MISMATCH, EXIT_REFUSED, EXIT_STOPPED, EXIT_INTERRUPTED = 1, 2, 3, 130
+
+# How far the C and Rust gauge runs may differ. They run one after the other, so live readings change between them:
+# each reading is compared by its median over the run, against a tolerance in its own unit.
+RATE_TOLERANCE = 0.15  # frames a second, as a share of the C's
+GIVEN_TOLERANCE = 0.25  # the share of frames that carry a reading
+READINGS = [("Boost", "psi", 3.0), ("AFR", "", 1.5), ("Timing", "deg", 8.0), ("Intake air", "C", 5.0),
+            ("Transmission", "C", 5.0), ("Rail pressure", "bar", 40.0), ("Oil pressure", "bar", 1.0),
+            ("Coolant", "C", 5.0)]
+SPEEDS = [("Engine speed", "rpm", 250.0), ("Road speed", "km/h", 3.0)]
+STALL_MS = 400  # a gap between frames this long is a stall, which the summary counts
 
 
 class Stop(Exception):
@@ -78,10 +108,18 @@ def number(value, lo, hi):
 
 def refused(worker, args):
     """Why args aren't a read-only run of worker, or None. Only the options the workers read with are taken, each
-    once."""
+    once. The gauge workers' --udp-port and --gateway-file are the script's own, and --cycles and --demo aren't how
+    the apps run them."""
     if "--clear" in args:
         return "--clear clears the engine computer's fault memory. This script only reads."
-    if worker == "engine-codes":
+    if worker in GAUGES:
+        options = {"--host": address, "--port": lambda v: number(v, 1, 65535)}
+        flags, rest = ({"--session", "--no-trans", "--trace"} if worker == "boostdeck-collector" else set()), list(args)
+        if "--host" not in rest:
+            return f"{worker} needs --host"
+        if worker == "boostdeck-collector" and "--session" not in rest:
+            return "boostdeck-collector needs --session: without it, it doesn't take the diagnostic lease"
+    elif worker == "engine-codes":
         options = {"--host": address, "--port": lambda v: number(v, 1, 65535)}
         flags, rest = {"--codes"}, list(args)
         if "--codes" not in rest:
@@ -283,8 +321,9 @@ def upload(unit, folder, name, data, openssl):
     if code or actual != expected:
         raise Stop(f"{name} on the car has SHA-256 {actual or 'unknown'}, not {expected}: the upload is damaged.")
     print(f"Uploaded {name}: {len(data)} bytes, SHA-256 {expected} matches ({how})")
-    code, _, err = unit.text(shlex.quote(target))  # no arguments: it prints its usage and exits 2
-    if code != 2 or not err.startswith("Usage:"):
+    probe, usage = PROBES[name]  # it prints its usage, if it has one, and exits 2
+    code, _, err = unit.text(" ".join(shlex.quote(part) for part in [target, *probe]))
+    if code != 2 or (usage and not err.startswith("Usage:")) or (not usage and err):
         raise Stop(f"The head unit couldn't run {name} (exit {code}): {err.strip()[:200]}")
 
 
@@ -349,6 +388,244 @@ def run_worker(unit, folder, program, args, timeout):
             "moved": (found.get("MOVED") or [None])[0]}
 
 
+GAUGE_RUN = """
+d={folder}
+rm -f "$d/out" "$d/err" "$d/pid" "$d/capture" "$d/capture-err" "$d/moved-gateway.txt"
+# Each process this starts, as its pid and start time, so that a cleanup after Ctrl-C signals these and no others.
+record() {{
+    stat=
+    read -r stat 2>/dev/null <"/proc/$1/stat" || return
+    set -- $stat
+    p=$1
+    shift 21
+    echo "$p $1" >>"$d/pid"
+}}
+status() {{
+    value=
+    while read -r key field rest; do
+        [ "$key" = "$2" ] && value=$field
+    done 2>/dev/null <"/proc/$1/status"
+    echo "$value"
+}}
+env -i "$d/{capture}" --seconds {limit} </dev/null >"$d/capture" 2>"$d/capture-err" &
+capture=$!
+record $capture
+port=
+n=0
+while [ -z "$port" ] && [ $n -lt 250 ]; do
+    read -r key value rest 2>/dev/null <"$d/capture"
+    [ "$key" = PORT ] && port=$value
+    [ -z "$port" ] && usleep 20000
+    n=$((n + 1))
+done
+case $port in
+    ''|*[!0-9]*) kill -TERM $capture 2>/dev/null; wait $capture; rm -f "$d/pid"; echo "NOPORT=1"; exit 0 ;;
+esac
+read -r start rest </proc/uptime
+env -i LD_LIBRARY_PATH=/lib:/usr/lib {command} </dev/null >"$d/out" 2>"$d/err" &
+pid=$!
+record $pid
+others=
+s=0
+while [ $s -lt {seconds} ] && [ -z "$others" ]; do
+    sleep 1
+    s=$((s + 1))
+    case $(status $pid State:) in ''|Z|X) break ;; esac
+    # An app's worker that started meanwhile: an EntryNav-Apps page opened in iDrive.
+    for name in {gauge_workers}; do
+        for p in $(pidof "$name" 2>/dev/null); do
+            [ "$p" != "$pid" ] && others="$others $name:$p"
+        done
+    done
+done
+peak=$(status $pid VmHWM:)
+kill -TERM $pid 2>/dev/null
+wait $pid
+code=$?
+read -r end rest </proc/uptime
+usleep 200000
+kill -TERM $capture 2>/dev/null
+wait $capture
+rm -f "$d/pid"
+echo "CODE=$code"
+echo "START=$start"
+echo "END=$end"
+echo "PEAK_KB=$peak"
+echo "OTHERS=$others"
+[ -f "$d/moved-gateway.txt" ] && echo "MOVED=$(cat "$d/moved-gateway.txt")"
+exit 0
+"""
+
+
+def run_gauge(unit, folder, program, args, seconds):
+    """One gauge run of seconds: as run_worker, with the frames ena-capture recorded as [(arrival ms, bytes)]."""
+    command = " ".join(shlex.quote(part) for part in [program, *args]).replace(PORT, '"$port"')
+    script = GAUGE_RUN.format(folder=shlex.quote(folder), capture=CAPTURE, limit=seconds + 30, command=command,
+                              seconds=seconds, gauge_workers=" ".join(GAUGE_WORKERS))
+    code, out, err = unit.text(script, timeout=seconds + 60)
+    if code:
+        raise Stop(f"Running {program} failed on the head unit: {err.strip()[:200]}")
+    found = facts(out)
+    if found.get("NOPORT"):
+        raise Stop(f"{CAPTURE} didn't start on the head unit, so nothing could record the frames.")
+    others = (found.get("OTHERS") or [""])[0].split()
+    if others:
+        raise Stop(f"An app's worker started during the run ({', '.join(others)}): an EntryNav-Apps page opened in "
+                   "iDrive. This script stopped its own worker. Close the page and run this again.")
+    _, stdout, stderr = unit.run(f'cat "{folder}/out"; cat "{folder}/err" >&2')
+    _, recorded, _ = unit.run(f'cat "{folder}/capture"', timeout=120)
+    start, end = float(found["START"][0]), float(found["END"][0])
+    peak = (found.get("PEAK_KB") or [""])[0]
+    return {"code": int(found["CODE"][0]), "stdout": stdout, "stderr": stderr, "seconds": end - start,
+            "peak": f"{peak} kB" if peak.isdigit() else "not readable", "moved": (found.get("MOVED") or [None])[0],
+            "frames": captured(recorded)}
+
+
+def captured(data):
+    """ena-capture's lines, after its PORT line: [(arrival ms, datagram bytes)]."""
+    frames = []
+    for line in data.decode(errors="replace").splitlines()[1:]:
+        stamp, _, hexed = line.partition(" ")
+        try:
+            frames.append((int(stamp), bytes.fromhex(hexed)))
+        except ValueError:
+            continue
+    return frames
+
+
+def pace(times):
+    """Frames a second, the longest gap in ms and the stalls (gaps of STALL_MS or more) of arrival times in ms."""
+    gaps = [b - a for a, b in zip(times, times[1:])]
+    rate = (len(times) - 1) * 1000 / (times[-1] - times[0]) if len(times) > 1 and times[-1] > times[0] else 0.0
+    return rate, max(gaps, default=0), sum(gap >= STALL_MS for gap in gaps)
+
+
+def gauge_summary(worker, frames):
+    """What the app would have seen: frame counts, faults in the frames, the pace, and per reading the share of frames
+    that carry it and its median."""
+    good, bad, breaks, off_clock, demo, times = 0, 0, 0, 0, 0, []
+    names = READINGS if worker == "boostdeck-collector" else SPEEDS
+    values = [[] for _ in names]
+    previous = None
+    for arrived, data in frames:
+        if worker == "boostdeck-collector":
+            text = data.decode(errors="replace")
+            fields = text.split()
+            try:
+                if len(fields) != 21 or fields[0] != "NBG3" or not text.endswith("\n"):
+                    raise ValueError
+                seq, flag, valid, sent = (int(field) for field in fields[1:5])
+                readings = [float(fields[5 + 2 * i]) if valid >> i & 1 else None for i in range(len(names))]
+            except ValueError:
+                bad += 1
+                continue
+            breaks += previous is not None and seq != previous + 1
+            previous, demo = seq, demo + (flag != 0)
+        else:
+            if len(data) != 16:
+                bad += 1
+                continue
+            sent, rpm, kph = struct.unpack("<Qii", data)
+            readings = [rpm if rpm >= 0 else None, kph if kph >= 0 else None]
+            breaks += previous is not None and sent < previous
+            previous = sent
+        good += 1
+        times.append(arrived)
+        off_clock += abs(arrived - sent) > 500  # stamped with CLOCK_MONOTONIC, the clock ena-capture reads
+        for i, value in enumerate(readings):
+            if value is not None:
+                values[i].append(value)
+    rate, longest, stalls = pace(times)
+    return {"frames": good, "bad": bad, "breaks": breaks, "off clock": off_clock, "demo": demo, "rate": rate,
+            "longest": longest, "stalls": stalls,
+            "readings": [(len(v) / good if good else 0.0, statistics.median(v) if v else None) for v in values]}
+
+
+def refusals(worker, stderr):
+    """The lines on stderr that say something went wrong: for the collector, all but its first line (what it is) and
+    the gateway moving; for shift-deck, every line, since it prints nothing."""
+    found = lines(stderr)
+    if worker == "boostdeck-collector":
+        found = [line for line in found[1:] if not line.startswith("The gateway moved")]
+    return sorted(set(found))
+
+
+def gauge_problems(worker, rust, c):
+    """Why the two runs don't match, or [] when they do."""
+    problems = []
+    summaries = {"Rust": gauge_summary(worker, rust["frames"]), "C": gauge_summary(worker, c["frames"])}
+    for build, result in (("Rust", rust), ("C", c)):
+        summary = summaries[build]
+        if result["code"] != 0:
+            problems.append(f"the {build} worker exited {result['code']}, not 0 after SIGTERM")
+        if not summary["frames"]:
+            problems.append(f"the {build} worker sent no frames")
+        faults = [f"{summary[key]} {what}" for key, what in (("bad", "unreadable"), ("breaks", "out of order"),
+                                                              ("off clock", "stamped off the monotonic clock"),
+                                                              ("demo", "marked demo")) if summary[key]]
+        if faults:
+            problems.append(f"the {build} worker's frames: {', '.join(faults)}")
+    if refusals(worker, rust["stderr"]) != refusals(worker, c["stderr"]):
+        problems.append("different errors on stderr")
+    r, k = summaries["Rust"], summaries["C"]
+    if k["rate"] and abs(r["rate"] - k["rate"]) > RATE_TOLERANCE * k["rate"]:
+        problems.append(f"{r['rate']:.1f} frames a second against the C's {k['rate']:.1f}, more than "
+                        f"{RATE_TOLERANCE:.0%} apart")
+    names = READINGS if worker == "boostdeck-collector" else SPEEDS
+    for (name, unit_name, tolerance), (r_share, r_median), (c_share, c_median) in zip(names, r["readings"],
+                                                                                      k["readings"]):
+        if abs(r_share - c_share) > GIVEN_TOLERANCE:
+            problems.append(f"{name} in {r_share:.0%} of the Rust frames and {c_share:.0%} of the C's")
+        elif r_median is not None and c_median is not None and abs(r_median - c_median) > tolerance:
+            problems.append(f"{name}: median {r_median:.1f} against the C's {c_median:.1f}, more than "
+                            f"{tolerance:g} {unit_name} apart".replace("  ", " "))
+    return problems
+
+
+def compare_gauges(worker, title, args, rust, c, folder, c_path, seconds):
+    print(f"\n== {' '.join(args).replace(PORT, 'PORT')}\n   ({title}, {seconds} s each)")
+    width = 34
+    results = [(rust, "Rust (" + folder + ")"), (c, "C (" + (c_path or "not installed") + ")")]
+    summaries = [gauge_summary(worker, result["frames"]) if result else None for result, _ in results]
+    print(f"   {'':15}{results[0][1]:{width}}{results[1][1]}")
+
+    def row(label, show):
+        cells = [show(result, summary) if result else "-" for (result, _), summary in zip(results, summaries)]
+        print(f"   {label:15}{cells[0]:{width}}{cells[1]}")
+
+    row("exit code", lambda result, _: str(result["code"]))
+    row("run time", lambda result, _: f"{result['seconds']:.1f} s")
+    row("peak memory", lambda result, _: result["peak"])
+    row("frames", lambda _, s: f"{s['frames']}, {s['rate']:.1f} a second")
+    row("longest gap", lambda _, s: f"{s['longest']} ms, {s['stalls']} stall{'s' if s['stalls'] != 1 else ''}")
+    names = READINGS if worker == "boostdeck-collector" else SPEEDS
+    for i, (name, unit_name, _) in enumerate(names):
+        def reading(_, s, i=i, unit_name=unit_name):
+            share, median = s["readings"][i]
+            return "never given" if median is None else f"{median:.1f} {unit_name}".strip() + f", {share:.0%} given"
+        row(name, reading)
+    row("stderr", lambda result, _: describe(result["stderr"]))
+    for result, name in ((rust, "Rust"), (c, "C")):
+        if result and result["moved"]:
+            print(f"   The {name} worker found the gateway at {result['moved']}, not at the saved address. It "
+                  "saved that in its /tmp folder only. setup.sh gateway updates the apps' setting.")
+        if result:
+            for line in refusals(worker, result["stderr"]):
+                print(f"   {name} stderr: {line}")
+    if worker == "shift-deck" and all(s and s["readings"][0][1] == 0 for s in summaries if s):
+        print("   Engine speed was 0: start the engine for live readings.")
+    if c is None:
+        print("   Result: no installed C worker to compare with")
+        return None
+    problems = gauge_problems(worker, rust, c)
+    if problems:
+        print("   Result: DIFFERENT: " + "; ".join(problems))
+        return False
+    print(f"   Result: MATCH, the same readings, frame rates within {RATE_TOLERANCE:.0%} and medians within "
+          "tolerance")
+    return True
+
+
 def lines(data):
     return data.decode(errors="replace").splitlines()
 
@@ -397,21 +674,23 @@ def compare(title, args, rust, c, folder, c_path):
 
 
 def cleanup(unit, folder):
-    """Ends a worker this script started that is still running, then deletes the folder."""
+    """Ends the processes this script started that are still running (a worker, and ena-capture), then deletes the
+    folder."""
     if not folder or not FOLDER.match(folder):
         return
     quoted = shlex.quote(folder)
     script = f"""
 d={quoted}
 if [ -f "$d/pid" ]; then
-    read -r pid started rest <"$d/pid"
-    case $pid in ''|*[!0-9]*) pid= ;; esac
-    now=$(awk '{{print $22}}' "/proc/$pid/stat" 2>/dev/null)
-    if [ -n "$pid" ] && [ -n "$started" ] && [ "$now" = "$started" ]; then
-        kill -TERM "$pid" 2>/dev/null
-        n=0
-        while [ -d "/proc/$pid" ] && [ $n -lt 30 ]; do usleep 100000; n=$((n + 1)); done
-    fi
+    while read -r pid started rest; do
+        case $pid in ''|*[!0-9]*) continue ;; esac
+        now=$(awk '{{print $22}}' "/proc/$pid/stat" 2>/dev/null)
+        if [ -n "$started" ] && [ "$now" = "$started" ]; then
+            kill -TERM "$pid" 2>/dev/null
+            n=0
+            while [ -d "/proc/$pid" ] && [ $n -lt 30 ]; do usleep 100000; n=$((n + 1)); done
+        fi
+    done <"$d/pid"
 fi
 rm -rf "$d"
 [ ! -e "$d" ] && echo CLEANED
@@ -436,24 +715,27 @@ def main(argv=None):
                                                  "compares them. Read-only; installs nothing.")
     parser.add_argument("--host", required=True, help="the head unit's address on the car's Wi-Fi or ENET")
     parser.add_argument("--ssh-port", type=int, default=22)
-    parser.add_argument("--worker", choices=("all", *WORKERS), default="all")
+    parser.add_argument("--worker", choices=("all", "gauges", *WORKERS), default="all",
+                        help="all four workers, both gauge workers, or one")
     parser.add_argument("--worker-args", help="read-only arguments for --worker instead of the apps' own, quoted as "
                                               "one string, for example \"check --host 169.254.10.3\"")
+    parser.add_argument("--seconds", type=int, default=20, choices=range(3, 301), metavar="3-300",
+                        help="how long each gauge worker runs (default 20)")
     parser.add_argument("--rust-dir", type=Path, default=ROOT / "build" / "rust", help="where make rust put them")
-    parser.add_argument("--timeout", type=int, default=60, help="seconds a run may take")
+    parser.add_argument("--timeout", type=int, default=60, help="seconds a one-shot run may take")
     options = parser.parse_args(argv)
-    workers = list(WORKERS) if options.worker == "all" else [options.worker]
+    workers = {"all": list(WORKERS), "gauges": list(GAUGES)}.get(options.worker, [options.worker])
     custom = None
     if options.worker_args is not None:
-        if options.worker == "all":
-            parser.error("--worker-args needs --worker engine-codes or --worker ena-gateway")
+        if len(workers) > 1:
+            parser.error("--worker-args needs --worker and one worker's name")
         custom = shlex.split(options.worker_args)
         why = refused(options.worker, custom)
         if why:
             print(f"Refused: {why}", file=sys.stderr)
             return EXIT_REFUSED
     binaries = {}
-    for worker in workers:
+    for worker in workers + ([CAPTURE] if set(workers) & set(GAUGES) else []):
         path = options.rust_dir / worker
         if not path.is_file():
             print(f"{path} is missing. Build it first: make rust", file=sys.stderr)
@@ -469,25 +751,31 @@ def main(argv=None):
     try:
         unit = HeadUnit(options.host, options.ssh_port, password)
         del password
+        # The uploads, read back once, and a gauge run's frames: at most about 30 kB a second.
         need_kb = sum(len(data) for data in binaries.values()) // 1024 * 2 + 256
+        if CAPTURE in binaries:
+            need_kb += options.seconds * 30
         installed, openssl = preflight(unit, workers, need_kb)
         gateway = saved_gateway(unit)
         jobs = [(worker, title, args) for worker in workers for title, args in JOBS[worker]]
         if custom is not None:
             jobs = [(workers[0], "the arguments given", custom)]
         if any(GATEWAY in args for _, _, args in jobs) and not gateway:
-            raise Stop(f"No usable gateway address in {GATEWAY_FILE}, so Engine Fault Codes would say "
-                       "\"Gateway not set up\". sh /opt/hmi/data/ro/Plugins/EngineCodes/setup.sh gateway finds it.")
+            raise Stop(f"No usable gateway address in {GATEWAY_FILE}, so the apps can't reach the car (Engine Fault "
+                       "Codes says \"Gateway not set up\"). sh /opt/hmi/data/ro/Plugins/EngineCodes/setup.sh gateway "
+                       "finds it.")
         if gateway:
             print(f"Saved gateway: {gateway}")
         folder = make_folder(unit)
         print(f"Made {folder}")
-        for worker in workers:
-            upload(unit, folder, worker, binaries[worker], openssl)
+        for name, data in binaries.items():
+            upload(unit, folder, name, data, openssl)
         results = []
         for worker, title, args in jobs:
             args = [gateway if a == GATEWAY else a for a in args]
-            if worker == "engine-codes":
+            if worker in GAUGES:  # its frames to ena-capture, never to the app's port
+                args += ["--udp-port", PORT]
+            if worker in ("engine-codes", *GAUGES):
                 args += ["--gateway-file", f"{folder}/moved-gateway.txt"]
             outcome = {}
             for build, program in (("rust", f"{folder}/{worker}"), ("c", installed[worker])):
@@ -497,12 +785,21 @@ def main(argv=None):
                 why = busy(unit)
                 if why:
                     raise Stop(why + " An app's page opened in iDrive while this ran. Close it and run this again.")
-                outcome[build] = run_worker(unit, folder, program, args, options.timeout)
+                if worker in GAUGES:
+                    label = "Rust" if build == "rust" else "C"
+                    print(f"Running the {label} {worker} for {options.seconds} s...", flush=True)
+                    outcome[build] = run_gauge(unit, folder, program, args, options.seconds)
+                else:
+                    outcome[build] = run_worker(unit, folder, program, args, options.timeout)
                 if LEASE_HELD.encode() in outcome[build]["stdout"]:
                     raise Stop(f"The {build.upper()} worker found the diagnostics connection busy: an app took it "
                                "during the run. Close its page in iDrive and run this again.")
                 time.sleep(0.3)
-            results.append(compare(title, args, outcome["rust"], outcome["c"], folder, installed[worker]))
+            if worker in GAUGES:
+                results.append(compare_gauges(worker, title, args, outcome["rust"], outcome["c"], folder,
+                                              installed[worker], options.seconds))
+            else:
+                results.append(compare(title, args, outcome["rust"], outcome["c"], folder, installed[worker]))
         compared = [r for r in results if r is not None]
         print(f"\n{sum(compared)} of {len(compared)} compared runs matched." if compared else "\nNothing to compare.")
         status = 0 if all(compared) else EXIT_MISMATCH
@@ -516,7 +813,7 @@ def main(argv=None):
         print("\nInterrupted. Cleaning up on the head unit...", file=sys.stderr)
         status = EXIT_INTERRUPTED
     except TimeoutError:
-        print(f"The head unit didn't answer within {options.timeout} s.", file=sys.stderr)
+        print("The head unit didn't answer in time.", file=sys.stderr)
         status = EXIT_STOPPED
     except (OSError, paramiko.SSHException) as error:
         print(f"Lost the head unit: {error}", file=sys.stderr)
