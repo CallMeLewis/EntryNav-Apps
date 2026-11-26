@@ -1,6 +1,8 @@
-# Every push and pull request, as four jobs that run side by side: the PC tests, the apps' C++ compiled for errors,
-# ShellCheck, and the committed screens matching their generators. Together they are make check. The ARM build links
-# against the car's libraries (BMW files), so it runs on a developer's machine with tools/check.py, not here.
+# Every push and pull request, as five jobs that run side by side: the PC tests, the apps' C++ compiled for errors,
+# ShellCheck, the committed screens matching their generators, and the Rust workers' unit tests and Clippy on the
+# runner's x86_64 Linux. The first four together are make check. The ARM build links against the car's libraries (BMW
+# files), so it runs on a developer's machine with tools/check.py, not here, and so do the Rust unit tests built for the
+# head unit's ARM target (tests/run_rust.py).
 name: CI
 
 on:
@@ -58,3 +60,22 @@ jobs:
           sudo apt-get install -y --no-install-recommends python3-pil fonts-dejavu-core fonts-dejavu-extra
       - name: The committed screens and headers match their generators
         run: make generated
+
+  rust:
+    name: Rust unit tests and Clippy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The runner's own rustup installs the version rust-toolchain.toml pins, so no toolchain action is needed.
+      - name: Install the pinned Rust and Clippy
+        run: |
+          rustup toolchain install --no-self-update
+          rustup component add clippy
+      - name: The unit tests of every crate in the workspace
+        run: cargo test --locked
+      - name: Clippy on every crate and target, warnings as errors
+        run: cargo clippy --locked --all-targets -- -D warnings

@@ -193,7 +193,7 @@ another). That copy holds BMW files and never goes into git.
 |---|---|
 | `make test` | The PC tests: the decoders, each worker against a simulated gateway, and how `tools/publish_release.py` retries and checks the tag (Linux or WSL, Python with cryptography) |
 | `make assets` | The screens and their image archives (Python with Pillow) |
-| `make check` | The PC tests, the apps' C++ compiled for errors, ShellCheck, and the committed screens matching their generators. CI runs each as its own job on every push |
+| `make check` | The PC tests, the apps' C++ compiled for errors, ShellCheck, and the committed screens matching their generators. CI runs each as its own job on every push, along with the Rust unit tests and Clippy |
 | `bash toolchain/tc.sh make arm` | The ARM apps, workers and test programs |
 | `bash toolchain/qemu.sh python3 tests/run_arm.py` | Loads each app the way iDrive does, with the car's own libraries under QEMU |
 | `python3 tools/package_release.py` | One release archive per app, in `dist/`, with the C workers. `--workers rust` packages the Rust ones (see [The Rust workers](#the-rust-workers)) |
@@ -216,6 +216,7 @@ describes. `ena-capture`, built with them, records what a gauge worker sends, fo
 |---|---|
 | `make rust` | The six workers, `ena-capture` and `test-bm3` for the head unit, statically linked, in `build/rust`, with the Rust version `rust/rust-toolchain.toml` pins. From WSL on Windows: `make rust CARGO=cargo.exe` |
 | `python3 tests/run_rust.py` | Their unit tests, the worker tests on both builds, and two tests that run the C and Rust builds through the same scenarios and compare them, all under QEMU. Run `bash toolchain/tc.sh make arm` first. `--fixtures` compares the Rust builds with the recorded C instead |
+| `cargo test` and `cargo clippy --all-targets -- -D warnings`, in `rust/` | The unit tests and Clippy on a Linux PC, as CI runs them. The workers use Linux's system calls, so they don't build for Windows: from Windows, run these in WSL or Docker |
 | `python3 tests/record_fixtures.py` | Runs the C workers through every comparison scenario under QEMU and records what they did in `tests/fixtures` |
 | `uv run --no-project --with paramiko tests/test_try_on_car.py` | Tests `tools/try_on_car.py` against a pretend head unit in Docker |
 

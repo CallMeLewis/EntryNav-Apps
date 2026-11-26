@@ -29,7 +29,8 @@ assets:
 	$(PYTHON) tools/make_bars.py
 	$(PYTHON) tools/make_drive_apps.py
 
-# Every check that needs no copy of the car's system. CI (.github/workflows/ci.yml) runs each as its own job.
+# Every check outside rust/ that needs no copy of the car's system. CI (.github/workflows/ci.yml) runs each as its own
+# job, and the Rust unit tests and Clippy as one more.
 check: test syntax lint generated
 
 # The apps' C++ on the PC, for errors only: the ARM build needs the car's libraries.
