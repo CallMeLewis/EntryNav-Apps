@@ -1,0 +1,239 @@
+{
+ "worker": "ena-gateway",
+ "recorded from": "build-arm/ena-gateway",
+ "sha256": "1793a74c5c6d46b06ac8151329d1b89923e5491f510f9bd22c01a6cceadc1190",
+ "runner": "qemu-arm -cpu cortex-a15 -r 3.12.25-FR21.0 -L /sysroot",
+ "scenarios": {
+  "discover: the gateway, once": {
+   "stdout": "127.0.0.1\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.4279185039999902,
+   "identification requests": [
+    "000000000011"
+   ]
+  },
+  "discover: other controllers and messages": {
+   "stdout": "",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.426094773999921,
+   "identification requests": [
+    "000000000011"
+   ]
+  },
+  "discover: every network on lo": {
+   "stdout": "127.0.0.1\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.44089826399999765,
+   "identification requests": [
+    "000000000011"
+   ]
+  },
+  "discover: 18 gateways, 16 kept": {
+   "stdout": "127.0.0.1\n127.0.0.2\n127.0.0.3\n127.0.0.4\n127.0.0.5\n127.0.0.6\n127.0.0.7\n127.0.0.8\n127.0.0.9\n127.0.0.10\n127.0.0.11\n127.0.0.12\n127.0.0.13\n127.0.0.14\n127.0.0.15\n127.0.0.16\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.01904774200011161,
+   "identification requests": [
+    "000000000011"
+   ]
+  },
+  "discover: nothing answers": {
+   "stdout": "",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.33188532999997733,
+   "identification requests": [
+    "000000000011"
+   ]
+  },
+  "discover: SIGTERM while waiting": {
+   "stdout": "",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.6091563289999158,
+   "identification requests": [
+    "000000000011"
+   ]
+  },
+  "discover: a device without an address": {
+   "stdout": "",
+   "stderr": "nonexistent0 has no IPv4 address\n",
+   "code": 1,
+   "seconds": 0.04480764100003398
+  },
+  "discover: an empty device": {
+   "stdout": "",
+   "stderr": " has no IPv4 address\n",
+   "code": 1,
+   "seconds": 0.02463031199999932
+  },
+  "discover: a bad address": {
+   "stdout": "",
+   "stderr": "Invalid address: 1.2.3\n",
+   "code": 2,
+   "seconds": 0.017897515999948155
+  },
+  "check: positive": {
+   "stdout": "Gateway 127.0.0.1 answers; the DME replied to OBD 01 00\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.025580679999848144,
+   "gateway": [
+    [
+     1,
+     "f4120100"
+    ]
+   ]
+  },
+  "check: pending, then refused": {
+   "stdout": "Gateway 127.0.0.1 answers; the DME refused OBD 01 00 (NRC 12)\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.04964427599998089,
+   "gateway": [
+    [
+     1,
+     "f4120100"
+    ]
+   ]
+  },
+  "check: an answer too long to take": {
+   "stdout": "Connected to 127.0.0.1, but the DME did not answer\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.0572178829997938,
+   "gateway": [
+    [
+     1,
+     "f4120100"
+    ]
+   ]
+  },
+  "check: never answers (1.5 s)": {
+   "stdout": "Connected to 127.0.0.1, but the DME did not answer\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 1.5265507970000272,
+   "gateway": [
+    [
+     1,
+     "f4120100"
+    ]
+   ]
+  },
+  "check: gateway closes": {
+   "stdout": "Connected to 127.0.0.1, but the DME did not answer\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.023975938000148744,
+   "gateway": [
+    [
+     1,
+     "f4120100"
+    ]
+   ]
+  },
+  "check: no connection": {
+   "stdout": "No connection to 127.0.0.1 port PORT\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.02068875999998454,
+   "gateway": []
+  },
+  "check: lease held": {
+   "stdout": "Diagnostics busy. Close BoostDeck or ShiftDeck and try again.\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.021572934999994686,
+   "gateway": [],
+   "asked for the lease": true
+  },
+  "check: SIGTERM while waiting": {
+   "stdout": "Connected to 127.0.0.1, but the DME did not answer\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.604141595000101,
+   "gateway": [
+    [
+     1,
+     "f4120100"
+    ]
+   ]
+  },
+  "no arguments": {
+   "stdout": "",
+   "stderr": "Usage: WORKER discover [--dev NAME | --to IPv4] [--port 6811] [--wait MS] | check --host IPv4 [--port 6801]\n",
+   "code": 2,
+   "seconds": 0.019524427000078504
+  },
+  "unknown command": {
+   "stdout": "",
+   "stderr": "Usage: WORKER discover [--dev NAME | --to IPv4] [--port 6811] [--wait MS] | check --host IPv4 [--port 6801]\n",
+   "code": 2,
+   "seconds": 0.023206565000009505
+  },
+  "discover with --host": {
+   "stdout": "",
+   "stderr": "Unknown argument: --host\n",
+   "code": 2,
+   "seconds": 0.0214448930000799
+  },
+  "check with --to": {
+   "stdout": "",
+   "stderr": "Unknown argument: --to\n",
+   "code": 2,
+   "seconds": 0.025925757999857524
+  },
+  "check without --host": {
+   "stdout": "",
+   "stderr": "check needs --host\n",
+   "code": 2,
+   "seconds": 0.018348702999901434
+  },
+  "check, --host without a value": {
+   "stdout": "",
+   "stderr": "Unknown argument: --host\n",
+   "code": 2,
+   "seconds": 0.018193680999956996
+  },
+  "check, two hosts": {
+   "stdout": "",
+   "stderr": "Unknown argument: --host\n",
+   "code": 2,
+   "seconds": 0.018460639000068113
+  },
+  "discover, two destinations": {
+   "stdout": "",
+   "stderr": "Unknown argument: --to\n",
+   "code": 2,
+   "seconds": 0.017855778000011924
+  },
+  "wait too short": {
+   "stdout": "",
+   "stderr": "Invalid number: 99\n",
+   "code": 2,
+   "seconds": 0.018348610999964876
+  },
+  "wait too long": {
+   "stdout": "",
+   "stderr": "Invalid number: 10001\n",
+   "code": 2,
+   "seconds": 0.01928928100005578
+  },
+  "port 0": {
+   "stdout": "",
+   "stderr": "Invalid number: 0\n",
+   "code": 2,
+   "seconds": 0.017777923000039664
+  },
+  "check, bad host": {
+   "stdout": "No connection to 127.0.0.256 port 6801\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.02071882999985064
+  }
+ }
+}

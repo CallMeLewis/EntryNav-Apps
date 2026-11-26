@@ -1,0 +1,1223 @@
+{
+ "worker": "shift-deck",
+ "recorded from": "build-arm/shift-deck",
+ "sha256": "89445b0b6238808f541e092cab6ce5f79fa864710c340aa5d8a08d8a23f6d035",
+ "runner": "qemu-arm -cpu cortex-a15 -r 3.12.25-FR21.0 -L /sysroot",
+ "scenarios": {
+  "one pass": {
+   "stdout": "",
+   "stderr": "",
+   "code": 0,
+   "sizes": [
+    16
+   ],
+   "rpm": [
+    696
+   ],
+   "kph": [
+    0
+   ],
+   "monotonic clock": true,
+   "stamps in order": true,
+   "first requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 1
+    },
+    "median gap, ms": {
+     "within": null
+    },
+    "connections": {
+     "within": 1
+    },
+    "12 010c: requests": {
+     "within": 1
+    },
+    "12 010c: first, s": {
+     "within": 0.0
+    },
+    "12 010d: requests": {
+     "within": 1
+    },
+    "12 010d: first, s": {
+     "within": 0.00030778399991504557
+    },
+    "run, s": {
+     "within": 0.04029653800012056
+    }
+   },
+   "lease free after": true
+  },
+  "streaming: rising revs, speed every 65 ms": {
+   "stdout": "",
+   "stderr": "",
+   "code": 0,
+   "sizes": [
+    16
+   ],
+   "rpm": [
+    700,
+    850,
+    1000,
+    1150,
+    1300,
+    1450,
+    1600,
+    1750,
+    1900,
+    2050,
+    2200,
+    2350,
+    2500,
+    2650,
+    2800,
+    2950,
+    3100,
+    3250,
+    3400,
+    3550,
+    3700,
+    3850,
+    4000,
+    4150,
+    4300,
+    4450,
+    4600,
+    4750,
+    4900,
+    5050,
+    5200,
+    5350,
+    5500,
+    5650,
+    5800,
+    5950,
+    6100,
+    6250,
+    6400,
+    6550
+   ],
+   "kph": [
+    0,
+    1,
+    2,
+    3,
+    5
+   ],
+   "monotonic clock": true,
+   "stamps in order": true,
+   "first requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 126
+    },
+    "median gap, ms": {
+     "within": 20.35221400001319
+    },
+    "connections": {
+     "within": 5
+    },
+    "12 010c: requests": {
+     "within": 126
+    },
+    "12 010c: first, s": {
+     "within": 0.0
+    },
+    "12 010c: median gap, ms": {
+     "within": 20.347139000023162
+    },
+    "12 010d: requests": {
+     "within": 34
+    },
+    "12 010d: first, s": {
+     "within": 0.0003320929999972577
+    },
+    "12 010d: median gap, ms": {
+     "within": 80.59622000018862
+    },
+    "run, s": {
+     "within": 3.1848801529999946
+    }
+   },
+   "lease free after": true
+  },
+  "refused and short answers": {
+   "stdout": "",
+   "stderr": "",
+   "code": 0,
+   "sizes": [
+    16
+   ],
+   "rpm": [
+    -1,
+    696
+   ],
+   "kph": [
+    -1
+   ],
+   "monotonic clock": true,
+   "stamps in order": true,
+   "first requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ],
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010c"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 3
+    },
+    "median gap, ms": {
+     "within": 19.945036499962043
+    },
+    "connections": {
+     "within": 1
+    },
+    "12 010c: requests": {
+     "within": 3
+    },
+    "12 010c: first, s": {
+     "within": 0.0
+    },
+    "12 010c: median gap, ms": {
+     "within": 20.114609999950517
+    },
+    "12 010d: requests": {
+     "within": 1
+    },
+    "12 010d: first, s": {
+     "within": 0.0002856369999335584
+    },
+    "run, s": {
+     "within": 0.08001519100002952
+    }
+   },
+   "lease free after": true
+  },
+  "an answer too long to take": {
+   "stdout": "",
+   "stderr": "",
+   "code": 0,
+   "sizes": [
+    16
+   ],
+   "rpm": [
+    696
+   ],
+   "kph": [
+    0
+   ],
+   "monotonic clock": true,
+   "stamps in order": true,
+   "first requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010c"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 18
+    },
+    "median gap, ms": {
+     "within": 20.34168599993791
+    },
+    "connections": {
+     "within": 2
+    },
+    "12 010c: requests": {
+     "within": 19
+    },
+    "12 010c: first, s": {
+     "within": 0.0
+    },
+    "12 010c: median gap, ms": {
+     "within": 20.3872129999354
+    },
+    "12 010d: requests": {
+     "within": 5
+    },
+    "12 010d: first, s": {
+     "within": 0.3023256939998191
+    },
+    "12 010d: median gap, ms": {
+     "within": 80.5945115000668
+    },
+    "run, s": {
+     "within": 0.6838858300000084
+    }
+   },
+   "lease free after": true
+  },
+  "an oversized frame": {
+   "stdout": "",
+   "stderr": "",
+   "code": 0,
+   "sizes": [
+    16
+   ],
+   "rpm": [
+    696
+   ],
+   "kph": [
+    0
+   ],
+   "monotonic clock": true,
+   "stamps in order": true,
+   "first requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010c"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 18
+    },
+    "median gap, ms": {
+     "within": 20.335761999831448
+    },
+    "connections": {
+     "within": 2
+    },
+    "12 010c: requests": {
+     "within": 19
+    },
+    "12 010c: first, s": {
+     "within": 0.0
+    },
+    "12 010c: median gap, ms": {
+     "within": 20.349939000084305
+    },
+    "12 010d: requests": {
+     "within": 5
+    },
+    "12 010d: first, s": {
+     "within": 0.3022735310000826
+    },
+    "12 010d: median gap, ms": {
+     "within": 80.22624249997534
+    },
+    "run, s": {
+     "within": 0.683883951000098
+    }
+   },
+   "lease free after": true
+  },
+  "acknowledgements, pending answers and alive checks": {
+   "stdout": "",
+   "stderr": "",
+   "code": 0,
+   "sizes": [
+    16
+   ],
+   "rpm": [
+    696
+   ],
+   "kph": [
+    7
+   ],
+   "monotonic clock": true,
+   "stamps in order": true,
+   "first requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ],
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010c"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "other frames": [
+    [
+     19,
+     "00f4"
+    ]
+   ],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 3
+    },
+    "median gap, ms": {
+     "within": 19.989869500022905
+    },
+    "connections": {
+     "within": 1
+    },
+    "12 010c: requests": {
+     "within": 3
+    },
+    "12 010c: first, s": {
+     "within": 0.0
+    },
+    "12 010c: median gap, ms": {
+     "within": 20.137435500032552
+    },
+    "12 010d: requests": {
+     "within": 1
+    },
+    "12 010d: first, s": {
+     "within": 0.00034240600007251487
+    },
+    "run, s": {
+     "within": 0.08021173999986786
+    }
+   },
+   "lease free after": true
+  },
+  "the gateway goes silent": {
+   "stdout": "",
+   "stderr": "",
+   "code": 0,
+   "sizes": [
+    16
+   ],
+   "rpm": [
+    696
+   ],
+   "kph": [
+    0
+   ],
+   "monotonic clock": true,
+   "stamps in order": true,
+   "first requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 8
+    },
+    "median gap, ms": {
+     "within": 20.348208999848794
+    },
+    "connections": {
+     "within": 3
+    },
+    "12 010c: requests": {
+     "within": 11
+    },
+    "12 010c: first, s": {
+     "within": 0.0
+    },
+    "12 010c: median gap, ms": {
+     "within": 20.366951000028166
+    },
+    "12 010d: requests": {
+     "within": 2
+    },
+    "12 010d: first, s": {
+     "within": 0.0003736060000392172
+    },
+    "12 010d: median gap, ms": {
+     "within": 79.5964889998686
+    },
+    "run, s": {
+     "within": 1.7365969219999897
+    }
+   },
+   "lease free after": true
+  },
+  "the gateway closes every ninth request": {
+   "stdout": "",
+   "stderr": "",
+   "code": 0,
+   "sizes": [
+    16
+   ],
+   "rpm": [
+    700,
+    850,
+    1000,
+    1150,
+    1300,
+    1450,
+    1600,
+    1750,
+    1900,
+    2050,
+    2200,
+    2350,
+    2500,
+    2650,
+    2800,
+    2950,
+    3100,
+    3250,
+    3400,
+    3550,
+    3700,
+    3850,
+    4000,
+    4150
+   ],
+   "kph": [
+    0
+   ],
+   "monotonic clock": true,
+   "stamps in order": true,
+   "first requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 24
+    },
+    "median gap, ms": {
+     "within": 20.368983000025764
+    },
+    "connections": {
+     "within": 4
+    },
+    "12 010c: requests": {
+     "within": 27
+    },
+    "12 010c: first, s": {
+     "within": 0.0
+    },
+    "12 010c: median gap, ms": {
+     "within": 20.36359850012559
+    },
+    "12 010d: requests": {
+     "within": 8
+    },
+    "12 010d: first, s": {
+     "within": 0.00035231800006840785
+    },
+    "12 010d: median gap, ms": {
+     "within": 81.63562200002161
+    },
+    "run, s": {
+     "within": 1.4098150639999858
+    }
+   },
+   "lease free after": true
+  },
+  "the lease held throughout": {
+   "stdout": "",
+   "stderr": "",
+   "code": 0,
+   "sizes": [],
+   "rpm": [],
+   "kph": [],
+   "monotonic clock": true,
+   "stamps in order": true,
+   "first requests": [],
+   "requests": [],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 0
+    },
+    "median gap, ms": {
+     "within": null
+    },
+    "connections": {
+     "within": 0
+    },
+    "run, s": {
+     "within": 0.7757916479999949
+    }
+   },
+   "lease free after": true,
+   "waiting bytes": 30
+  },
+  "the lease given up after 0.3 s": {
+   "stdout": "",
+   "stderr": "",
+   "code": 0,
+   "sizes": [
+    16
+   ],
+   "rpm": [
+    700,
+    850,
+    1000,
+    1150,
+    1300,
+    1450,
+    1600,
+    1750,
+    1900,
+    2050,
+    2200,
+    2350,
+    2500,
+    2650,
+    2800,
+    2950,
+    3100,
+    3250,
+    3400,
+    3550,
+    3700,
+    3850,
+    4000,
+    4150,
+    4300,
+    4450,
+    4600,
+    4750,
+    4900,
+    5050,
+    5200,
+    5350
+   ],
+   "kph": [
+    0
+   ],
+   "monotonic clock": true,
+   "stamps in order": true,
+   "first requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 32
+    },
+    "median gap, ms": {
+     "within": 20.34837999985939
+    },
+    "connections": {
+     "within": 2
+    },
+    "12 010c: requests": {
+     "within": 32
+    },
+    "12 010c: first, s": {
+     "within": 0.0
+    },
+    "12 010c: median gap, ms": {
+     "within": 20.353581000108534
+    },
+    "12 010d: requests": {
+     "within": 9
+    },
+    "12 010d: first, s": {
+     "within": 0.00026353399994150095
+    },
+    "12 010d: median gap, ms": {
+     "within": 80.50656000000345
+    },
+    "run, s": {
+     "within": 1.119959450000124
+    },
+    "waiting bytes": {
+     "within": 12
+    }
+   },
+   "lease free after": true
+  },
+  "another worker asks for the lease": {
+   "stdout": "",
+   "stderr": "",
+   "code": 0,
+   "sizes": [
+    16
+   ],
+   "rpm": [
+    700,
+    850,
+    1000,
+    1150,
+    1300,
+    1450,
+    1600,
+    1750,
+    1900,
+    2050,
+    2200,
+    2350,
+    2500,
+    2650,
+    2800,
+    2950,
+    3100,
+    3250,
+    3400,
+    3550,
+    3700,
+    3850,
+    4000,
+    4150,
+    4300,
+    4450,
+    4600,
+    4750,
+    4900,
+    5050,
+    5200,
+    5350,
+    5500,
+    5650,
+    5800,
+    5950,
+    6100,
+    6250,
+    6400,
+    6550
+   ],
+   "kph": [
+    0
+   ],
+   "monotonic clock": true,
+   "stamps in order": true,
+   "first requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 59
+    },
+    "median gap, ms": {
+     "within": 20.36202300007517
+    },
+    "connections": {
+     "within": 3
+    },
+    "12 010c: requests": {
+     "within": 59
+    },
+    "12 010c: first, s": {
+     "within": 0.0
+    },
+    "12 010c: median gap, ms": {
+     "within": 20.374800000013238
+    },
+    "12 010d: requests": {
+     "within": 16
+    },
+    "12 010d: first, s": {
+     "within": 0.0003292359999704786
+    },
+    "12 010d: median gap, ms": {
+     "within": 80.58141800006524
+    },
+    "run, s": {
+     "within": 1.744985528000143
+    },
+    "the other worker waited, s": {
+     "within": 4.740600002151041e-05
+    }
+   },
+   "lease free after": true,
+   "the other worker got the lease": true
+  },
+  "SIGTERM part way": {
+   "stdout": "",
+   "stderr": "",
+   "code": 0,
+   "sizes": [
+    16
+   ],
+   "rpm": [
+    696
+   ],
+   "kph": [
+    0
+   ],
+   "monotonic clock": true,
+   "stamps in order": true,
+   "first requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 42
+    },
+    "median gap, ms": {
+     "within": 20.34956400007104
+    },
+    "connections": {
+     "within": 2
+    },
+    "12 010c: requests": {
+     "within": 42
+    },
+    "12 010c: first, s": {
+     "within": 0.0
+    },
+    "12 010c: median gap, ms": {
+     "within": 20.36099700012528
+    },
+    "12 010d: requests": {
+     "within": 11
+    },
+    "12 010d: first, s": {
+     "within": 0.00029170999982852663
+    },
+    "12 010d: median gap, ms": {
+     "within": 80.59123449993422
+    },
+    "run, s": {
+     "within": 1.0032625710000502
+    }
+   },
+   "lease free after": true
+  },
+  "SIGTERM while a read waits": {
+   "stdout": "",
+   "stderr": "",
+   "code": 0,
+   "sizes": [
+    16
+   ],
+   "rpm": [
+    696
+   ],
+   "kph": [
+    0
+   ],
+   "monotonic clock": true,
+   "stamps in order": true,
+   "first requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "010c"
+    ],
+    [
+     18,
+     "010d"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 4
+    },
+    "median gap, ms": {
+     "within": 19.448394999926677
+    },
+    "connections": {
+     "within": 2
+    },
+    "12 010c: requests": {
+     "within": 6
+    },
+    "12 010c: first, s": {
+     "within": 0.0
+    },
+    "12 010c: median gap, ms": {
+     "within": 20.411429999967368
+    },
+    "12 010d: requests": {
+     "within": 2
+    },
+    "12 010d: first, s": {
+     "within": 0.00032007400000111375
+    },
+    "12 010d: median gap, ms": {
+     "within": 79.96977000016159
+    },
+    "run, s": {
+     "within": 0.8032646609999574
+    }
+   },
+   "lease free after": true
+  },
+  "its parent goes": {
+   "stderr": "",
+   "stopped within 0.5 s of its parent": true,
+   "streamed before": true,
+   "lease free after": true,
+   "timing": {
+    "stopped after, s": {
+     "within": 0.010320400999944468
+    }
+   },
+   "readings": [
+    696
+   ]
+  },
+  "the gateway moved and is saved": {
+   "stdout": "",
+   "stderr": "The gateway moved from 127.0.0.2 to 127.0.0.1\n",
+   "code": 0,
+   "saved": "127.0.0.1\n",
+   "left behind": [
+    "gateway-ip.txt"
+   ],
+   "identification requests": [
+    "000000000011"
+   ],
+   "sizes": [
+    16
+   ],
+   "rpm": [
+    696
+   ],
+   "kph": [
+    0
+   ],
+   "monotonic clock": true,
+   "stamps in order": true,
+   "timing": {
+    "frames": {
+     "within": 29
+    },
+    "median gap, ms": {
+     "within": 20.34283250009139
+    },
+    "run, s": {
+     "within": 2.597118437000063
+    },
+    "connections": {
+     "within": 3
+    }
+   }
+  },
+  "no gateway, nothing to search": {
+   "stdout": "",
+   "stderr": "",
+   "code": 0,
+   "sizes": [],
+   "rpm": [],
+   "kph": [],
+   "monotonic clock": true,
+   "stamps in order": true,
+   "first requests": [],
+   "requests": [],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 0
+    },
+    "median gap, ms": {
+     "within": null
+    },
+    "connections": {
+     "within": 0
+    },
+    "run, s": {
+     "within": 0.2213459029999285
+    }
+   },
+   "lease free after": true
+  },
+  "no arguments": {
+   "stdout": "",
+   "stderr": "",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.018549640999935946
+    }
+   }
+  },
+  "host without a value": {
+   "stdout": "",
+   "stderr": "",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.018447390999881463
+    }
+   }
+  },
+  "two hosts": {
+   "stdout": "",
+   "stderr": "",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.01801814700002069
+    }
+   }
+  },
+  "unknown option": {
+   "stdout": "",
+   "stderr": "",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.01845191799998247
+    }
+   }
+  },
+  "cycles 1001": {
+   "stdout": "",
+   "stderr": "Invalid number: 1001\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.020745106000049418
+    }
+   }
+  },
+  "cycles 0": {
+   "stdout": "",
+   "stderr": "Invalid number: 0\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.02005428600000414
+    }
+   }
+  },
+  "port 0": {
+   "stdout": "",
+   "stderr": "Invalid number: 0\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.018930709999949613
+    }
+   }
+  },
+  "UDP port 65536": {
+   "stdout": "",
+   "stderr": "Invalid number: 65536\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.01994793300013953
+    }
+   }
+  },
+  "search port with letters": {
+   "stdout": "",
+   "stderr": "Invalid number: x\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.020446362000029694
+    }
+   }
+  },
+  "host too long": {
+   "stdout": "",
+   "stderr": "",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.019413438000128735
+    }
+   }
+  }
+ }
+}

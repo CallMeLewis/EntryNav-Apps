@@ -1,0 +1,6711 @@
+{
+ "worker": "boostdeck-collector",
+ "recorded from": "build-arm/boostdeck-collector",
+ "sha256": "87f1710557f5c0f83beb764051f35a96a01e0f607c1079bf61af639eff3eac6a",
+ "runner": "qemu-arm -cpu cortex-a15 -r 3.12.25-FR21.0 -L /sysroot",
+ "scenarios": {
+  "one pass: every reading": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      1,
+      "0.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "14.980160",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "7.800000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "49.500000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "94.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "89.140000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "33.250000",
+      true
+     ]
+    ]
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "224300"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 1
+    },
+    "frames with a reading": {
+     "within": 1
+    },
+    "median gap, ms": {
+     "within": null
+    },
+    "connections": {
+     "within": 1
+    },
+    "12 224201: requests": {
+     "within": 1
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224205: requests": {
+     "within": 1
+    },
+    "12 224205: first, s": {
+     "within": 0.0006853990000763588
+    },
+    "12 224300: requests": {
+     "within": 1
+    },
+    "12 224300: first, s": {
+     "within": 0.001613990000123522
+    },
+    "12 224a49: requests": {
+     "within": 1
+    },
+    "12 224a49: first, s": {
+     "within": 0.0009442400000807538
+    },
+    "12 2256d7: requests": {
+     "within": 1
+    },
+    "12 2256d7: first, s": {
+     "within": 0.0012183630001345591
+    },
+    "12 22580f: requests": {
+     "within": 1
+    },
+    "12 22580f: first, s": {
+     "within": 0.0010333669999909034
+    },
+    "12 22586f: requests": {
+     "within": 1
+    },
+    "12 22586f: first, s": {
+     "within": 0.0014201250000951404
+    },
+    "12 225889: requests": {
+     "within": 1
+    },
+    "12 225889: first, s": {
+     "within": 0.0008575040001232992
+    },
+    "18 22da12: requests": {
+     "within": 1
+    },
+    "18 22da12: first, s": {
+     "within": 0.0011300480000500102
+    },
+    "run, s": {
+     "within": 0.05615233499997885
+    }
+   },
+   "lease free after": true
+  },
+  "one pass, traced: the car's snapshot": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\nRAW mono_ms=T ecu=12 did=4201 payload=6589 decoded=101.535156\nRAW mono_ms=T ecu=12 did=4205 payload=32DD decoded=101.726562\nRAW mono_ms=T ecu=12 did=5889 payload=1015 decoded=1.005142\nRAW mono_ms=T ecu=12 did=4A49 payload=FFFF unavailable reason=ambiguous-FFFF\nRAW mono_ms=T ecu=12 did=580F payload=8C decoded=57.000000\nRAW mono_ms=T ecu=18 did=DA12 payload=005A decoded=42.000000\nRAW mono_ms=T ecu=12 did=56D7 payload=1169 decoded=89.140000\nRAW mono_ms=T ecu=12 did=586F payload=09C1 decoded=2.497000\nRAW mono_ms=T ecu=12 did=4300 payload=0BF8 decoded=33.250000\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      1,
+      "0.027761",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "14.775592",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      1,
+      "57.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "42.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "89.140000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "33.250000",
+      true
+     ]
+    ]
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "224300"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 1
+    },
+    "frames with a reading": {
+     "within": 1
+    },
+    "median gap, ms": {
+     "within": null
+    },
+    "connections": {
+     "within": 1
+    },
+    "12 224201: requests": {
+     "within": 1
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224205: requests": {
+     "within": 1
+    },
+    "12 224205: first, s": {
+     "within": 0.0014946589999453863
+    },
+    "12 224300: requests": {
+     "within": 1
+    },
+    "12 224300: first, s": {
+     "within": 0.00306012400005784
+    },
+    "12 224a49: requests": {
+     "within": 1
+    },
+    "12 224a49: first, s": {
+     "within": 0.0020460349999211758
+    },
+    "12 2256d7: requests": {
+     "within": 1
+    },
+    "12 2256d7: first, s": {
+     "within": 0.002587355000059688
+    },
+    "12 22580f: requests": {
+     "within": 1
+    },
+    "12 22580f: first, s": {
+     "within": 0.002254988000004232
+    },
+    "12 22586f: requests": {
+     "within": 1
+    },
+    "12 22586f: first, s": {
+     "within": 0.0028225000000929867
+    },
+    "12 225889: requests": {
+     "within": 1
+    },
+    "12 225889: first, s": {
+     "within": 0.001785033000032854
+    },
+    "18 22da12: requests": {
+     "within": 1
+    },
+    "18 22da12: first, s": {
+     "within": 0.00243383899987748
+    },
+    "run, s": {
+     "within": 0.05558420100010153
+    }
+   },
+   "lease free after": true
+  },
+  "one pass in a session": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      1,
+      "0.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "14.980160",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "7.800000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "49.500000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "94.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "89.140000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "33.250000",
+      true
+     ]
+    ]
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "224300"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 1
+    },
+    "frames with a reading": {
+     "within": 1
+    },
+    "median gap, ms": {
+     "within": null
+    },
+    "connections": {
+     "within": 1
+    },
+    "12 224201: requests": {
+     "within": 1
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224205: requests": {
+     "within": 1
+    },
+    "12 224205: first, s": {
+     "within": 0.0002693199999157514
+    },
+    "12 224300: requests": {
+     "within": 1
+    },
+    "12 224300: first, s": {
+     "within": 0.0011700509999172937
+    },
+    "12 224a49: requests": {
+     "within": 1
+    },
+    "12 224a49: first, s": {
+     "within": 0.0006488989999979822
+    },
+    "12 2256d7: requests": {
+     "within": 1
+    },
+    "12 2256d7: first, s": {
+     "within": 0.0009951439999440481
+    },
+    "12 22580f: requests": {
+     "within": 1
+    },
+    "12 22580f: first, s": {
+     "within": 0.0007895169999301288
+    },
+    "12 22586f: requests": {
+     "within": 1
+    },
+    "12 22586f: first, s": {
+     "within": 0.0010891909998917981
+    },
+    "12 225889: requests": {
+     "within": 1
+    },
+    "12 225889: first, s": {
+     "within": 0.0004666549998546543
+    },
+    "18 22da12: requests": {
+     "within": 1
+    },
+    "18 22da12: first, s": {
+     "within": 0.0008903019997887895
+    },
+    "run, s": {
+     "within": 0.054793465999864566
+    }
+   },
+   "lease free after": true
+  },
+  "a session streams: boost changes, slow readings staggered": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      1,
+      "0.030594",
+      true
+     ],
+     [
+      1,
+      "0.175632",
+      true
+     ],
+     [
+      1,
+      "0.320669",
+      true
+     ],
+     [
+      1,
+      "0.465707",
+      true
+     ],
+     [
+      1,
+      "0.610745",
+      true
+     ],
+     [
+      1,
+      "0.755783",
+      true
+     ],
+     [
+      1,
+      "0.900820",
+      true
+     ],
+     [
+      1,
+      "1.045858",
+      true
+     ],
+     [
+      1,
+      "1.190896",
+      true
+     ],
+     [
+      1,
+      "1.335934",
+      true
+     ],
+     [
+      1,
+      "1.480971",
+      true
+     ],
+     [
+      1,
+      "1.626009",
+      true
+     ],
+     [
+      1,
+      "1.771047",
+      true
+     ],
+     [
+      1,
+      "1.916084",
+      true
+     ],
+     [
+      1,
+      "2.061122",
+      true
+     ],
+     [
+      1,
+      "2.206160",
+      true
+     ],
+     [
+      1,
+      "2.351198",
+      true
+     ],
+     [
+      1,
+      "2.496235",
+      true
+     ],
+     [
+      1,
+      "2.641273",
+      true
+     ],
+     [
+      1,
+      "2.786311",
+      true
+     ],
+     [
+      1,
+      "2.931349",
+      true
+     ],
+     [
+      1,
+      "3.076386",
+      true
+     ],
+     [
+      1,
+      "3.221424",
+      true
+     ],
+     [
+      1,
+      "3.366462",
+      true
+     ],
+     [
+      1,
+      "3.511500",
+      true
+     ],
+     [
+      1,
+      "3.656537",
+      true
+     ],
+     [
+      1,
+      "3.801575",
+      true
+     ],
+     [
+      1,
+      "3.946613",
+      true
+     ],
+     [
+      1,
+      "4.091651",
+      true
+     ],
+     [
+      1,
+      "4.236688",
+      true
+     ],
+     [
+      1,
+      "4.381726",
+      true
+     ],
+     [
+      1,
+      "4.526764",
+      true
+     ],
+     [
+      1,
+      "4.671802",
+      true
+     ],
+     [
+      1,
+      "4.816839",
+      true
+     ],
+     [
+      1,
+      "4.961877",
+      true
+     ],
+     [
+      1,
+      "5.106915",
+      true
+     ],
+     [
+      1,
+      "5.251952",
+      true
+     ],
+     [
+      1,
+      "5.396990",
+      true
+     ],
+     [
+      1,
+      "5.542028",
+      true
+     ],
+     [
+      1,
+      "5.687066",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "14.980160",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "7.800000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "49.500000",
+      true
+     ],
+     [
+      1,
+      "51.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "94.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "89.140000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "33.250000",
+      true
+     ]
+    ]
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "224300"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 100
+    },
+    "frames with a reading": {
+     "within": 100
+    },
+    "median gap, ms": {
+     "within": 35.60976699986895
+    },
+    "connections": {
+     "within": 6
+    },
+    "12 224201: requests": {
+     "within": 4
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224201: median gap, ms": {
+     "within": 995.7707940000091
+    },
+    "12 224205: requests": {
+     "within": 87
+    },
+    "12 224205: first, s": {
+     "within": 0.0003983379999681347
+    },
+    "12 224205: median gap, ms": {
+     "within": 35.08613399992555
+    },
+    "12 224300: requests": {
+     "within": 3
+    },
+    "12 224300: first, s": {
+     "within": 0.0010469829999237845
+    },
+    "12 224300: median gap, ms": {
+     "within": 1849.8452375000625
+    },
+    "12 224a49: requests": {
+     "within": 87
+    },
+    "12 224a49: first, s": {
+     "within": 0.0006345740000597289
+    },
+    "12 224a49: median gap, ms": {
+     "within": 35.09835950001161
+    },
+    "12 2256d7: requests": {
+     "within": 87
+    },
+    "12 2256d7: first, s": {
+     "within": 0.0008611539999492379
+    },
+    "12 2256d7: median gap, ms": {
+     "within": 35.10797850003655
+    },
+    "12 22580f: requests": {
+     "within": 3
+    },
+    "12 22580f: first, s": {
+     "within": 0.0007156379999742057
+    },
+    "12 22580f: median gap, ms": {
+     "within": 1253.4519619999855
+    },
+    "12 22586f: requests": {
+     "within": 87
+    },
+    "12 22586f: first, s": {
+     "within": 0.0009280489998673147
+    },
+    "12 22586f: median gap, ms": {
+     "within": 35.1080359999969
+    },
+    "12 225889: requests": {
+     "within": 87
+    },
+    "12 225889: first, s": {
+     "within": 0.0005474120000599214
+    },
+    "12 225889: median gap, ms": {
+     "within": 35.08801699990727
+    },
+    "18 22da12: requests": {
+     "within": 3
+    },
+    "18 22da12: first, s": {
+     "within": 0.000790932999962024
+    },
+    "18 22da12: median gap, ms": {
+     "within": 1591.5532100000291
+    },
+    "run, s": {
+     "within": 3.897485599999982
+    }
+   },
+   "lease free after": true
+  },
+  "streaming without a session keeps its connection": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      1,
+      "0.030594",
+      true
+     ],
+     [
+      1,
+      "0.175632",
+      true
+     ],
+     [
+      1,
+      "0.320669",
+      true
+     ],
+     [
+      1,
+      "0.465707",
+      true
+     ],
+     [
+      1,
+      "0.610745",
+      true
+     ],
+     [
+      1,
+      "0.755783",
+      true
+     ],
+     [
+      1,
+      "0.900820",
+      true
+     ],
+     [
+      1,
+      "1.045858",
+      true
+     ],
+     [
+      1,
+      "1.190896",
+      true
+     ],
+     [
+      1,
+      "1.335934",
+      true
+     ],
+     [
+      1,
+      "1.480971",
+      true
+     ],
+     [
+      1,
+      "1.626009",
+      true
+     ],
+     [
+      1,
+      "1.771047",
+      true
+     ],
+     [
+      1,
+      "1.916084",
+      true
+     ],
+     [
+      1,
+      "2.061122",
+      true
+     ],
+     [
+      1,
+      "2.206160",
+      true
+     ],
+     [
+      1,
+      "2.351198",
+      true
+     ],
+     [
+      1,
+      "2.496235",
+      true
+     ],
+     [
+      1,
+      "2.641273",
+      true
+     ],
+     [
+      1,
+      "2.786311",
+      true
+     ],
+     [
+      1,
+      "2.931349",
+      true
+     ],
+     [
+      1,
+      "3.076386",
+      true
+     ],
+     [
+      1,
+      "3.221424",
+      true
+     ],
+     [
+      1,
+      "3.366462",
+      true
+     ],
+     [
+      1,
+      "3.511500",
+      true
+     ],
+     [
+      1,
+      "3.656537",
+      true
+     ],
+     [
+      1,
+      "3.801575",
+      true
+     ],
+     [
+      1,
+      "3.946613",
+      true
+     ],
+     [
+      1,
+      "4.091651",
+      true
+     ],
+     [
+      1,
+      "4.236688",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "14.980160",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "7.800000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "49.500000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "94.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "89.140000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "33.250000",
+      true
+     ]
+    ]
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "224300"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 40
+    },
+    "frames with a reading": {
+     "within": 40
+    },
+    "median gap, ms": {
+     "within": 34.86153600010766
+    },
+    "connections": {
+     "within": 1
+    },
+    "12 224201: requests": {
+     "within": 2
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224201: median gap, ms": {
+     "within": 914.6257150000565
+    },
+    "12 224205: requests": {
+     "within": 40
+    },
+    "12 224205: first, s": {
+     "within": 0.00031669200006945175
+    },
+    "12 224205: median gap, ms": {
+     "within": 34.90254799999093
+    },
+    "12 224300: requests": {
+     "within": 1
+    },
+    "12 224300: first, s": {
+     "within": 0.0009519320001345477
+    },
+    "12 224a49: requests": {
+     "within": 40
+    },
+    "12 224a49: first, s": {
+     "within": 0.0005102650000026188
+    },
+    "12 224a49: median gap, ms": {
+     "within": 34.863748000134365
+    },
+    "12 2256d7: requests": {
+     "within": 40
+    },
+    "12 2256d7: first, s": {
+     "within": 0.0007942839999941498
+    },
+    "12 2256d7: median gap, ms": {
+     "within": 34.83516599999348
+    },
+    "12 22580f: requests": {
+     "within": 2
+    },
+    "12 22580f: first, s": {
+     "within": 0.0005814050000481075
+    },
+    "12 22580f: median gap, ms": {
+     "within": 526.1850320000576
+    },
+    "12 22586f: requests": {
+     "within": 40
+    },
+    "12 22586f: first, s": {
+     "within": 0.0008730850001938961
+    },
+    "12 22586f: median gap, ms": {
+     "within": 34.848041000032026
+    },
+    "12 225889: requests": {
+     "within": 40
+    },
+    "12 225889: first, s": {
+     "within": 0.0004286480000246229
+    },
+    "12 225889: median gap, ms": {
+     "within": 34.898984000165
+    },
+    "18 22da12: requests": {
+     "within": 2
+    },
+    "18 22da12: first, s": {
+     "within": 0.0006608730000152718
+    },
+    "18 22da12: median gap, ms": {
+     "within": 1159.379263000119
+    },
+    "run, s": {
+     "within": 1.4260919779999313
+    }
+   },
+   "lease free after": true
+  },
+  "streaming without the EGS": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      1,
+      "0.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "14.980160",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "7.800000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "49.500000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      1,
+      "89.140000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "33.250000",
+      true
+     ]
+    ]
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "224300"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 30
+    },
+    "frames with a reading": {
+     "within": 30
+    },
+    "median gap, ms": {
+     "within": 34.931013000004896
+    },
+    "connections": {
+     "within": 2
+    },
+    "12 224201: requests": {
+     "within": 2
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224201: median gap, ms": {
+     "within": 922.3267469999428
+    },
+    "12 224205: requests": {
+     "within": 27
+    },
+    "12 224205: first, s": {
+     "within": 0.00032411500001217064
+    },
+    "12 224205: median gap, ms": {
+     "within": 34.79402750008376
+    },
+    "12 224300: requests": {
+     "within": 1
+    },
+    "12 224300: first, s": {
+     "within": 0.0007890510000834183
+    },
+    "12 224a49: requests": {
+     "within": 27
+    },
+    "12 224a49: first, s": {
+     "within": 0.0005261629999040451
+    },
+    "12 224a49: median gap, ms": {
+     "within": 34.80372449996594
+    },
+    "12 2256d7: requests": {
+     "within": 27
+    },
+    "12 2256d7: first, s": {
+     "within": 0.0006659779999154125
+    },
+    "12 2256d7: median gap, ms": {
+     "within": 34.821701999931065
+    },
+    "12 22580f: requests": {
+     "within": 2
+    },
+    "12 22580f: first, s": {
+     "within": 0.0005983070000183943
+    },
+    "12 22580f: median gap, ms": {
+     "within": 525.8753529999467
+    },
+    "12 22586f: requests": {
+     "within": 27
+    },
+    "12 22586f: first, s": {
+     "within": 0.0007279849999122234
+    },
+    "12 22586f: median gap, ms": {
+     "within": 34.812270000088574
+    },
+    "12 225889: requests": {
+     "within": 27
+    },
+    "12 225889: first, s": {
+     "within": 0.00044691800007967686
+    },
+    "12 225889: median gap, ms": {
+     "within": 34.803191999913
+    },
+    "run, s": {
+     "within": 1.1528717460000735
+    }
+   },
+   "lease free after": true
+  },
+  "refusals, sentinels and bad payloads, traced": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\nRAW mono_ms=T ecu=12 did=4201 payload=63CA decoded=99.789062\nECU 12 DID 4205 NRC 31\nRAW mono_ms=T ecu=12 did=5889 payload=104EAA unavailable reason=invalid-or-out-of-range\nRAW mono_ms=T ecu=12 did=4A49 payload=FFFF unavailable reason=ambiguous-FFFF\nRAW mono_ms=T ecu=12 did=580F payload=FF unavailable reason=invalid-or-out-of-range\nRAW mono_ms=T ecu=18 did=DA12 payload=008E decoded=94.000000\nRAW mono_ms=T ecu=12 did=56D7 payload=FFFF unavailable reason=invalid-or-out-of-range\nRAW mono_ms=T ecu=12 did=586F payload=09C1 decoded=2.497000\nRAW mono_ms=T ecu=12 did=4300 payload=0BF8 decoded=33.250000\nRAW mono_ms=T ecu=12 did=4205 payload=31 unavailable reason=invalid-or-out-of-range\nRAW mono_ms=T ecu=12 did=5889 payload=104E decoded=1.019059\nRAW mono_ms=T ecu=12 did=4A49 payload=FFFE decoded=-0.200000\nRAW mono_ms=T ecu=12 did=56D7 payload=FFFF unavailable reason=invalid-or-out-of-range\nRAW mono_ms=T ecu=12 did=586F payload=09C1 decoded=2.497000\nRAW mono_ms=T ecu=12 did=4205 payload=31E5AA unavailable reason=invalid-or-out-of-range\nRAW mono_ms=T ecu=12 did=5889 payload=104E decoded=1.019059\nRAW mono_ms=T ecu=12 did=4A49 payload=FFFE decoded=-0.200000\nRAW mono_ms=T ecu=12 did=56D7 payload=FFFF unavailable reason=invalid-or-out-of-range\nRAW mono_ms=T ecu=12 did=586F payload=09C1 decoded=2.497000\nRAW mono_ms=T ecu=12 did=4205 payload=31E5 decoded=99.789062\nRAW mono_ms=T ecu=12 did=5889 payload=104E decoded=1.019059\nRAW mono_ms=T ecu=12 did=4A49 payload=FFFE decoded=-0.200000\nRAW mono_ms=T ecu=12 did=56D7 payload=FFFF unavailable reason=invalid-or-out-of-range\nRAW mono_ms=T ecu=12 did=586F payload=09C1 decoded=2.497000\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "0.000000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "14.980160",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "-0.200000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      1,
+      "94.000000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      1,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "33.250000",
+      true
+     ]
+    ]
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "224300"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 4
+    },
+    "frames with a reading": {
+     "within": 4
+    },
+    "median gap, ms": {
+     "within": 35.17463100001805
+    },
+    "connections": {
+     "within": 1
+    },
+    "12 224201: requests": {
+     "within": 1
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224205: requests": {
+     "within": 4
+    },
+    "12 224205: first, s": {
+     "within": 0.0016760539999722823
+    },
+    "12 224205: median gap, ms": {
+     "within": 35.18228199982332
+    },
+    "12 224300: requests": {
+     "within": 1
+    },
+    "12 224300: first, s": {
+     "within": 0.003163322999853335
+    },
+    "12 224a49: requests": {
+     "within": 4
+    },
+    "12 224a49: first, s": {
+     "within": 0.0020118140000704443
+    },
+    "12 224a49: median gap, ms": {
+     "within": 34.99734499996521
+    },
+    "12 2256d7: requests": {
+     "within": 4
+    },
+    "12 2256d7: first, s": {
+     "within": 0.0028581679998751497
+    },
+    "12 2256d7: median gap, ms": {
+     "within": 34.99317199998586
+    },
+    "12 22580f: requests": {
+     "within": 1
+    },
+    "12 22580f: first, s": {
+     "within": 0.002140576999863697
+    },
+    "12 22586f: requests": {
+     "within": 4
+    },
+    "12 22586f: first, s": {
+     "within": 0.0029683059999570105
+    },
+    "12 22586f: median gap, ms": {
+     "within": 35.11530300011145
+    },
+    "12 225889: requests": {
+     "within": 4
+    },
+    "12 225889: first, s": {
+     "within": 0.0018408010000712238
+    },
+    "12 225889: median gap, ms": {
+     "within": 35.07760000002236
+    },
+    "18 22da12: requests": {
+     "within": 1
+    },
+    "18 22da12: first, s": {
+     "within": 0.0024003710000215506
+    },
+    "run, s": {
+     "within": 0.16222880899999836
+    }
+   },
+   "lease free after": true
+  },
+  "acknowledgements, pending answers and alive checks": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      1,
+      "0.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "14.980160",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "7.800000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "49.500000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "94.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "89.140000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "33.250000",
+      true
+     ]
+    ]
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "224300"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [
+    [
+     19,
+     "00f4"
+    ]
+   ],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 3
+    },
+    "frames with a reading": {
+     "within": 3
+    },
+    "median gap, ms": {
+     "within": 33.762424999963514
+    },
+    "connections": {
+     "within": 1
+    },
+    "12 224201: requests": {
+     "within": 1
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224205: requests": {
+     "within": 3
+    },
+    "12 224205: first, s": {
+     "within": 0.00038739399997211876
+    },
+    "12 224205: median gap, ms": {
+     "within": 34.77288449994376
+    },
+    "12 224300: requests": {
+     "within": 1
+    },
+    "12 224300: first, s": {
+     "within": 0.0010093549999510287
+    },
+    "12 224a49: requests": {
+     "within": 3
+    },
+    "12 224a49: first, s": {
+     "within": 0.0006536209998557752
+    },
+    "12 224a49: median gap, ms": {
+     "within": 34.73097500000222
+    },
+    "12 2256d7: requests": {
+     "within": 3
+    },
+    "12 2256d7: first, s": {
+     "within": 0.0008721859999241133
+    },
+    "12 2256d7: median gap, ms": {
+     "within": 34.64741499999491
+    },
+    "12 22580f: requests": {
+     "within": 1
+    },
+    "12 22580f: first, s": {
+     "within": 0.0007326669999656588
+    },
+    "12 22586f: requests": {
+     "within": 3
+    },
+    "12 22586f: first, s": {
+     "within": 0.0009354329999951005
+    },
+    "12 22586f: median gap, ms": {
+     "within": 34.640307000017856
+    },
+    "12 225889: requests": {
+     "within": 3
+    },
+    "12 225889: first, s": {
+     "within": 0.0005661079999299545
+    },
+    "12 225889: median gap, ms": {
+     "within": 34.74734849999095
+    },
+    "18 22da12: requests": {
+     "within": 1
+    },
+    "18 22da12: first, s": {
+     "within": 0.0008082859999376524
+    },
+    "run, s": {
+     "within": 0.12738662700007808
+    }
+   },
+   "lease free after": true
+  },
+  "an oversized frame for boost, in a session": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    {
+     "values read": [],
+     "states": [
+      [
+       0,
+       false
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "14.980160"
+     ],
+     "states": [
+      [
+       0,
+       false
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "7.800000"
+     ],
+     "states": [
+      [
+       0,
+       false
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "49.500000"
+     ],
+     "states": [
+      [
+       0,
+       false
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "94.000000"
+     ],
+     "states": [
+      [
+       0,
+       false
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "89.140000"
+     ],
+     "states": [
+      [
+       0,
+       false
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "2.497000"
+     ],
+     "states": [
+      [
+       0,
+       false
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "33.250000"
+     ],
+     "states": [
+      [
+       0,
+       false
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    }
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 60
+    },
+    "frames with a reading": {
+     "within": 54
+    },
+    "median gap, ms": {
+     "within": 35.62240600012956
+    },
+    "connections": {
+     "within": 5
+    },
+    "12 224201: requests": {
+     "within": 4
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224201: median gap, ms": {
+     "within": 902.0412970000962
+    },
+    "12 224205: requests": {
+     "within": 2
+    },
+    "12 224205: first, s": {
+     "within": 0.00044366599991008115
+    },
+    "12 224205: median gap, ms": {
+     "within": 2031.7579729999125
+    },
+    "12 224300: requests": {
+     "within": 2
+    },
+    "12 224300: first, s": {
+     "within": 0.3311156189997746
+    },
+    "12 224300: median gap, ms": {
+     "within": 2032.2643910001261
+    },
+    "12 224a49: requests": {
+     "within": 44
+    },
+    "12 224a49: first, s": {
+     "within": 0.33063799999990806
+    },
+    "12 224a49: median gap, ms": {
+     "within": 35.06836299993665
+    },
+    "12 2256d7: requests": {
+     "within": 44
+    },
+    "12 2256d7: first, s": {
+     "within": 0.3309481739997864
+    },
+    "12 2256d7: median gap, ms": {
+     "within": 35.07759099989016
+    },
+    "12 22580f: requests": {
+     "within": 2
+    },
+    "12 22580f: first, s": {
+     "within": 0.33077312299997175
+    },
+    "12 22580f: median gap, ms": {
+     "within": 526.259753999966
+    },
+    "12 22586f: requests": {
+     "within": 44
+    },
+    "12 22586f: first, s": {
+     "within": 0.3310254379998696
+    },
+    "12 22586f: median gap, ms": {
+     "within": 35.00684300001922
+    },
+    "12 225889: requests": {
+     "within": 44
+    },
+    "12 225889: first, s": {
+     "within": 0.33046016799994504
+    },
+    "12 225889: median gap, ms": {
+     "within": 35.01827300010518
+    },
+    "18 22da12: requests": {
+     "within": 2
+    },
+    "18 22da12: first, s": {
+     "within": 0.3308571079999183
+    },
+    "18 22da12: median gap, ms": {
+     "within": 1183.1104139998843
+    },
+    "run, s": {
+     "within": 2.489060772999892
+    }
+   },
+   "lease free after": true
+  },
+  "an oversized frame without a session": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      1,
+      "0.000000",
+      true
+     ],
+     [
+      0,
+      "0.000000",
+      true
+     ],
+     [
+      1,
+      "0.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "14.980160",
+      true
+     ],
+     [
+      0,
+      "14.980160",
+      true
+     ],
+     [
+      1,
+      "14.980160",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "7.800000",
+      true
+     ],
+     [
+      0,
+      "7.800000",
+      true
+     ],
+     [
+      1,
+      "7.800000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "49.500000",
+      true
+     ],
+     [
+      0,
+      "49.500000",
+      true
+     ],
+     [
+      1,
+      "49.500000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "94.000000",
+      true
+     ],
+     [
+      0,
+      "94.000000",
+      true
+     ],
+     [
+      1,
+      "94.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "89.140000",
+      true
+     ],
+     [
+      0,
+      "89.140000",
+      true
+     ],
+     [
+      1,
+      "89.140000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "2.497000",
+      true
+     ],
+     [
+      0,
+      "2.497000",
+      true
+     ],
+     [
+      1,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "33.250000",
+      true
+     ],
+     [
+      0,
+      "33.250000",
+      true
+     ],
+     [
+      1,
+      "33.250000",
+      true
+     ]
+    ]
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "224300"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 4
+    },
+    "frames with a reading": {
+     "within": 3
+    },
+    "median gap, ms": {
+     "within": 34.625882000000274
+    },
+    "connections": {
+     "within": 2
+    },
+    "12 224201: requests": {
+     "within": 2
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224201: median gap, ms": {
+     "within": 69.5353129999603
+    },
+    "12 224205: requests": {
+     "within": 4
+    },
+    "12 224205: first, s": {
+     "within": 0.00034242400010953133
+    },
+    "12 224205: median gap, ms": {
+     "within": 34.6883429999707
+    },
+    "12 224300: requests": {
+     "within": 2
+    },
+    "12 224300: first, s": {
+     "within": 0.0012021960001220577
+    },
+    "12 224300: median gap, ms": {
+     "within": 68.93423799988341
+    },
+    "12 224a49: requests": {
+     "within": 3
+    },
+    "12 224a49: first, s": {
+     "within": 0.0005516930000339926
+    },
+    "12 224a49: median gap, ms": {
+     "within": 52.03487649998806
+    },
+    "12 2256d7: requests": {
+     "within": 3
+    },
+    "12 2256d7: first, s": {
+     "within": 0.0008172370000920637
+    },
+    "12 2256d7: median gap, ms": {
+     "within": 51.92907200000718
+    },
+    "12 22580f: requests": {
+     "within": 2
+    },
+    "12 22580f: first, s": {
+     "within": 0.0006463950001034391
+    },
+    "12 22580f: median gap, ms": {
+     "within": 69.2119149998689
+    },
+    "12 22586f: requests": {
+     "within": 3
+    },
+    "12 22586f: first, s": {
+     "within": 0.0010694110001168156
+    },
+    "12 22586f: median gap, ms": {
+     "within": 51.83540799998809
+    },
+    "12 225889: requests": {
+     "within": 3
+    },
+    "12 225889: first, s": {
+     "within": 0.0004654360000131419
+    },
+    "12 225889: median gap, ms": {
+     "within": 52.04984250008238
+    },
+    "18 22da12: requests": {
+     "within": 2
+    },
+    "18 22da12: first, s": {
+     "within": 0.0007428840001466597
+    },
+    "18 22da12: median gap, ms": {
+     "within": 69.20721699998467
+    },
+    "run, s": {
+     "within": 0.15986117300008118
+    }
+   },
+   "lease free after": true
+  },
+  "the longest answer HSFZ allows": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      1,
+      "14.980160",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "7.800000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "49.500000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "94.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "89.140000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "33.250000",
+      true
+     ]
+    ]
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "224300"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 2
+    },
+    "frames with a reading": {
+     "within": 2
+    },
+    "median gap, ms": {
+     "within": 31.8204400000468
+    },
+    "connections": {
+     "within": 1
+    },
+    "12 224201: requests": {
+     "within": 1
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224205: requests": {
+     "within": 2
+    },
+    "12 224205: first, s": {
+     "within": 0.0004117869998481183
+    },
+    "12 224205: median gap, ms": {
+     "within": 34.0148790000967
+    },
+    "12 224300: requests": {
+     "within": 1
+    },
+    "12 224300: first, s": {
+     "within": 0.0013885149999168789
+    },
+    "12 224a49: requests": {
+     "within": 2
+    },
+    "12 224a49: first, s": {
+     "within": 0.0007029349999356782
+    },
+    "12 224a49: median gap, ms": {
+     "within": 33.89926399995602
+    },
+    "12 2256d7: requests": {
+     "within": 2
+    },
+    "12 2256d7: first, s": {
+     "within": 0.0011412269998345437
+    },
+    "12 2256d7: median gap, ms": {
+     "within": 33.55018700017354
+    },
+    "12 22580f: requests": {
+     "within": 1
+    },
+    "12 22580f: first, s": {
+     "within": 0.0008949119999215327
+    },
+    "12 22586f: requests": {
+     "within": 2
+    },
+    "12 22586f: first, s": {
+     "within": 0.0013027549998696486
+    },
+    "12 22586f: median gap, ms": {
+     "within": 33.49519600010353
+    },
+    "12 225889: requests": {
+     "within": 2
+    },
+    "12 225889: first, s": {
+     "within": 0.0005723179999677086
+    },
+    "12 225889: median gap, ms": {
+     "within": 33.963770999889675
+    },
+    "18 22da12: requests": {
+     "within": 1
+    },
+    "18 22da12: first, s": {
+     "within": 0.0010305499999958556
+    },
+    "run, s": {
+     "within": 0.08972373599999628
+    }
+   },
+   "lease free after": true
+  },
+  "an answer one byte over HSFZ's limit": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "0.000000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "14.980160",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "7.800000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "49.500000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "94.000000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "89.140000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "33.250000",
+      true
+     ]
+    ]
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 2
+    },
+    "frames with a reading": {
+     "within": 1
+    },
+    "median gap, ms": {
+     "within": 34.06471100015551
+    },
+    "connections": {
+     "within": 2
+    },
+    "12 224201: requests": {
+     "within": 2
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224201: median gap, ms": {
+     "within": 34.80828300007488
+    },
+    "12 224205: requests": {
+     "within": 2
+    },
+    "12 224205: first, s": {
+     "within": 0.0007297580000340531
+    },
+    "12 224205: median gap, ms": {
+     "within": 34.208657000135645
+    },
+    "12 224300: requests": {
+     "within": 1
+    },
+    "12 224300: first, s": {
+     "within": 0.03569938999999067
+    },
+    "12 224a49: requests": {
+     "within": 1
+    },
+    "12 224a49: first, s": {
+     "within": 0.03515167900013694
+    },
+    "12 2256d7: requests": {
+     "within": 1
+    },
+    "12 2256d7: first, s": {
+     "within": 0.03558183500013001
+    },
+    "12 22580f: requests": {
+     "within": 1
+    },
+    "12 22580f: first, s": {
+     "within": 0.035281811999993806
+    },
+    "12 22586f: requests": {
+     "within": 1
+    },
+    "12 22586f: first, s": {
+     "within": 0.03564191500004199
+    },
+    "12 225889: requests": {
+     "within": 1
+    },
+    "12 225889: first, s": {
+     "within": 0.03507372900003247
+    },
+    "18 22da12: requests": {
+     "within": 1
+    },
+    "18 22da12: first, s": {
+     "within": 0.035505232000105025
+    },
+    "run, s": {
+     "within": 0.09091589500008013
+    }
+   },
+   "lease free after": true
+  },
+  "the gateway goes silent in a session": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    {
+     "values read": [
+      "0.000000"
+     ],
+     "states": [
+      [
+       0,
+       true
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "14.980160"
+     ],
+     "states": [
+      [
+       0,
+       true
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "7.800000"
+     ],
+     "states": [
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "49.500000"
+     ],
+     "states": [
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "94.000000"
+     ],
+     "states": [
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "89.140000"
+     ],
+     "states": [
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "2.497000"
+     ],
+     "states": [
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "33.250000"
+     ],
+     "states": [
+      [
+       1,
+       true
+      ]
+     ]
+    }
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "224300"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 30
+    },
+    "frames with a reading": {
+     "within": 30
+    },
+    "median gap, ms": {
+     "within": 55.22186200005308
+    },
+    "connections": {
+     "within": 4
+    },
+    "12 224201: requests": {
+     "within": 2
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224201: median gap, ms": {
+     "within": 940.3396449999946
+    },
+    "12 224205: requests": {
+     "within": 5
+    },
+    "12 224205: first, s": {
+     "within": 0.0003852319998713938
+    },
+    "12 224205: median gap, ms": {
+     "within": 35.781531499992525
+    },
+    "12 224300: requests": {
+     "within": 1
+    },
+    "12 224300: first, s": {
+     "within": 0.0013078679999125598
+    },
+    "12 224a49: requests": {
+     "within": 3
+    },
+    "12 224a49: first, s": {
+     "within": 0.0006928059999609104
+    },
+    "12 224a49: median gap, ms": {
+     "within": 34.57187200001499
+    },
+    "12 2256d7: requests": {
+     "within": 3
+    },
+    "12 2256d7: first, s": {
+     "within": 0.0010526219998610031
+    },
+    "12 2256d7: median gap, ms": {
+     "within": 34.436723499993604
+    },
+    "12 22580f: requests": {
+     "within": 1
+    },
+    "12 22580f: first, s": {
+     "within": 0.0007924389999516279
+    },
+    "12 22586f: requests": {
+     "within": 3
+    },
+    "12 22586f: first, s": {
+     "within": 0.0011217809999379824
+    },
+    "12 22586f: median gap, ms": {
+     "within": 34.43303849996937
+    },
+    "12 225889: requests": {
+     "within": 5
+    },
+    "12 225889: first, s": {
+     "within": 0.0005279449999306962
+    },
+    "12 225889: median gap, ms": {
+     "within": 35.76929149994612
+    },
+    "18 22da12: requests": {
+     "within": 1
+    },
+    "18 22da12: first, s": {
+     "within": 0.0009422420000646525
+    },
+    "run, s": {
+     "within": 3.409515856000098
+    }
+   },
+   "lease free after": true
+  },
+  "the gateway goes silent without a session": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      1,
+      "0.000000",
+      true
+     ],
+     [
+      0,
+      "0.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "14.980160",
+      true
+     ],
+     [
+      0,
+      "14.980160",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "7.800000",
+      true
+     ],
+     [
+      0,
+      "7.800000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "49.500000",
+      true
+     ],
+     [
+      0,
+      "49.500000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "94.000000",
+      true
+     ],
+     [
+      0,
+      "94.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "89.140000",
+      true
+     ],
+     [
+      0,
+      "89.140000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "2.497000",
+      true
+     ],
+     [
+      0,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "33.250000",
+      true
+     ],
+     [
+      0,
+      "33.250000",
+      true
+     ]
+    ]
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "224300"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 4
+    },
+    "frames with a reading": {
+     "within": 1
+    },
+    "median gap, ms": {
+     "within": 503.9518930000213
+    },
+    "connections": {
+     "within": 3
+    },
+    "12 224201: requests": {
+     "within": 3
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224201: median gap, ms": {
+     "within": 521.4144765000128
+    },
+    "12 224205: requests": {
+     "within": 2
+    },
+    "12 224205: first, s": {
+     "within": 0.00034418900008859055
+    },
+    "12 224205: median gap, ms": {
+     "within": 33.95046900004672
+    },
+    "12 224300: requests": {
+     "within": 1
+    },
+    "12 224300: first, s": {
+     "within": 0.0009895870000491414
+    },
+    "12 224a49: requests": {
+     "within": 2
+    },
+    "12 224a49: first, s": {
+     "within": 0.0005609720001302776
+    },
+    "12 224a49: median gap, ms": {
+     "within": 33.96658499991645
+    },
+    "12 2256d7: requests": {
+     "within": 2
+    },
+    "12 2256d7: first, s": {
+     "within": 0.0008510899999691901
+    },
+    "12 2256d7: median gap, ms": {
+     "within": 33.77725800010012
+    },
+    "12 22580f: requests": {
+     "within": 1
+    },
+    "12 22580f: first, s": {
+     "within": 0.0006507729999611911
+    },
+    "12 22586f: requests": {
+     "within": 1
+    },
+    "12 22586f: first, s": {
+     "within": 0.0009214010001414863
+    },
+    "12 225889: requests": {
+     "within": 2
+    },
+    "12 225889: first, s": {
+     "within": 0.0004722800001673022
+    },
+    "12 225889: median gap, ms": {
+     "within": 33.97256999983256
+    },
+    "18 22da12: requests": {
+     "within": 1
+    },
+    "18 22da12: first, s": {
+     "within": 0.0007739010000022972
+    },
+    "run, s": {
+     "within": 1.5686648610001157
+    }
+   },
+   "lease free after": true
+  },
+  "the gateway closes every seventh request in a session": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    {
+     "values read": [
+      "0.000000"
+     ],
+     "states": [
+      [
+       0,
+       true
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "14.980160"
+     ],
+     "states": [
+      [
+       0,
+       true
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "7.800000"
+     ],
+     "states": [
+      [
+       0,
+       true
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "49.500000"
+     ],
+     "states": [
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "94.000000"
+     ],
+     "states": [
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "89.140000"
+     ],
+     "states": [
+      [
+       0,
+       false
+      ],
+      [
+       0,
+       true
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "2.497000"
+     ],
+     "states": [
+      [
+       0,
+       false
+      ],
+      [
+       0,
+       true
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "33.250000"
+     ],
+     "states": [
+      [
+       0,
+       false
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    }
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 60
+    },
+    "frames with a reading": {
+     "within": 60
+    },
+    "median gap, ms": {
+     "within": 55.21275599994624
+    },
+    "connections": {
+     "within": 8
+    },
+    "12 224201: requests": {
+     "within": 5
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224201: median gap, ms": {
+     "within": 330.77799549994324
+    },
+    "12 224205: requests": {
+     "within": 5
+    },
+    "12 224205: first, s": {
+     "within": 0.0003775659999973868
+    },
+    "12 224205: median gap, ms": {
+     "within": 330.2516240000841
+    },
+    "12 224300: requests": {
+     "within": 2
+    },
+    "12 224300: first, s": {
+     "within": 0.6622705449999557
+    },
+    "12 224300: median gap, ms": {
+     "within": 2041.07060299998
+    },
+    "12 224a49: requests": {
+     "within": 12
+    },
+    "12 224a49: first, s": {
+     "within": 0.0005591340000137279
+    },
+    "12 224a49: median gap, ms": {
+     "within": 35.5887860000621
+    },
+    "12 2256d7: requests": {
+     "within": 11
+    },
+    "12 2256d7: first, s": {
+     "within": 0.0008709059998182056
+    },
+    "12 2256d7: median gap, ms": {
+     "within": 35.453755499929684
+    },
+    "12 22580f: requests": {
+     "within": 5
+    },
+    "12 22580f: first, s": {
+     "within": 0.0006643340000209719
+    },
+    "12 22580f: median gap, ms": {
+     "within": 330.6557374999102
+    },
+    "12 22586f: requests": {
+     "within": 3
+    },
+    "12 22586f: first, s": {
+     "within": 0.33173075900003823
+    },
+    "12 22586f: median gap, ms": {
+     "within": 1019.9411314999907
+    },
+    "12 225889: requests": {
+     "within": 8
+    },
+    "12 225889: first, s": {
+     "within": 0.0004868290000104025
+    },
+    "12 225889: median gap, ms": {
+     "within": 330.21528700010094
+    },
+    "18 22da12: requests": {
+     "within": 5
+    },
+    "18 22da12: first, s": {
+     "within": 0.0007497709998460778
+    },
+    "18 22da12: median gap, ms": {
+     "within": 330.69626300004984
+    },
+    "run, s": {
+     "within": 3.0126240089998646
+    }
+   },
+   "lease free after": true
+  },
+  "the gateway closes without a session": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    {
+     "values read": [
+      "0.000000"
+     ],
+     "states": [
+      [
+       0,
+       true
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "14.980160"
+     ],
+     "states": [
+      [
+       0,
+       true
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "7.800000"
+     ],
+     "states": [
+      [
+       0,
+       true
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "49.500000"
+     ],
+     "states": [
+      [
+       0,
+       true
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "94.000000"
+     ],
+     "states": [
+      [
+       0,
+       true
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "89.140000"
+     ],
+     "states": [
+      [
+       0,
+       true
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "2.497000"
+     ],
+     "states": [
+      [
+       0,
+       true
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "33.250000"
+     ],
+     "states": [
+      [
+       0,
+       true
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    }
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "224300"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 20
+    },
+    "frames with a reading": {
+     "within": 10
+    },
+    "median gap, ms": {
+     "within": 35.121422999964125
+    },
+    "connections": {
+     "within": 10
+    },
+    "12 224201: requests": {
+     "within": 10
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224201: median gap, ms": {
+     "within": 70.56599699990329
+    },
+    "12 224205: requests": {
+     "within": 20
+    },
+    "12 224205: first, s": {
+     "within": 0.0003942200000892626
+    },
+    "12 224205: median gap, ms": {
+     "within": 35.19380599982469
+    },
+    "12 224300: requests": {
+     "within": 10
+    },
+    "12 224300: first, s": {
+     "within": 0.0013962930001980567
+    },
+    "12 224300: median gap, ms": {
+     "within": 70.54283500019665
+    },
+    "12 224a49: requests": {
+     "within": 20
+    },
+    "12 224a49: first, s": {
+     "within": 0.0008239190001404495
+    },
+    "12 224a49: median gap, ms": {
+     "within": 35.15463000007912
+    },
+    "12 2256d7: requests": {
+     "within": 10
+    },
+    "12 2256d7: first, s": {
+     "within": 0.0011188959999799408
+    },
+    "12 2256d7: median gap, ms": {
+     "within": 70.54140699983691
+    },
+    "12 22580f: requests": {
+     "within": 10
+    },
+    "12 22580f: first, s": {
+     "within": 0.0009167160001197772
+    },
+    "12 22580f: median gap, ms": {
+     "within": 70.54036999988966
+    },
+    "12 22586f: requests": {
+     "within": 10
+    },
+    "12 22586f: first, s": {
+     "within": 0.0012937500000589353
+    },
+    "12 22586f: median gap, ms": {
+     "within": 70.54214300001149
+    },
+    "12 225889: requests": {
+     "within": 20
+    },
+    "12 225889: first, s": {
+     "within": 0.0006050490001143771
+    },
+    "12 225889: median gap, ms": {
+     "within": 35.21848199989108
+    },
+    "18 22da12: requests": {
+     "within": 10
+    },
+    "18 22da12: first, s": {
+     "within": 0.0010005250001086097
+    },
+    "18 22da12: median gap, ms": {
+     "within": 70.5406680001488
+    },
+    "run, s": {
+     "within": 0.7267030169998634
+    }
+   },
+   "lease free after": true
+  },
+  "the lease held throughout": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ]
+   ],
+   "first requests": [],
+   "requests": [],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 20
+    },
+    "frames with a reading": {
+     "within": 0
+    },
+    "median gap, ms": {
+     "within": 55.278308999959336
+    },
+    "connections": {
+     "within": 0
+    },
+    "run, s": {
+     "within": 1.1231757349999043
+    }
+   },
+   "lease free after": true,
+   "waiting bytes": 20
+  },
+  "the lease given up after 0.4 s": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "0.000000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "14.980160",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "7.800000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "49.500000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "94.000000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "89.140000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "33.250000",
+      true
+     ]
+    ]
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "224300"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 40
+    },
+    "frames with a reading": {
+     "within": 33
+    },
+    "median gap, ms": {
+     "within": 35.67451899994012
+    },
+    "connections": {
+     "within": 2
+    },
+    "12 224201: requests": {
+     "within": 2
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224201: median gap, ms": {
+     "within": 904.2638430000807
+    },
+    "12 224205: requests": {
+     "within": 31
+    },
+    "12 224205: first, s": {
+     "within": 0.0003494580000733549
+    },
+    "12 224205: median gap, ms": {
+     "within": 34.86627800009501
+    },
+    "12 224300: requests": {
+     "within": 1
+    },
+    "12 224300: first, s": {
+     "within": 0.001198604999899544
+    },
+    "12 224a49: requests": {
+     "within": 31
+    },
+    "12 224a49: first, s": {
+     "within": 0.0005451249999168795
+    },
+    "12 224a49: median gap, ms": {
+     "within": 34.8341960000198
+    },
+    "12 2256d7: requests": {
+     "within": 31
+    },
+    "12 2256d7: first, s": {
+     "within": 0.0010227410000425152
+    },
+    "12 2256d7: median gap, ms": {
+     "within": 34.81757849999667
+    },
+    "12 22580f: requests": {
+     "within": 2
+    },
+    "12 22580f: first, s": {
+     "within": 0.0006283180000536959
+    },
+    "12 22580f: median gap, ms": {
+     "within": 527.0783290000054
+    },
+    "12 22586f: requests": {
+     "within": 31
+    },
+    "12 22586f: first, s": {
+     "within": 0.001099222999982885
+    },
+    "12 22586f: median gap, ms": {
+     "within": 34.826877499995135
+    },
+    "12 225889: requests": {
+     "within": 31
+    },
+    "12 225889: first, s": {
+     "within": 0.00046502999998665473
+    },
+    "12 225889: median gap, ms": {
+     "within": 34.876719499948194
+    },
+    "18 22da12: requests": {
+     "within": 2
+    },
+    "18 22da12: first, s": {
+     "within": 0.0008817529999305407
+    },
+    "18 22da12: median gap, ms": {
+     "within": 1149.3043350001244
+    },
+    "run, s": {
+     "within": 1.6249734999998964
+    },
+    "waiting bytes": {
+     "within": 7
+    }
+   },
+   "lease free after": true
+  },
+  "another worker asks for the lease": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      1,
+      "0.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "14.980160",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "7.800000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "49.500000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "94.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "89.140000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "33.250000",
+      true
+     ]
+    ]
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "224300"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 60
+    },
+    "frames with a reading": {
+     "within": 60
+    },
+    "median gap, ms": {
+     "within": 35.56587299999592
+    },
+    "connections": {
+     "within": 4
+    },
+    "12 224201: requests": {
+     "within": 3
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224201: median gap, ms": {
+     "within": 983.1234739999672
+    },
+    "12 224205: requests": {
+     "within": 49
+    },
+    "12 224205: first, s": {
+     "within": 0.0007020939999620168
+    },
+    "12 224205: median gap, ms": {
+     "within": 34.86508900004992
+    },
+    "12 224300: requests": {
+     "within": 2
+    },
+    "12 224300: first, s": {
+     "within": 0.001830487000006542
+    },
+    "12 224300: median gap, ms": {
+     "within": 1709.4959919998018
+    },
+    "12 224a49: requests": {
+     "within": 49
+    },
+    "12 224a49: first, s": {
+     "within": 0.000971207999782564
+    },
+    "12 224a49: median gap, ms": {
+     "within": 34.85065049994773
+    },
+    "12 2256d7: requests": {
+     "within": 49
+    },
+    "12 2256d7: first, s": {
+     "within": 0.001461496999809242
+    },
+    "12 2256d7: median gap, ms": {
+     "within": 34.830947500040566
+    },
+    "12 22580f: requests": {
+     "within": 2
+    },
+    "12 22580f: first, s": {
+     "within": 0.0010920229999555886
+    },
+    "12 22580f: median gap, ms": {
+     "within": 526.2753560000419
+    },
+    "12 22586f: requests": {
+     "within": 49
+    },
+    "12 22586f: first, s": {
+     "within": 0.0016357899999093206
+    },
+    "12 22586f: median gap, ms": {
+     "within": 34.854695500030175
+    },
+    "12 225889: requests": {
+     "within": 49
+    },
+    "12 225889: first, s": {
+     "within": 0.00088489099994149
+    },
+    "12 225889: median gap, ms": {
+     "within": 34.85077049992924
+    },
+    "18 22da12: requests": {
+     "within": 2
+    },
+    "18 22da12: first, s": {
+     "within": 0.0012470929998471547
+    },
+    "18 22da12: median gap, ms": {
+     "within": 1217.7459520000866
+    },
+    "run, s": {
+     "within": 2.407634141000017
+    },
+    "the other worker waited, s": {
+     "within": 0.12616416000014397
+    }
+   },
+   "lease free after": true,
+   "the other worker got the lease": true
+  },
+  "SIGTERM part way": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      1,
+      "0.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "14.980160",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "7.800000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "49.500000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "94.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "89.140000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "33.250000",
+      true
+     ]
+    ]
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "224300"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 26
+    },
+    "frames with a reading": {
+     "within": 26
+    },
+    "median gap, ms": {
+     "within": 35.58944699989297
+    },
+    "connections": {
+     "within": 2
+    },
+    "12 224201: requests": {
+     "within": 2
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224201: median gap, ms": {
+     "within": 925.1443410000775
+    },
+    "12 224205: requests": {
+     "within": 23
+    },
+    "12 224205: first, s": {
+     "within": 0.00028521800004455145
+    },
+    "12 224205: median gap, ms": {
+     "within": 35.015636500020264
+    },
+    "12 224300: requests": {
+     "within": 1
+    },
+    "12 224300: first, s": {
+     "within": 0.0011591100001169252
+    },
+    "12 224a49: requests": {
+     "within": 23
+    },
+    "12 224a49: first, s": {
+     "within": 0.0006409810000604921
+    },
+    "12 224a49: median gap, ms": {
+     "within": 34.87974199993005
+    },
+    "12 2256d7: requests": {
+     "within": 23
+    },
+    "12 2256d7: first, s": {
+     "within": 0.0009943730001396034
+    },
+    "12 2256d7: median gap, ms": {
+     "within": 34.91046899989669
+    },
+    "12 22580f: requests": {
+     "within": 2
+    },
+    "12 22580f: first, s": {
+     "within": 0.0007734569999229279
+    },
+    "12 22580f: median gap, ms": {
+     "within": 528.0904600001577
+    },
+    "12 22586f: requests": {
+     "within": 23
+    },
+    "12 22586f: first, s": {
+     "within": 0.0010860410000077536
+    },
+    "12 22586f: median gap, ms": {
+     "within": 34.93727800002944
+    },
+    "12 225889: requests": {
+     "within": 23
+    },
+    "12 225889: first, s": {
+     "within": 0.0004759549999562296
+    },
+    "12 225889: median gap, ms": {
+     "within": 34.99446550006269
+    },
+    "18 22da12: requests": {
+     "within": 1
+    },
+    "18 22da12: first, s": {
+     "within": 0.0009081499999865628
+    },
+    "run, s": {
+     "within": 1.0031838459999562
+    }
+   },
+   "lease free after": true
+  },
+  "SIGTERM while a read waits": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    {
+     "values read": [
+      "0.000000"
+     ],
+     "states": [
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "14.980160"
+     ],
+     "states": [
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "7.800000"
+     ],
+     "states": [
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "49.500000"
+     ],
+     "states": [
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "94.000000"
+     ],
+     "states": [
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "89.140000"
+     ],
+     "states": [
+      [
+       0,
+       true
+      ],
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "2.497000"
+     ],
+     "states": [
+      [
+       1,
+       true
+      ]
+     ]
+    },
+    {
+     "values read": [
+      "33.250000"
+     ],
+     "states": [
+      [
+       1,
+       true
+      ]
+     ]
+    }
+   ],
+   "first requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     24,
+     "22da12"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "224300"
+    ]
+   ],
+   "requests": [
+    [
+     18,
+     "224201"
+    ],
+    [
+     18,
+     "224205"
+    ],
+    [
+     18,
+     "224300"
+    ],
+    [
+     18,
+     "224a49"
+    ],
+    [
+     18,
+     "2256d7"
+    ],
+    [
+     18,
+     "22580f"
+    ],
+    [
+     18,
+     "22586f"
+    ],
+    [
+     18,
+     "225889"
+    ],
+    [
+     24,
+     "22da12"
+    ]
+   ],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 7
+    },
+    "frames with a reading": {
+     "within": 7
+    },
+    "median gap, ms": {
+     "within": 55.25510649988519
+    },
+    "connections": {
+     "within": 1
+    },
+    "12 224201: requests": {
+     "within": 1
+    },
+    "12 224201: first, s": {
+     "within": 0.0
+    },
+    "12 224205: requests": {
+     "within": 2
+    },
+    "12 224205: first, s": {
+     "within": 0.00036548699995364586
+    },
+    "12 224205: median gap, ms": {
+     "within": 34.670127000026696
+    },
+    "12 224300: requests": {
+     "within": 1
+    },
+    "12 224300: first, s": {
+     "within": 0.0009781329999896116
+    },
+    "12 224a49: requests": {
+     "within": 2
+    },
+    "12 224a49: first, s": {
+     "within": 0.0006279550000272138
+    },
+    "12 224a49: median gap, ms": {
+     "within": 34.598256999970545
+    },
+    "12 2256d7: requests": {
+     "within": 2
+    },
+    "12 2256d7: first, s": {
+     "within": 0.0008568060000015976
+    },
+    "12 2256d7: median gap, ms": {
+     "within": 34.45065200003228
+    },
+    "12 22580f: requests": {
+     "within": 1
+    },
+    "12 22580f: first, s": {
+     "within": 0.0007255970001551759
+    },
+    "12 22586f: requests": {
+     "within": 1
+    },
+    "12 22586f: first, s": {
+     "within": 0.0009177419999559788
+    },
+    "12 225889: requests": {
+     "within": 2
+    },
+    "12 225889: first, s": {
+     "within": 0.000494522000053621
+    },
+    "12 225889: median gap, ms": {
+     "within": 34.6734730001117
+    },
+    "18 22da12: requests": {
+     "within": 1
+    },
+    "18 22da12: first, s": {
+     "within": 0.0007947880001211161
+    },
+    "run, s": {
+     "within": 0.8032616289999623
+    }
+   },
+   "lease free after": true
+  },
+  "its parent goes in a session": {
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "stopped within 0.5 s of its parent": true,
+   "streamed before": true,
+   "lease free after": true,
+   "timing": {
+    "stopped after, s": {
+     "within": 0.051313732999915374
+    }
+   },
+   "readings": [
+    [
+     [
+      1,
+      "0.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "14.980160",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "7.800000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "49.500000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "94.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "89.140000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "33.250000",
+      true
+     ]
+    ]
+   ]
+  },
+  "its parent goes without a session": {
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "stopped within 0.5 s of its parent": false,
+   "streamed before": true,
+   "lease free after": true,
+   "timing": {
+    "stopped after, s": {
+     "within": 1.1178101790001165
+    }
+   },
+   "readings": [
+    [
+     [
+      1,
+      "0.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "14.980160",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "7.800000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "49.500000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "94.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "89.140000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "33.250000",
+      true
+     ]
+    ]
+   ]
+  },
+  "the gateway moved and is saved": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\nThe gateway moved from 127.0.0.2 to 127.0.0.1\n",
+   "code": 0,
+   "saved": "127.0.0.1\n",
+   "left behind": [
+    "gateway-ip.txt"
+   ],
+   "identification requests": [
+    "000000000011"
+   ],
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "0.000000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "14.980160",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "7.800000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "49.500000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "94.000000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "89.140000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "2.497000",
+      true
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ],
+     [
+      1,
+      "33.250000",
+      true
+     ]
+    ]
+   ],
+   "timing": {
+    "frames": {
+     "within": 50
+    },
+    "frames with a reading": {
+     "within": 37
+    },
+    "median gap, ms": {
+     "within": 35.89840799986632
+    },
+    "run, s": {
+     "within": 3.3390232849999393
+    },
+    "connections": {
+     "within": 3
+    }
+   }
+  },
+  "no gateway, nothing to search": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\nnonexistent0 has no IPv4 address\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ]
+   ],
+   "first requests": [],
+   "requests": [],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 6
+    },
+    "frames with a reading": {
+     "within": 0
+    },
+    "median gap, ms": {
+     "within": 35.22656699988147
+    },
+    "connections": {
+     "within": 0
+    },
+    "run, s": {
+     "within": 0.23226130399984868
+    }
+   },
+   "lease free after": true
+  },
+  "two hosts: the last counts": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ]
+   ],
+   "first requests": [],
+   "requests": [],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 1
+    },
+    "frames with a reading": {
+     "within": 0
+    },
+    "median gap, ms": {
+     "within": null
+    },
+    "connections": {
+     "within": 0
+    },
+    "run, s": {
+     "within": 0.05603877600015039
+    }
+   },
+   "lease free after": true
+  },
+  "a host that isn't an address": {
+   "stdout": "",
+   "stderr": "READ ONLY / HSFZ: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "0"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ],
+    [
+     [
+      0,
+      "0.000000",
+      false
+     ]
+    ]
+   ],
+   "first requests": [],
+   "requests": [],
+   "other frames": [],
+   "only reads": true,
+   "timing": {
+    "frames": {
+     "within": 2
+    },
+    "frames with a reading": {
+     "within": 0
+    },
+    "median gap, ms": {
+     "within": 34.395618999951694
+    },
+    "connections": {
+     "within": 0
+    },
+    "run, s": {
+     "within": 0.09119982800007165
+    }
+   },
+   "lease free after": true
+  },
+  "demo": {
+   "stdout": "",
+   "stderr": "DEMO / NO VEHICLE CONNECTION: 2016 340i candidate profile; validate against ISTA/logger.\n",
+   "code": 0,
+   "formats": [
+    [
+     "NBG3",
+     21,
+     true
+    ]
+   ],
+   "seq counts from 1": true,
+   "demo": [
+    "1"
+   ],
+   "monotonic clock": true,
+   "readings": [
+    [
+     [
+      1,
+      "12.000000",
+      true
+     ],
+     [
+      1,
+      "12.279943",
+      true
+     ],
+     [
+      1,
+      "12.559543",
+      true
+     ],
+     [
+      1,
+      "12.838457",
+      true
+     ],
+     [
+      1,
+      "13.116345",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "13.200000",
+      true
+     ],
+     [
+      1,
+      "13.220996",
+      true
+     ],
+     [
+      1,
+      "13.241966",
+      true
+     ],
+     [
+      1,
+      "13.262884",
+      true
+     ],
+     [
+      1,
+      "13.283726",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "8.000000",
+      true
+     ],
+     [
+      1,
+      "8.104979",
+      true
+     ],
+     [
+      1,
+      "8.209829",
+      true
+     ],
+     [
+      1,
+      "8.314422",
+      true
+     ],
+     [
+      1,
+      "8.418629",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "44.000000",
+      true
+     ],
+     [
+      1,
+      "44.069986",
+      true
+     ],
+     [
+      1,
+      "44.139886",
+      true
+     ],
+     [
+      1,
+      "44.209614",
+      true
+     ],
+     [
+      1,
+      "44.279086",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "88.000000",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "95.000000",
+      true
+     ],
+     [
+      1,
+      "95.769843",
+      true
+     ],
+     [
+      1,
+      "96.538743",
+      true
+     ],
+     [
+      1,
+      "97.305758",
+      true
+     ],
+     [
+      1,
+      "98.069949",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "2.500000",
+      true
+     ],
+     [
+      1,
+      "2.517496",
+      true
+     ],
+     [
+      1,
+      "2.534971",
+      true
+     ],
+     [
+      1,
+      "2.552404",
+      true
+     ],
+     [
+      1,
+      "2.569772",
+      true
+     ]
+    ],
+    [
+     [
+      1,
+      "86.000000",
+      true
+     ],
+     [
+      1,
+      "86.104979",
+      true
+     ],
+     [
+      1,
+      "86.209829",
+      true
+     ],
+     [
+      1,
+      "86.314422",
+      true
+     ],
+     [
+      1,
+      "86.418629",
+      true
+     ]
+    ]
+   ],
+   "timing": {
+    "frames": {
+     "within": 5
+    },
+    "frames with a reading": {
+     "within": 5
+    },
+    "median gap, ms": {
+     "within": 35.227866499894844
+    },
+    "run, s": {
+     "within": 0.19600917499997195
+    }
+   }
+  },
+  "no arguments": {
+   "stdout": "",
+   "stderr": "Choose --host or --demo, never both.\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.020375779000005423
+    }
+   }
+  },
+  "demo and a host": {
+   "stdout": "",
+   "stderr": "Choose --host or --demo, never both.\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.018568337000033353
+    }
+   }
+  },
+  "host without a value": {
+   "stdout": "",
+   "stderr": "Usage: WORKER (--host IPv4 | --demo) [--port 6801] [--udp-port 42860] [--cycles N] [--no-trans] [--trace] [--session]\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.019347138999819435
+    }
+   }
+  },
+  "unknown option": {
+   "stdout": "",
+   "stderr": "Usage: WORKER (--host IPv4 | --demo) [--port 6801] [--udp-port 42860] [--cycles N] [--no-trans] [--trace] [--session]\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.01936499199996433
+    }
+   }
+  },
+  "a stray argument": {
+   "stdout": "",
+   "stderr": "Usage: WORKER (--host IPv4 | --demo) [--port 6801] [--udp-port 42860] [--cycles N] [--no-trans] [--trace] [--session]\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.019324259000086386
+    }
+   }
+  },
+  "cycles 0": {
+   "stdout": "",
+   "stderr": "Invalid number: 0\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.019529749999946944
+    }
+   }
+  },
+  "cycles 1000001": {
+   "stdout": "",
+   "stderr": "Invalid number: 1000001\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.0193419110000832
+    }
+   }
+  },
+  "cycles with letters": {
+   "stdout": "",
+   "stderr": "Invalid number: 1O\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.01946931499992388
+    }
+   }
+  },
+  "port 65536": {
+   "stdout": "",
+   "stderr": "Invalid number: 65536\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.019380326999907993
+    }
+   }
+  },
+  "UDP port 0": {
+   "stdout": "",
+   "stderr": "Invalid number: 0\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.01879553699995995
+    }
+   }
+  },
+  "search port 0": {
+   "stdout": "",
+   "stderr": "Invalid number: 0\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.01911034899990227
+    }
+   }
+  },
+  "search device without a value": {
+   "stdout": "",
+   "stderr": "Usage: WORKER (--host IPv4 | --demo) [--port 6801] [--udp-port 42860] [--cycles N] [--no-trans] [--trace] [--session]\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.018781546999889542
+    }
+   }
+  },
+  "host too long": {
+   "stdout": "",
+   "stderr": "Invalid host: 169.254.100.1000\n",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.0202258649999294
+    }
+   }
+  },
+  "demo in a session": {
+   "stdout": "",
+   "stderr": "",
+   "code": 2,
+   "timing": {
+    "run, s": {
+     "within": 0.01939533199993093
+    }
+   }
+  }
+ }
+}

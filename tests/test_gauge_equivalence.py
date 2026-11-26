@@ -1,6 +1,6 @@
 r"""The C and Rust builds of the gauge workers, boostdeck-collector and shift-deck, side by side. Each scenario runs
 every build in ENA_WORKERS against the same pretend gateway, with a pretend app listening for the frames, and compares
-each build with the first, the C.
+each build with the first, the C, or with what the C did as tests/fixtures records it (tests/reference.py).
 
 What can't depend on timing must be the same: stdout, stderr (the trace's clock readings aside), the exit code, the
 frames' format, each reading's sequence of values as the app sees it, the gateway's first requests and which ECU each
@@ -18,6 +18,7 @@ Needs two builds, as tests/run_rust.py runs it:
 """
 
 import errno
+import os
 import re
 import socket
 import statistics
@@ -30,9 +31,10 @@ import time
 import unittest
 from pathlib import Path
 
+import reference
 from test_transport import CAR_VALUES, VALUES, frame
-from test_worker_equivalence import LEASE_PORT, Lease, Responder, add_tests, identification, run
-from workers import builds, command
+from test_worker_equivalence import CRASHED, LEASE_PORT, Lease, Responder, add_tests, identification, pairs, run
+from workers import builds
 
 BOOST_DIDS = (0x4201, 0x4205, 0x5889, 0x4A49, 0x580F, 0xDA12, 0x56D7, 0x586F, 0x4300)
 SLOW_DIDS = {0x4201: 1000, 0x580F: 2000, 0xDA12: 2000, 0x4300: 2000}  # and their periods
@@ -580,31 +582,31 @@ SHIFTDECK = {
 }
 
 
+def needed(keys):
+    """The measurements both runs must have. A gap needs two requests of a kind, which a slow reading near the end of a
+    run may or may not get; the kinds of request are compared exactly."""
+    return sorted(key for key in keys if not key.endswith("median gap, ms"))
+
+
 class GaugeEquivalence:
     worker = None
     scenarios = None
 
     def compare(self, name):
-        results = {label: self.scenarios[name](command(folder, self.worker)) for label, folder in builds()}
-        reference_label, reference = next(iter(results.items()))
-        reference_timing = reference.pop("timing")
-        for label, result in results.items():
-            self.assertIs(result.get("only reads", True), True, f"{label} sent the gateway more than reads")
-            if label == reference_label:
-                continue
-            timing = result.pop("timing")
-            self.assertEqual(result, reference, f"{label} differs from {reference_label}")
-            # A gap needs two requests of a kind, which a slow reading near the end of a run may or may not get. The
-            # kinds of request are compared exactly above.
-            def needed(keys):
-                return sorted(key for key in keys if not key.endswith("median gap, ms"))
+        for reference_label, expected, label, result in pairs(self.worker, self.scenarios[name], name):
+            expected, result = dict(expected), dict(result)
+            for who, outcome in ((reference_label, expected), (label, result)):
+                self.assertIs(outcome.get("only reads", True), True, f"{who} sent the gateway more than reads")
+            reference_timing, timing = expected.pop("timing"), result.pop("timing")
+            self.assertEqual(reference.plain(result), reference.plain(expected),
+                             f"{label} differs from {reference_label}")
             self.assertEqual(needed(timing), needed(reference_timing), f"{label} measured other things")
             for key, measured in timing.items():
                 if key not in reference_timing:
                     continue
                 self.assertTrue(measured.agrees(reference_timing[key]),
                                 f"{key}: {label} {measured}, {reference_label} {reference_timing[key]}")
-        self.assertNotIn(reference.get("code"), (-6, -11, 134, 139), "the reference crashed")
+            self.assertNotIn(expected.get("code"), CRASHED, f"{reference_label} crashed")
 
 
 class BoostDeckEquivalence(GaugeEquivalence, unittest.TestCase):
@@ -619,10 +621,12 @@ class ShiftDeckEquivalence(GaugeEquivalence, unittest.TestCase):
 
 add_tests(BoostDeckEquivalence, BOOSTDECK)
 add_tests(ShiftDeckEquivalence, SHIFTDECK)
+# For tests/record_fixtures.py: both gauge workers' scenarios.
+SCENARIOS = {B: BOOSTDECK, S: SHIFTDECK}
 
 
 def setUpModule():
-    if len(builds()) < 2:
+    if len(builds()) < 2 and os.environ.get("ENA_REFERENCE") != "fixtures":
         raise unittest.SkipTest("ENA_WORKERS names one build: nothing to compare (tests/run_rust.py names two)")
 
 

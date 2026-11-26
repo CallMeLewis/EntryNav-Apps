@@ -1,0 +1,556 @@
+{
+ "worker": "mhd-maps",
+ "recorded from": "build-arm/mhd-maps",
+ "sha256": "4c581ed88188932d7c7345e7a11c430d2fed7441e69f92f6566a228eefb2888d",
+ "runner": "qemu-arm -cpu cortex-a15 -r 3.12.25-FR21.0 -L /sysroot",
+ "scenarios": {
+  "map 1": {
+   "stdout": "Map 1 accepted by the DME\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.02185655400012365,
+   "gateway": [
+    [
+     1,
+     "f4122f0100"
+    ]
+   ]
+  },
+  "map 2": {
+   "stdout": "Map 2 accepted by the DME\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.02112168400003611,
+   "gateway": [
+    [
+     1,
+     "f4122f0101"
+    ]
+   ]
+  },
+  "map 3": {
+   "stdout": "Map 3 accepted by the DME\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.021428504000141402,
+   "gateway": [
+    [
+     1,
+     "f4122f0102"
+    ]
+   ]
+  },
+  "map 4": {
+   "stdout": "Map 4 accepted by the DME\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.01988427900005263,
+   "gateway": [
+    [
+     1,
+     "f4122f0103"
+    ]
+   ]
+  },
+  "map 2 after a pending answer": {
+   "stdout": "Map 2 accepted by the DME\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.021085756000047695,
+   "gateway": [
+    [
+     1,
+     "f4122f0101"
+    ]
+   ]
+  },
+  "map 2 after an acknowledgement, an alive check and another ECU": {
+   "stdout": "Map 2 accepted by the DME\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.02069789799998034,
+   "gateway": [
+    [
+     1,
+     "f4122f0101"
+    ],
+    [
+     19,
+     "00f4"
+    ]
+   ]
+  },
+  "map 2: another map echoed (3 s)": {
+   "stdout": "No answer from the DME for map 2\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 3.02556265599992,
+   "gateway": [
+    [
+     1,
+     "f4122f0101"
+    ]
+   ]
+  },
+  "map 1: refused, NRC 11": {
+   "stdout": "The DME refused map 1 (NRC 11). Is an MHD+ tune flashed?\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.020858892999967793,
+   "gateway": [
+    [
+     1,
+     "f4122f0100"
+    ]
+   ]
+  },
+  "map 1: refused, NRC 12": {
+   "stdout": "The DME refused map 1 (NRC 12). Is an MHD+ tune flashed?\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.020294528000022183,
+   "gateway": [
+    [
+     1,
+     "f4122f0100"
+    ]
+   ]
+  },
+  "map 1: refused, NRC 13": {
+   "stdout": "The DME refused map 1 (NRC 13). Is an MHD+ tune flashed?\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.020549292999930913,
+   "gateway": [
+    [
+     1,
+     "f4122f0100"
+    ]
+   ]
+  },
+  "map 1: refused, NRC 31": {
+   "stdout": "The DME refused map 1 (NRC 31). Is an MHD+ tune flashed?\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.020774688999836144,
+   "gateway": [
+    [
+     1,
+     "f4122f0100"
+    ]
+   ]
+  },
+  "map 1: refused, NRC 22": {
+   "stdout": "The DME refused map 1 (NRC 22)\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.020357878000140772,
+   "gateway": [
+    [
+     1,
+     "f4122f0100"
+    ]
+   ]
+  },
+  "map 1: refused, NRC 33": {
+   "stdout": "The DME refused map 1 (NRC 33)\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.02087123299997984,
+   "gateway": [
+    [
+     1,
+     "f4122f0100"
+    ]
+   ]
+  },
+  "map 3: refused after a pending answer": {
+   "stdout": "The DME refused map 3 (NRC 31). Is an MHD+ tune flashed?\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.021080947999962518,
+   "gateway": [
+    [
+     1,
+     "f4122f0102"
+    ]
+   ]
+  },
+  "map 4: no answer (3 s)": {
+   "stdout": "No answer from the DME for map 4\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 3.0242220800000723,
+   "gateway": [
+    [
+     1,
+     "f4122f0103"
+    ]
+   ]
+  },
+  "map 4: the gateway closes": {
+   "stdout": "No answer from the DME for map 4\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.02175135499987846,
+   "gateway": [
+    [
+     1,
+     "f4122f0103"
+    ]
+   ]
+  },
+  "map 4: the echo too long": {
+   "stdout": "No answer from the DME for map 4\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.021745201999920027,
+   "gateway": [
+    [
+     1,
+     "f4122f0103"
+    ]
+   ]
+  },
+  "map 4: an oversized frame": {
+   "stdout": "No answer from the DME for map 4\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.021641429000055723,
+   "gateway": [
+    [
+     1,
+     "f4122f0103"
+    ]
+   ]
+  },
+  "Max Cooling on at 750 rpm": {
+   "stdout": "Max Cooling on, accepted by the DME\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.01999412400004985,
+   "gateway": [
+    [
+     1,
+     "f412010c"
+    ],
+    [
+     1,
+     "f4122f0301"
+    ]
+   ]
+  },
+  "Max Cooling on at 501 rpm": {
+   "stdout": "Max Cooling on, accepted by the DME\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.022102731000131826,
+   "gateway": [
+    [
+     1,
+     "f412010c"
+    ],
+    [
+     1,
+     "f4122f0301"
+    ]
+   ]
+  },
+  "Max Cooling on at 500 rpm": {
+   "stdout": "Start the engine first. Max Cooling needs it running.\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.022022195999852556,
+   "gateway": [
+    [
+     1,
+     "f412010c"
+    ]
+   ]
+  },
+  "Max Cooling on with the engine off": {
+   "stdout": "Start the engine first. Max Cooling needs it running.\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.022412223999936032,
+   "gateway": [
+    [
+     1,
+     "f412010c"
+    ]
+   ]
+  },
+  "Max Cooling on: no engine speed (1 s)": {
+   "stdout": "Start the engine first. Max Cooling needs it running.\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 1.0219271119999576,
+   "gateway": [
+    [
+     1,
+     "f412010c"
+    ]
+   ]
+  },
+  "Max Cooling on: engine speed refused": {
+   "stdout": "Start the engine first. Max Cooling needs it running.\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.020369689000062863,
+   "gateway": [
+    [
+     1,
+     "f412010c"
+    ]
+   ]
+  },
+  "Max Cooling on: engine speed of the wrong length": {
+   "stdout": "Start the engine first. Max Cooling needs it running.\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.022895887999993647,
+   "gateway": [
+    [
+     1,
+     "f412010c"
+    ]
+   ]
+  },
+  "Max Cooling on: engine speed too long": {
+   "stdout": "Start the engine first. Max Cooling needs it running.\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.02115585999990799,
+   "gateway": [
+    [
+     1,
+     "f412010c"
+    ]
+   ]
+  },
+  "Max Cooling on: refused": {
+   "stdout": "The DME refused Max Cooling on (NRC 31). Is an MHD+ tune flashed?\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.022477876000039032,
+   "gateway": [
+    [
+     1,
+     "f412010c"
+    ],
+    [
+     1,
+     "f4122f0301"
+    ]
+   ]
+  },
+  "Max Cooling on: no echo (3 s)": {
+   "stdout": "No answer from the DME for Max Cooling on\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 3.0265684729999975,
+   "gateway": [
+    [
+     1,
+     "f412010c"
+    ],
+    [
+     1,
+     "f4122f0301"
+    ]
+   ]
+  },
+  "Max Cooling off": {
+   "stdout": "Max Cooling off, accepted by the DME\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.02062967300003038,
+   "gateway": [
+    [
+     1,
+     "f4122f0300"
+    ]
+   ]
+  },
+  "Max Cooling off: refused": {
+   "stdout": "The DME refused Max Cooling off (NRC 22)\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.02146077299994431,
+   "gateway": [
+    [
+     1,
+     "f4122f0300"
+    ]
+   ]
+  },
+  "the lease held throughout (650 ms)": {
+   "stdout": "Diagnostics busy. Wait a moment and try again.\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.6759579449999364,
+   "gateway": [],
+   "asked for the lease": true
+  },
+  "the lease given up after 0.2 s": {
+   "stdout": "Map 2 accepted by the DME\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.22311403300000165,
+   "gateway": [
+    [
+     1,
+     "f4122f0101"
+    ]
+   ],
+   "asked for the lease": true
+  },
+  "SIGTERM while waiting for the lease": {
+   "stdout": "Diagnostics busy. Wait a moment and try again.\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.30358514999988984,
+   "gateway": [],
+   "asked for the lease": true
+  },
+  "SIGTERM while waiting for the echo": {
+   "stdout": "No answer from the DME for map 2\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.803959298999871,
+   "gateway": [
+    [
+     1,
+     "f4122f0101"
+    ]
+   ]
+  },
+  "SIGTERM while reading the engine speed": {
+   "stdout": "Start the engine first. Max Cooling needs it running.\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 0.5037501510000766,
+   "gateway": [
+    [
+     1,
+     "f412010c"
+    ]
+   ]
+  },
+  "no gateway": {
+   "stdout": "Diagnostic gateway unavailable\n",
+   "stderr": "",
+   "code": 1,
+   "seconds": 1.223332801999959
+  },
+  "the gateway moved and is saved": {
+   "stdout": "Map 3 accepted by the DME\n",
+   "stderr": "The gateway moved from 127.0.0.2 to 127.0.0.1\n",
+   "code": 0,
+   "seconds": 1.2296547519999876,
+   "gateway": [
+    [
+     1,
+     "f4122f0102"
+    ]
+   ],
+   "saved": "127.0.0.1\n",
+   "left behind": [
+    "gateway-ip.txt"
+   ],
+   "identification requests": [
+    "000000000011"
+   ]
+  },
+  "no arguments": {
+   "stdout": "",
+   "stderr": "Usage: WORKER --host IPv4 [--port 6801] (--map 1-4 | --cooling 0-1)\n",
+   "code": 2,
+   "seconds": 0.018752674999859664
+  },
+  "host only": {
+   "stdout": "",
+   "stderr": "Usage: WORKER --host IPv4 [--port 6801] (--map 1-4 | --cooling 0-1)\n",
+   "code": 2,
+   "seconds": 0.018688152000095215
+  },
+  "action only": {
+   "stdout": "",
+   "stderr": "Usage: WORKER --host IPv4 [--port 6801] (--map 1-4 | --cooling 0-1)\n",
+   "code": 2,
+   "seconds": 0.018558833000042796
+  },
+  "map 0": {
+   "stdout": "",
+   "stderr": "Invalid number: 0\n",
+   "code": 2,
+   "seconds": 0.019153653000103077
+  },
+  "map 5": {
+   "stdout": "",
+   "stderr": "Invalid number: 5\n",
+   "code": 2,
+   "seconds": 0.019018331999859583
+  },
+  "map without a value": {
+   "stdout": "",
+   "stderr": "",
+   "code": 2,
+   "seconds": 0.01984204499990483
+  },
+  "cooling 2": {
+   "stdout": "",
+   "stderr": "Invalid number: 2\n",
+   "code": 2,
+   "seconds": 0.01940745699994295
+  },
+  "map, then cooling": {
+   "stdout": "",
+   "stderr": "",
+   "code": 2,
+   "seconds": 0.01874921299986454
+  },
+  "cooling, then map": {
+   "stdout": "",
+   "stderr": "",
+   "code": 2,
+   "seconds": 0.018107085999872652
+  },
+  "a status it doesn't have": {
+   "stdout": "",
+   "stderr": "",
+   "code": 2,
+   "seconds": 0.019388624999919557
+  },
+  "two hosts": {
+   "stdout": "",
+   "stderr": "",
+   "code": 2,
+   "seconds": 0.018221811000103116
+  },
+  "host too long": {
+   "stdout": "",
+   "stderr": "Usage: WORKER --host IPv4 [--port 6801] (--map 1-4 | --cooling 0-1)\n",
+   "code": 2,
+   "seconds": 0.0196215650000795
+  },
+  "port 65536": {
+   "stdout": "",
+   "stderr": "Invalid number: 65536\n",
+   "code": 2,
+   "seconds": 0.019519796000167844
+  },
+  "search port 0": {
+   "stdout": "",
+   "stderr": "Invalid number: 0\n",
+   "code": 2,
+   "seconds": 0.01915462099987053
+  },
+  "a stray argument": {
+   "stdout": "",
+   "stderr": "",
+   "code": 2,
+   "seconds": 0.0187861829999747
+  }
+ }
+}

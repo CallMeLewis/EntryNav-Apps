@@ -1,0 +1,440 @@
+{
+ "worker": "engine-codes",
+ "recorded from": "build-arm/engine-codes",
+ "sha256": "74916c79d7c234f8c0adcd57bf993ff912fd761cb5c4dda546a568cfc2b1cac3",
+ "runner": "qemu-arm -cpu cortex-a15 -r 3.12.25-FR21.0 -L /sysroot",
+ "scenarios": {
+  "codes with noise before them": {
+   "stdout": "Engine: 2 codes\n1A2F0F  status 2F\n30FE01  status 08\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.12022079500002292,
+   "gateway": [
+    [
+     1,
+     "f4121902af"
+    ]
+   ]
+  },
+  "no codes": {
+   "stdout": "Engine: 0 codes\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.01969203200019365,
+   "gateway": [
+    [
+     1,
+     "f4121902af"
+    ]
+   ]
+  },
+  "130 codes, 128 shown": {
+   "stdout": "Engine: 130 codes\n000000  status 08\n000001  status 08\n000002  status 08\n000003  status 08\n000004  status 08\n000005  status 08\n000006  status 08\n000007  status 08\n000008  status 08\n000009  status 08\n00000A  status 08\n00000B  status 08\n00000C  status 08\n00000D  status 08\n00000E  status 08\n00000F  status 08\n000010  status 08\n000011  status 08\n000012  status 08\n000013  status 08\n000014  status 08\n000015  status 08\n000016  status 08\n000017  status 08\n000018  status 08\n000019  status 08\n00001A  status 08\n00001B  status 08\n00001C  status 08\n00001D  status 08\n00001E  status 08\n00001F  status 08\n000020  status 08\n000021  status 08\n000022  status 08\n000023  status 08\n000024  status 08\n000025  status 08\n000026  status 08\n000027  status 08\n000028  status 08\n000029  status 08\n00002A  status 08\n00002B  status 08\n00002C  status 08\n00002D  status 08\n00002E  status 08\n00002F  status 08\n000030  status 08\n000031  status 08\n000032  status 08\n000033  status 08\n000034  status 08\n000035  status 08\n000036  status 08\n000037  status 08\n000038  status 08\n000039  status 08\n00003A  status 08\n00003B  status 08\n00003C  status 08\n00003D  status 08\n00003E  status 08\n00003F  status 08\n000040  status 08\n000041  status 08\n000042  status 08\n000043  status 08\n000044  status 08\n000045  status 08\n000046  status 08\n000047  status 08\n000048  status 08\n000049  status 08\n00004A  status 08\n00004B  status 08\n00004C  status 08\n00004D  status 08\n00004E  status 08\n00004F  status 08\n000050  status 08\n000051  status 08\n000052  status 08\n000053  status 08\n000054  status 08\n000055  status 08\n000056  status 08\n000057  status 08\n000058  status 08\n000059  status 08\n00005A  status 08\n00005B  status 08\n00005C  status 08\n00005D  status 08\n00005E  status 08\n00005F  status 08\n000060  status 08\n000061  status 08\n000062  status 08\n000063  status 08\n000064  status 08\n000065  status 08\n000066  status 08\n000067  status 08\n000068  status 08\n000069  status 08\n00006A  status 08\n00006B  status 08\n00006C  status 08\n00006D  status 08\n00006E  status 08\n00006F  status 08\n000070  status 08\n000071  status 08\n000072  status 08\n000073  status 08\n000074  status 08\n000075  status 08\n000076  status 08\n000077  status 08\n000078  status 08\n000079  status 08\n00007A  status 08\n00007B  status 08\n00007C  status 08\n00007D  status 08\n00007E  status 08\n00007F  status 08\nMore codes returned; first 128 shown\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.04604115899996941,
+   "gateway": [
+    [
+     1,
+     "f4121902af"
+    ]
+   ]
+  },
+  "availability mask": {
+   "stdout": "Engine: 1 code\n1A2F0F  status 2F\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.03668439199987006,
+   "gateway": [
+    [
+     1,
+     "f4121902af"
+    ]
+   ]
+  },
+  "an answer of the wrong length": {
+   "stdout": "No valid code response\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.045222260999935315,
+   "gateway": [
+    [
+     1,
+     "f4121902af"
+    ]
+   ]
+  },
+  "read refused": {
+   "stdout": "Read rejected (NRC 31)\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.04126642999995056,
+   "gateway": [
+    [
+     1,
+     "f4121902af"
+    ]
+   ]
+  },
+  "alive check while waiting": {
+   "stdout": "Engine: 1 code\n30FE01  status 08\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.03688096200016844,
+   "gateway": [
+    [
+     1,
+     "f4121902af"
+    ],
+    [
+     19,
+     "00f4"
+    ]
+   ]
+  },
+  "oversized frame": {
+   "stdout": "No valid code response\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.03836997500002326,
+   "gateway": [
+    [
+     1,
+     "f4121902af"
+    ]
+   ]
+  },
+  "gateway closes": {
+   "stdout": "No valid code response\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.02320886799998334,
+   "gateway": [
+    [
+     1,
+     "f4121902af"
+    ]
+   ]
+  },
+  "gateway never answers (1.8 s)": {
+   "stdout": "No valid code response\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 1.8356832790000226,
+   "gateway": [
+    [
+     1,
+     "f4121902af"
+    ]
+   ]
+  },
+  "SIGTERM while waiting": {
+   "stdout": "No valid code response\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.6058098490000248,
+   "gateway": [
+    [
+     1,
+     "f4121902af"
+    ]
+   ]
+  },
+  "clear, then read": {
+   "stdout": "Engine: 0 codes after clear\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.06325251500015838,
+   "gateway": [
+    [
+     1,
+     "f41214ffffff"
+    ],
+    [
+     1,
+     "f4121902af"
+    ]
+   ]
+  },
+  "clear in the extended session": {
+   "stdout": "Engine: 0 codes after clear\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.02137908100007735,
+   "gateway": [
+    [
+     1,
+     "f41214ffffff"
+    ],
+    [
+     1,
+     "f4121003"
+    ],
+    [
+     1,
+     "f41214ffffff"
+    ],
+    [
+     1,
+     "f4121001"
+    ],
+    [
+     1,
+     "f4121902af"
+    ]
+   ]
+  },
+  "clear refused, session refused": {
+   "stdout": "Clear refused (NRC 22). Try with the ignition on and the engine off.\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.022927816999981587,
+   "gateway": [
+    [
+     1,
+     "f41214ffffff"
+    ],
+    [
+     1,
+     "f4121003"
+    ]
+   ]
+  },
+  "clear rejected": {
+   "stdout": "Clear rejected (NRC 13)\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.018865456999947128,
+   "gateway": [
+    [
+     1,
+     "f41214ffffff"
+    ]
+   ]
+  },
+  "clear answer of the wrong length": {
+   "stdout": "Clear result unknown: read codes again\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.01930146700010482,
+   "gateway": [
+    [
+     1,
+     "f41214ffffff"
+    ]
+   ]
+  },
+  "clear, gateway closes": {
+   "stdout": "Clear result unknown: read codes again\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.023490213000059157,
+   "gateway": [
+    [
+     1,
+     "f41214ffffff"
+    ]
+   ]
+  },
+  "clear acknowledged, read fails": {
+   "stdout": "Read rejected (NRC 31)\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.02052965600000789,
+   "gateway": [
+    [
+     1,
+     "f41214ffffff"
+    ],
+    [
+     1,
+     "f4121902af"
+    ]
+   ]
+  },
+  "clear acknowledged, no read answer": {
+   "stdout": "Clear acknowledged; recheck unavailable\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.025820277999855534,
+   "gateway": [
+    [
+     1,
+     "f41214ffffff"
+    ],
+    [
+     1,
+     "f4121902af"
+    ]
+   ]
+  },
+  "lease held throughout": {
+   "stdout": "Diagnostics busy. Wait a moment and try again.\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.7178797340000074,
+   "gateway": [],
+   "asked for the lease": true
+  },
+  "lease given up after 0.2 s": {
+   "stdout": "Engine: 0 codes\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.2385736359999555,
+   "gateway": [
+    [
+     1,
+     "f4121902af"
+    ]
+   ],
+   "asked for the lease": true
+  },
+  "SIGTERM while waiting for the lease": {
+   "stdout": "Diagnostics busy. Wait a moment and try again.\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 0.30349707000004855,
+   "gateway": [],
+   "asked for the lease": true
+  },
+  "no gateway, search on lo finds nothing": {
+   "stdout": "Diagnostic gateway unavailable\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 1.229594349999843
+  },
+  "no gateway, no vbr0 to search": {
+   "stdout": "Diagnostic gateway unavailable\n",
+   "stderr": "vbr0 has no IPv4 address\n",
+   "code": 0,
+   "seconds": 0.02740233199983777
+  },
+  "the gateway moved and is saved": {
+   "stdout": "Engine: 1 code\n1A2F0F  status 2F\n",
+   "stderr": "The gateway moved from 127.0.0.2 to 127.0.0.1\n",
+   "code": 0,
+   "seconds": 1.2571742610000456,
+   "gateway": [
+    [
+     1,
+     "f4121902af"
+    ]
+   ],
+   "saved": "127.0.0.1\n",
+   "left behind": [
+    "gateway-ip.txt"
+   ],
+   "identification requests": [
+    "000000000011"
+   ]
+  },
+  "no arguments": {
+   "stdout": "",
+   "stderr": "Usage: WORKER --host IPv4 [--port 6801] (--codes | --clear)\n",
+   "code": 2,
+   "seconds": 0.019229524000138554
+  },
+  "host only": {
+   "stdout": "",
+   "stderr": "Usage: WORKER --host IPv4 [--port 6801] (--codes | --clear)\n",
+   "code": 2,
+   "seconds": 0.018950495000126466
+  },
+  "mode only": {
+   "stdout": "",
+   "stderr": "Usage: WORKER --host IPv4 [--port 6801] (--codes | --clear)\n",
+   "code": 2,
+   "seconds": 0.017331782000155727
+  },
+  "two modes": {
+   "stdout": "",
+   "stderr": "Usage: WORKER --host IPv4 [--port 6801] (--codes | --clear)\n",
+   "code": 2,
+   "seconds": 0.018277786999988166
+  },
+  "two hosts": {
+   "stdout": "",
+   "stderr": "Usage: WORKER --host IPv4 [--port 6801] (--codes | --clear)\n",
+   "code": 2,
+   "seconds": 0.017323506000138877
+  },
+  "host without a value": {
+   "stdout": "",
+   "stderr": "Usage: WORKER --host IPv4 [--port 6801] (--codes | --clear)\n",
+   "code": 2,
+   "seconds": 0.023567698000078963
+  },
+  "host too long": {
+   "stdout": "",
+   "stderr": "Usage: WORKER --host IPv4 [--port 6801] (--codes | --clear)\n",
+   "code": 2,
+   "seconds": 0.017348947999835218
+  },
+  "empty host": {
+   "stdout": "",
+   "stderr": "Usage: WORKER --host IPv4 [--port 6801] (--codes | --clear)\n",
+   "code": 2,
+   "seconds": 0.019646338000029573
+  },
+  "port 0": {
+   "stdout": "",
+   "stderr": "Invalid number: 0\n",
+   "code": 2,
+   "seconds": 0.029869188000020586
+  },
+  "port 65536": {
+   "stdout": "",
+   "stderr": "Invalid number: 65536\n",
+   "code": 2,
+   "seconds": 0.017095530000005965
+  },
+  "port with letters": {
+   "stdout": "",
+   "stderr": "Invalid number: 68O1\n",
+   "code": 2,
+   "seconds": 0.020811145999914515
+  },
+  "port with a space": {
+   "stdout": "",
+   "stderr": "Invalid number: 6801 \n",
+   "code": 2,
+   "seconds": 0.03750101099990388
+  },
+  "port that wraps on ARM": {
+   "stdout": "Diagnostic gateway unavailable\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 1.236536010000009
+  },
+  "port far too large": {
+   "stdout": "",
+   "stderr": "Invalid number: 99999999999999999999\n",
+   "code": 2,
+   "seconds": 0.01983883100001549
+  },
+  "search port 0": {
+   "stdout": "",
+   "stderr": "Invalid number: 0\n",
+   "code": 2,
+   "seconds": 0.021186182000064946
+  },
+  "unknown option": {
+   "stdout": "",
+   "stderr": "Usage: WORKER --host IPv4 [--port 6801] (--codes | --clear)\n",
+   "code": 2,
+   "seconds": 0.018647987000122157
+  },
+  "host with a leading zero": {
+   "stdout": "Diagnostic gateway unavailable\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 1.2299313700000312
+  },
+  "host with three parts": {
+   "stdout": "Diagnostic gateway unavailable\n",
+   "stderr": "",
+   "code": 0,
+   "seconds": 1.235566824999978
+  }
+ }
+}

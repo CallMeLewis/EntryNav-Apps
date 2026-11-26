@@ -1,21 +1,27 @@
 #!/usr/bin/env python3
-"""The checks of the Rust ports of ena-gateway, engine-codes, boostdeck-collector and shift-deck (rust/), against
-their C originals, under QEMU with the car's kernel release:
+"""The checks of the Rust ports of the six workers (rust/): ena-gateway, engine-codes, boostdeck-collector,
+shift-deck, bm3-maps and mhd-maps, against their C originals, under QEMU with the car's kernel release:
 
-1. build/rust's binaries are what the head unit runs: 32-bit ARM, EABI 5 hard-float, statically linked.
+1. build/rust's programs are what the head unit runs: 32-bit ARM, EABI 5 hard-float, statically linked.
 2. The Rust unit tests, built for the head unit's target and run under qemu-arm with no copy of the car's system.
-3. tests/test_engine_codes.py, tests/test_gateway_tool.py, tests/test_transport.py (the BoostDeck collector) and
-   tests/test_drive_apps.py (ShiftDeck's worker) against the ARM builds of each, C and Rust.
-4. tests/test_worker_equivalence.py and tests/test_gauge_equivalence.py: every scenario on both builds, compared.
+3. The worker tests against the ARM builds of each, C and Rust: tests/test_engine_codes.py,
+   tests/test_gateway_tool.py, tests/test_transport.py (the BoostDeck collector), tests/test_drive_apps.py (ShiftDeck's
+   worker), tests/test_bm3_worker.py (bm3-maps, and test-bm3: tests/test_bm3.c and its Rust port) and
+   tests/test_mhd_worker.py.
+4. tests/test_worker_equivalence.py and tests/test_gauge_equivalence.py: every scenario on both builds, compared, and
+   the C compared with what tests/fixtures recorded of it.
 
 Build both first, then run it from the repository:
 
     make rust                                                    (from WSL on Windows: make rust CARGO=cargo.exe)
     bash toolchain/tc.sh make arm
-    python3 tests/run_rust.py
+    python3 tests/run_rust.py [--fixtures]
 
-Steps 2 to 4 run in the disposable aa-entrynav-qemu:local container, with the copy of the car's system from the Docker
-volume entrynav2-rootfs (HU_ROOTFS to use another), read-only. cargo (CARGO to name another) builds the unit tests.
+--fixtures compares the Rust builds with the recorded C (tests/record_fixtures.py) instead of the live C. A worker whose
+C build isn't in build-arm, because its C was deleted, is checked that way by itself: its worker tests run on the Rust
+build alone, and the comparisons use the recording. Steps 2 to 4 run in the disposable aa-entrynav-qemu:local
+container, with the copy of the car's system from the Docker volume entrynav2-rootfs (HU_ROOTFS to use another),
+read-only. cargo (CARGO to name another) builds the unit tests.
 """
 
 import json
@@ -24,13 +30,21 @@ import shlex
 import shutil
 import struct
 import subprocess
+import sys
 from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKERS = ("ena-gateway", "engine-codes", "boostdeck-collector", "shift-deck")
+WORKERS = ("ena-gateway", "engine-codes", "boostdeck-collector", "shift-deck", "bm3-maps", "mhd-maps")
+# Built with them, with no C worker of the same name to compare: the car trial's recorder, and tests/test_bm3.c's port.
+OTHERS = ("ena-capture", "test-bm3")
 TARGET = "armv7-unknown-linux-musleabihf"
 QEMU = "qemu-arm -cpu cortex-a15 -r 3.12.25-FR21.0"  # the car's CPU and kernel release, for uname
 BUILDS = "c=build-arm,rust=build/rust"
+# Each suite, and the programs it runs from each build. The equivalence tests choose for each worker by themselves.
+SUITES = {"test_engine_codes": ("engine-codes",), "test_gateway_tool": ("ena-gateway",),
+          "test_transport": ("boostdeck-collector",), "test_drive_apps": ("shift-deck",),
+          "test_bm3_worker": ("bm3-maps", "test-bm3"), "test_mhd_worker": ("mhd-maps",),
+          "test_worker_equivalence": (), "test_gauge_equivalence": ()}
 PT_INTERP, PT_DYNAMIC = 3, 2
 EM_ARM = 40
 EF_ARM_EABI_VER5, EF_ARM_ABI_FLOAT_HARD = 0x05000000, 0x400
@@ -75,24 +89,31 @@ def unit_tests():
     return paths
 
 
-def main():
-    for worker in (*WORKERS, "ena-capture"):  # ena-capture has no C original
-        for folder in ("build/rust", "build-arm") if worker in WORKERS else ("build/rust",):
-            if not (ROOT / folder / worker).is_file():
-                fail(f"{folder}/{worker} is missing: build it first (see tests/run_rust.py)")
-        why = static_arm(ROOT / "build/rust" / worker)
+def main(args):
+    if args not in ([], ["--fixtures"]):
+        raise SystemExit(__doc__)
+    no_c = set()
+    for program in (*WORKERS, *OTHERS):
+        if not (ROOT / "build/rust" / program).is_file():
+            fail(f"build/rust/{program} is missing: build it first (see tests/run_rust.py)")
+        if (program in WORKERS or program == "test-bm3") and not (ROOT / "build-arm" / program).is_file():
+            no_c.add(program)
+            print(f"NOTE build-arm/{program} is missing: it is checked against tests/fixtures, the recorded C. "
+                  "While the C exists, build it first: bash toolchain/tc.sh make arm", flush=True)
+        why = static_arm(ROOT / "build/rust" / program)
         if why:
-            fail(f"build/rust/{worker}: {why}")
-        size = (ROOT / "build/rust" / worker).stat().st_size
-        print(f"PASS build/rust/{worker}: static ARM, EABI 5 hard-float, {size} bytes", flush=True)
+            fail(f"build/rust/{program}: {why}")
+        size = (ROOT / "build/rust" / program).stat().st_size
+        print(f"PASS build/rust/{program}: static ARM, EABI 5 hard-float, {size} bytes", flush=True)
     tests = unit_tests()
     steps = [f"echo '== unit tests: {test.name}' && {QEMU} {test} --test-threads=1 -q" for test in tests]
-    steps += [f"echo '== {suite}' && python3 {suite}.py" for suite in
-              ("test_engine_codes", "test_gateway_tool", "test_transport", "test_drive_apps",
-               "test_worker_equivalence", "test_gauge_equivalence")]
+    for suite, programs in SUITES.items():
+        builds = "rust=build/rust" if no_c & set(programs) else BUILDS
+        steps.append(f"echo '== {suite}' && ENA_WORKERS={builds} python3 {suite}.py")
     command = ["docker", "run", "--rm", "-v", f"{ROOT}:/work:ro",
                "-v", f"{os.environ.get('HU_ROOTFS', 'entrynav2-rootfs')}:/sysroot:ro",
-               "-e", "PYTHONDONTWRITEBYTECODE=1", "-e", f"ENA_WORKERS={BUILDS}",
+               "-e", "PYTHONDONTWRITEBYTECODE=1",
+               *(["-e", "ENA_REFERENCE=fixtures"] if args else []),
                "-e", f"ENA_WORKER_RUNNER={QEMU} -L /sysroot", "-w", "/work/tests",
                "aa-entrynav-qemu:local", "sh", "-ec", " && ".join(steps)]
     print("+", shlex.join(command[:3]), "... aa-entrynav-qemu:local", flush=True)
@@ -103,4 +124,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
