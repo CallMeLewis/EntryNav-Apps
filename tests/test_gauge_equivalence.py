@@ -32,7 +32,7 @@ import unittest
 from pathlib import Path
 
 import reference
-from test_transport import CAR_VALUES, VALUES, frame
+from test_boostdeck_worker import CAR_VALUES, VALUES, frame
 from test_worker_equivalence import CRASHED, LEASE_PORT, Lease, Responder, add_tests, identification, pairs, run
 from workers import builds
 

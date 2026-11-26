@@ -27,7 +27,7 @@ from pathlib import Path
 
 import reference
 from test_bm3_worker import legacy_marker, mevd17_marker
-from test_transport import exact, frame
+from test_boostdeck_worker import exact, frame
 from workers import builds, command
 
 LEASE_PORT = 42861

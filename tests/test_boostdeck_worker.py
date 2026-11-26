@@ -1,5 +1,6 @@
-"""Exercise the BoostDeck collector against a loopback HSFZ gateway; no car needed. It runs every build in ENA_WORKERS
-(tests/workers.py), the C build by default."""
+"""Exercise BoostDeck's worker, boostdeck-collector, against a loopback HSFZ gateway; no car needed. It runs every build
+in ENA_WORKERS (tests/workers.py), the C build by default. The other worker tests share its gateway helpers (frame,
+exact) and readings."""
 import re
 import socket
 import struct
@@ -34,7 +35,7 @@ def exact(conn, n):
     return out
 
 
-class TransportTest:
+class BoostDeckWorkerTest:
     worker = None  # the build's command line, set by for_each_build
 
     def run_collector(self, mode="normal", extra=(), cycles=1):
@@ -210,8 +211,8 @@ class TransportTest:
         self.assertEqual(r.returncode, 2)
 
 
-for_each_build(TransportTest, "boostdeck-collector", globals())
-del TransportTest
+for_each_build(BoostDeckWorkerTest, "boostdeck-collector", globals())
+del BoostDeckWorkerTest
 
 if __name__ == "__main__":
     unittest.main()

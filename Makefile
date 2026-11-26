@@ -75,8 +75,8 @@ test: build/boostdeck-collector build/shift-deck build/bm3-maps build/mhd-maps b
       build/test-core build/test-bm3
 	./build/test-core
 	./build/test-bm3
-	$(PYTHON) -B tests/test_transport.py
-	$(PYTHON) -B tests/test_drive_apps.py
+	$(PYTHON) -B tests/test_boostdeck_worker.py
+	$(PYTHON) -B tests/test_shiftdeck_worker.py
 	$(PYTHON) -B tests/test_bm3_worker.py
 	$(PYTHON) -B tests/test_mhd_worker.py
 	$(PYTHON) -B tests/test_engine_codes.py

@@ -7,7 +7,7 @@ import subprocess
 import threading
 import unittest
 
-from test_transport import exact, frame
+from test_boostdeck_worker import exact, frame
 from workers import for_each_build
 
 

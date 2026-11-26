@@ -5,8 +5,8 @@ shift-deck, bm3-maps and mhd-maps, against their C originals, under QEMU with th
 1. build/rust's programs are what the head unit runs: 32-bit ARM, EABI 5 hard-float, statically linked.
 2. The Rust unit tests, built for the head unit's target and run under qemu-arm with no copy of the car's system.
 3. The worker tests against the ARM builds of each, C and Rust: tests/test_engine_codes.py,
-   tests/test_gateway_tool.py, tests/test_transport.py (the BoostDeck collector), tests/test_drive_apps.py (ShiftDeck's
-   worker), tests/test_bm3_worker.py (bm3-maps, and test-bm3: tests/test_bm3.c and its Rust port) and
+   tests/test_gateway_tool.py, tests/test_boostdeck_worker.py, tests/test_shiftdeck_worker.py,
+   tests/test_bm3_worker.py (bm3-maps, and test-bm3: tests/test_bm3.c and its Rust port) and
    tests/test_mhd_worker.py.
 4. tests/test_worker_equivalence.py and tests/test_gauge_equivalence.py: every scenario on both builds, compared, and
    the C compared with what tests/fixtures recorded of it.
@@ -42,7 +42,7 @@ QEMU = "qemu-arm -cpu cortex-a15 -r 3.12.25-FR21.0"  # the car's CPU and kernel 
 BUILDS = "c=build-arm,rust=build/rust"
 # Each suite, and the programs it runs from each build. The equivalence tests choose for each worker by themselves.
 SUITES = {"test_engine_codes": ("engine-codes",), "test_gateway_tool": ("ena-gateway",),
-          "test_transport": ("boostdeck-collector",), "test_drive_apps": ("shift-deck",),
+          "test_boostdeck_worker": ("boostdeck-collector",), "test_shiftdeck_worker": ("shift-deck",),
           "test_bm3_worker": ("bm3-maps", "test-bm3"), "test_mhd_worker": ("mhd-maps",),
           "test_worker_equivalence": (), "test_gauge_equivalence": ()}
 PT_INTERP, PT_DYNAMIC = 3, 2

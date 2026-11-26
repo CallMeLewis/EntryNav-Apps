@@ -165,7 +165,7 @@ mod tests {
         check(0x580f, &IAT, 49.5);
         check(0x5889, &LAMBDA, 4174.0 * 16.0 / 65535.0);
         check(0xda12, &TRANS, 94.0);
-        // tests/test_transport.py's rail, oil and coolant.
+        // tests/test_boostdeck_worker.py's rail, oil and coolant.
         check(0x56d7, &[0x11, 0x69], 89.14);
         check(0x586f, &[0x09, 0xc1], 2.497);
         check(0x4300, &[0x0b, 0xf8], 33.25);

@@ -1,16 +1,16 @@
-"""Verify the ShiftDeck worker on a simulated HSFZ gateway. It runs every build in ENA_WORKERS (tests/workers.py), the C
-build by default."""
+"""Verify ShiftDeck's worker, shift-deck, on a simulated HSFZ gateway. It runs every build in ENA_WORKERS
+(tests/workers.py), the C build by default."""
 import socket
 import struct
 import subprocess
 import threading
 import unittest
 
-from test_transport import exact, frame
+from test_boostdeck_worker import exact, frame
 from workers import for_each_build
 
 
-class DriveAppsTest:
+class ShiftDeckWorkerTest:
     worker = None  # the build's command line, set by for_each_build
 
     def run_worker(self, args, transactions):
@@ -97,8 +97,8 @@ class DriveAppsTest:
                         worker.terminate()
 
 
-for_each_build(DriveAppsTest, "shift-deck", globals())
-del DriveAppsTest
+for_each_build(ShiftDeckWorkerTest, "shift-deck", globals())
+del ShiftDeckWorkerTest
 
 if __name__ == "__main__":
     unittest.main()
