@@ -325,7 +325,7 @@ within 5 seconds. The app's library must still pass the loader's trace.
 
 Every app shares one version, `VERSION`, and every release ships all of them: a change to one app raises `VERSION`, and
 the others ship again unchanged. `tools/publish_release.py publish` runs `tools/check.py`, then sends each app's archive
-to Flare Drive's plugin catalog with `flare-publish`, and `plugins/<id>.toml` is each app's manifest. It then tags
+to Flare Drive's plugin catalog with `flare-publish`, and `catalog/<id>.toml` is each app's manifest. It then tags
 `vX.Y.Z` and puts the archives on its GitHub Release, with the version's CHANGELOG section as its text. The publishing
 Worker checks and stores the archive and signs the catalog, and the list older Flare Drive versions read
 (`https://updates.darkzone.dev/<id>/`) is rebuilt from it. It needs Flare Drive's repo cloned beside this one (or `FLARE_DRIVE_REPO`), the publishing service

@@ -19,7 +19,7 @@ their .sha256 files on the tag's GitHub Release, creating it if needed, with VER
 
 Releases reach Flare Drive through its plugin catalog, which only the publishing Worker writes. `publish` sends each
 plugin's archive there with flare-publish (Flare Drive's tools/flare_publish.py, in its repo beside this one, or
-FLARE_DRIVE_REPO), with plugins/<id>.toml as its manifest. The Worker checks the archive, stores it, adds it to the
+FLARE_DRIVE_REPO), with catalog/<id>.toml as its manifest. The Worker checks the archive, stores it, adds it to the
 catalog and signs it; flare-publish then rebuilds that plugin's per-plugin list (<id>/index.json) from the catalog and
 signs it with the release key (~/.flare-drive/release-signing-key, or FLARE_DRIVE_SIGNING_KEY), for Flare Drive 2.2.1
 and earlier. Flare Drive's docs/publishing.md describes the whole process. Never upload to the bucket any other way:
@@ -57,7 +57,7 @@ BUCKET = "darkzone-updates"
 REPO = "CallMeLewis/EntryNav-Apps"  # gh would otherwise pick the upstream fork parent
 # What the archives are built from. Once v<version> is tagged, none of it may change before the rest of the apps publish.
 # rust holds the workers --workers rust packages. The image archives aren't committed, so their generators are listed.
-APP_PATHS = ("VERSION", "Makefile", "src", "rust", "plugin", "plugins", "install", "sdk", "third-party", "toolchain",
+APP_PATHS = ("VERSION", "Makefile", "src", "rust", "plugin", "catalog", "install", "sdk", "third-party", "toolchain",
              "tools/package_release.py", "tools/make_bars.py", "tools/make_drive_apps.py", "tools/shift_art.py")
 BASE_URL = "https://updates.darkzone.dev"
 PLUGINS = ("boostdeck", "shiftdeck", "bm3-maps", "mhd-maps", "engine-codes")
@@ -320,7 +320,7 @@ def publish(args):
         with tempfile.TemporaryDirectory() as folder:
             notes_file = Path(folder) / "notes.txt"
             notes_file.write_text(notes[plugin], encoding="utf-8", newline="\n")
-            flare_publish("release", str(archive), "--manifest", str(ROOT / "plugins" / f"{plugin}.toml"),
+            flare_publish("release", str(archive), "--manifest", str(ROOT / "catalog" / f"{plugin}.toml"),
                           "--stability", label, "--notes-file", str(notes_file),
                           "--source-commit", head, "--min-app", str(MIN_APP))
         if fetch(plugin, f"releases/{version}/{archive.name}") != data:

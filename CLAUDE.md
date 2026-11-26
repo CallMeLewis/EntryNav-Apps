@@ -27,6 +27,6 @@ describes the whole process.
   later read only the catalog, so they would never see it.
 - `retire` is refused: the catalog would keep listing the release. Withdraw the app or change a release on the
   publishing page (`publish.darkzone.dev`) instead, as that guide describes.
-- `plugins/<id>.toml` is each app's manifest. Its `folder` and `worker` can never change, since installs on cars use
+- `catalog/<id>.toml` is each app's manifest. Its `folder` and `worker` can never change, since installs on cars use
   them. Its name, summary, description and order only describe an app new to the catalog; edit them on the publishing
   page. A new app needs a manifest here and its id in `PLUGINS` in `tools/publish_release.py`.
