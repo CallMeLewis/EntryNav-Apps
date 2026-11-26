@@ -1,4 +1,5 @@
-"""Exercise the real C collector against a loopback HSFZ gateway; no car needed."""
+"""Exercise the BoostDeck collector against a loopback HSFZ gateway; no car needed. It runs every build in ENA_WORKERS
+(tests/workers.py), the C build by default."""
 import re
 import socket
 import struct
@@ -6,9 +7,9 @@ import subprocess
 import threading
 import time
 import unittest
-from pathlib import Path
 
-BIN = str(Path(__file__).resolve().parents[1] / "build/boostdeck-collector")
+from workers import for_each_build
+
 VALUES = {0x4201: bytes.fromhex("63ca"), 0x4205: bytes.fromhex("31e5"),
           0x5889: bytes.fromhex("104e"), 0x4A49: bytes.fromhex("004e"),
           0x580F: bytes.fromhex("82"), 0xDA12: bytes.fromhex("008e")}
@@ -33,7 +34,9 @@ def exact(conn, n):
     return out
 
 
-class TransportTest(unittest.TestCase):
+class TransportTest:
+    worker = None  # the build's command line, set by for_each_build
+
     def run_collector(self, mode="normal", extra=(), cycles=1):
         udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         udp.bind(("127.0.0.1", 0))
@@ -105,7 +108,7 @@ class TransportTest(unittest.TestCase):
         t = threading.Thread(target=gateway, daemon=True)
         t.start()
         try:
-            result = subprocess.run([BIN, "--host", "127.0.0.1", "--port", str(server.getsockname()[1]),
+            result = subprocess.run([*self.worker, "--host", "127.0.0.1", "--port", str(server.getsockname()[1]),
                                      "--udp-port", str(udp.getsockname()[1]), "--cycles", str(cycles), *extra],
                                     capture_output=True, text=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -199,13 +202,16 @@ class TransportTest(unittest.TestCase):
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp:
             udp.bind(("127.0.0.1", 0))
             udp.settimeout(2)
-            r = subprocess.run([BIN, "--demo", "--cycles", "1", "--udp-port", str(udp.getsockname()[1])],
+            r = subprocess.run([*self.worker, "--demo", "--cycles", "1", "--udp-port", str(udp.getsockname()[1])],
                                capture_output=True, timeout=2)
             self.assertEqual(r.returncode, 0)
             self.assertEqual(udp.recv(512).decode().split()[2:4], ["1", "255"])
-        r = subprocess.run([BIN, "--demo", "--host", "127.0.0.1"], capture_output=True)
+        r = subprocess.run([*self.worker, "--demo", "--host", "127.0.0.1"], capture_output=True)
         self.assertEqual(r.returncode, 2)
 
+
+for_each_build(TransportTest, "boostdeck-collector", globals())
+del TransportTest
 
 if __name__ == "__main__":
     unittest.main()

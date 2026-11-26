@@ -1,5 +1,5 @@
-"""Verify the ShiftDeck worker on a simulated HSFZ gateway."""
-from pathlib import Path
+"""Verify the ShiftDeck worker on a simulated HSFZ gateway. It runs every build in ENA_WORKERS (tests/workers.py), the C
+build by default."""
 import socket
 import struct
 import subprocess
@@ -7,12 +7,13 @@ import threading
 import unittest
 
 from test_transport import exact, frame
+from workers import for_each_build
 
-BUILD = Path(__file__).resolve().parents[1] / "build"
 
+class DriveAppsTest:
+    worker = None  # the build's command line, set by for_each_build
 
-class DriveAppsTest(unittest.TestCase):
-    def run_worker(self, worker, args, transactions):
+    def run_worker(self, args, transactions):
         errors = []
         with socket.socket() as listener:
             listener.bind(("127.0.0.1", 0))
@@ -37,7 +38,7 @@ class DriveAppsTest(unittest.TestCase):
             thread = threading.Thread(target=gateway)
             thread.start()
             result = subprocess.run(
-                [BUILD/worker, "--host", "127.0.0.1", "--port", str(listener.getsockname()[1]), *args],
+                [*self.worker, "--host", "127.0.0.1", "--port", str(listener.getsockname()[1]), *args],
                 capture_output=True, text=True, check=True, timeout=6)
             thread.join(4)
             self.assertFalse(thread.is_alive())
@@ -49,7 +50,7 @@ class DriveAppsTest(unittest.TestCase):
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as listener:
             listener.bind(("127.0.0.1", 0))
             listener.settimeout(2)
-            self.run_worker("shift-deck", ["--cycles", "1", "--udp-port", str(listener.getsockname()[1])],
+            self.run_worker(["--cycles", "1", "--udp-port", str(listener.getsockname()[1])],
                             [("010c", ["410c61a8"]), ("010d", ["410d64"])])
             sampled_ms, rpm, kph = struct.unpack("=Qii", listener.recv(64))
             self.assertGreater(sampled_ms, 0)
@@ -60,7 +61,7 @@ class DriveAppsTest(unittest.TestCase):
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as listener:
             listener.bind(("127.0.0.1", 0))
             listener.settimeout(2)
-            self.run_worker("shift-deck", ["--cycles", "3", "--udp-port", str(listener.getsockname()[1])],
+            self.run_worker(["--cycles", "3", "--udp-port", str(listener.getsockname()[1])],
                             [("010c", ["410c61a8"]), ("010d", ["410d64"]), ("010c", ["410c6590"]),
                              ("010c", ["410c6978"])])
             frames = [struct.unpack("=Qii", listener.recv(64))[1:] for _ in range(3)]
@@ -75,7 +76,7 @@ class DriveAppsTest(unittest.TestCase):
             lock.bind(("127.0.0.1", 42861))
             with subprocess.Popen(
                 # It waits 25 ms a pass for the lock: enough passes to outlast the 0.2 s check below.
-                [BUILD/"shift-deck", "--host", "127.0.0.1",
+                [*self.worker, "--host", "127.0.0.1",
                  "--port", str(gateway.getsockname()[1]), "--cycles", "60"],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             ) as worker:
@@ -95,6 +96,9 @@ class DriveAppsTest(unittest.TestCase):
                     if worker.poll() is None:
                         worker.terminate()
 
+
+for_each_build(DriveAppsTest, "shift-deck", globals())
+del DriveAppsTest
 
 if __name__ == "__main__":
     unittest.main()
