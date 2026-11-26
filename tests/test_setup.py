@@ -3,6 +3,8 @@
 Run through tests/run_setup.py, which starts the privileged QEMU container this needs.
 """
 
+import hashlib
+import os
 import socket
 import struct
 import sys
@@ -15,8 +17,13 @@ from headunit import Unit
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "VERSION").read_text().strip()
+# The archives to test: dist, as tools/package_release.py writes them, or another folder (ENA_DIST, relative to the
+# repository), such as dist/rust for the archives with the Rust workers.
+DIST = ROOT / os.environ.get("ENA_DIST", "dist")
 PLUGINS = {"boostdeck": "BoostDeck", "shiftdeck": "ShiftDeck", "bm3-maps": "Bm3Maps", "mhd-maps": "MhdMaps",
            "engine-codes": "EngineCodes"}
+WORKERS = {"boostdeck": "boostdeck-collector", "shiftdeck": "shift-deck", "bm3-maps": "bm3-maps",
+           "mhd-maps": "mhd-maps", "engine-codes": "engine-codes"}
 MARK = ".installed-by-entrynav-apps"
 RULE_HSFZ = "OUTPUT -o vbr0 -p tcp --dport 6801 -j ACCEPT"
 RULE_HSFZ_OLD = "OUTPUT -d 169.254.0.0/16 -p tcp --dport 6801 -j ACCEPT"  # 0.1.0-test.1
@@ -26,7 +33,32 @@ DATA = "var/local/data/EntryNavApps"
 
 
 def archive(plugin):
-    return ROOT / "dist" / f"{plugin}-{VERSION}-armhf.tar"
+    return DIST / f"{plugin}-{VERSION}-armhf.tar"
+
+
+def arm_program(*instructions):
+    """A static 32-bit ARM EABI 5 hard-float program made of these instructions alone: an ELF header and one segment,
+    as setup.sh check sees a Rust worker."""
+    code = b"".join(struct.pack("<I", instruction) for instruction in instructions)
+    size = 52 + 32 + len(code)
+    header = struct.pack("<16sHHIIIIIHHHHHH", b"\x7fELF\x01\x01\x01".ljust(16, b"\0"), 2, 40, 1, 0x10000 + 84, 52, 0,
+                         0x05000400, 52, 32, 1, 0, 0, 0)
+    return header + struct.pack("<8I", 1, 0, 0x10000, 0x10000, size, size, 5, 0x1000) + code
+
+
+def exits(code):
+    return (0xE3A00000 | code, 0xE3A07001, 0xEF000000)  # mov r0, #code; mov r7, #1 (exit); svc #0
+
+
+UNDEFINED = (0xE7F000F0,)  # udf: SIGILL
+FOREVER = (0xEAFFFFFE,)  # b .
+
+
+def is_static(data):
+    """Whether an ELF has neither an interpreter nor a dynamic section."""
+    phoff, = struct.unpack_from("<I", data, 28)
+    size, count = struct.unpack_from("<HH", data, 42)
+    return all(struct.unpack_from("<I", data, phoff + i * size)[0] not in (2, 3) for i in range(count))
 
 
 def setup(plugin):
@@ -82,16 +114,72 @@ class SetupTest(unittest.TestCase):
         return sorted(p.name for p in self.unit.path("opt").iterdir() if p.name.startswith(".entrynav-"))
 
     # ---- check ---------------------------------------------------------------------------------------------------
+    def release_file(self, plugin, name):
+        return self.unit.path(f"tmp/{plugin}-{VERSION}/opt/hmi/data/ro/Plugins/{PLUGINS[plugin]}/{name}")
+
+    def replace_in_release(self, plugin, name, data):
+        """data in place of the app folder's file name in plugin's unpacked release, with MD5SUMS to match, as a
+        release built that way would have them."""
+        relative = f"opt/hmi/data/ro/Plugins/{PLUGINS[plugin]}/{name}"
+        path = self.unit.path(f"tmp/{plugin}-{VERSION}/{relative}")
+        path.write_bytes(data)
+        path.chmod(0o755)
+        sums = self.unit.path(f"tmp/{plugin}-{VERSION}/MD5SUMS")
+        sums.write_text("".join(f"{hashlib.md5(data).hexdigest()}  {relative}\n" if line.endswith(f"  {relative}")
+                                else line + "\n" for line in sums.read_text().splitlines()))
+
     def test_each_check_passes_and_writes_nothing(self):
         for plugin in PLUGINS:
             with self.subTest(plugin=plugin):
                 out = self.sh(f"{setup(plugin)} check")
                 self.assertIn("Every check passed", out)
                 self.assertIn("every library and function the app uses exists on this car", out)
+                for name in (WORKERS[plugin], "ena-gateway"):
+                    static = is_static(self.release_file(plugin, name).read_bytes())
+                    line = f"info  {name} is statically linked: it needs no library on this car, and it runs here"
+                    (self.assertIn if static else self.assertNotIn)(line, out)
         self.assertEqual(list(self.unit.path("opt/hmi/data/ro/Plugins").iterdir()), [])
         self.assertEqual(sorted(p.name for p in self.unit.path("etc/firewall").iterdir()),
                          ["HDRadio.rules", "sshd.rules", "whitelist.rules"])
         self.assertEqual(self.unit.rules(), [])
+
+    def test_a_static_worker_runs_instead_of_being_traced(self):
+        """glibc 2.15's loader crashes tracing a static program and then names nothing missing, so check runs a Rust
+        worker instead: with no arguments it prints its usage and exits 2."""
+        rust = ROOT / "build" / "rust"
+        if not (rust / "bm3-maps").is_file():
+            self.skipTest("build/rust has no Rust workers: make rust")
+        for name in ("bm3-maps", "ena-gateway"):
+            self.replace_in_release("bm3-maps", name, (rust / name).read_bytes())
+        out = self.sh(f"{setup('bm3-maps')} check")
+        self.assertIn("info  bm3-maps is statically linked: it needs no library on this car, and it runs here", out)
+        self.assertIn("info  ena-gateway is statically linked", out)
+        self.assertIn("ok    every library and function the app uses exists on this car", out)
+        self.install("bm3-maps")
+        self.assertIn("files: intact", self.sh(f"{installed('bm3-maps')} status"))
+
+    def test_a_static_program_that_does_not_run_stops_the_install(self):
+        """Each of these passed the loader's trace before, which crashed on it and printed nothing missing."""
+        for program, why in ((exits(0), "(exit 0)"), (exits(1), "(exit 1)"), (UNDEFINED, "(exit 132)"),
+                             (FOREVER, "(still running after 5 seconds)")):
+            with self.subTest(why=why):
+                self.replace_in_release("mhd-maps", "mhd-maps", arm_program(*program))
+                out = self.sh(f"{setup('mhd-maps')} install", 1)
+                self.assertIn(f"STOP  mhd-maps is statically linked but doesn't run on this car {why}", out)
+                self.assertIn("Not installed: 1 check(s) failed.", out)
+                self.assert_absent("mhd-maps")
+        self.replace_in_release("mhd-maps", "mhd-maps", arm_program(*exits(2)))
+        self.assertIn("info  mhd-maps is statically linked", self.sh(f"{setup('mhd-maps')} check"))
+
+    def test_a_program_for_another_computer_stops_the_install(self):
+        static_soft_float = bytearray(arm_program(*exits(2)))
+        static_soft_float[36:40] = struct.pack("<I", 0x04000000)  # EABI 4: not the car's
+        for data in (Path("/bin/true").read_bytes(), bytes(static_soft_float), b"#!/bin/sh\nexit 2\n"):
+            with self.subTest(start=data[:8]):
+                self.replace_in_release("engine-codes", "engine-codes", data)
+                out = self.sh(f"{setup('engine-codes')} install", 1)
+                self.assertIn("STOP  engine-codes is not a program for this head unit's 32-bit ARM Linux", out)
+                self.assert_absent("engine-codes")
 
     def test_check_stops_on_a_writable_system(self):
         self.unit.writable()

@@ -61,7 +61,7 @@ KEPT_COPY=$DATA/$ID-setup.sh
 LOADER=/lib/ld-linux-armhf.so.3
 LIBS=/opt/hmi/lib:/usr/local/lib:/usr/lib:/lib
 MARGIN_KB=1024
-NEEDED_COMMANDS="cat cp date df du grep id iptables ls md5sum mkdir mount mv rm sed sync"
+NEEDED_COMMANDS="cat cp date df du grep hexdump id iptables ls md5sum mkdir mount mv rm sed sync usleep"
 # File systems on which a rename survives a power cut whole (journalled or log-structured).
 SAFE_FILESYSTEMS="ext3 ext4 ubifs jffs2 yaffs yaffs2 f2fs btrfs xfs"
 # Firewall rules, as iptables arguments, the ones the rules file makes at start-up: HSFZ out, and the gateway search
@@ -349,7 +349,76 @@ check_space() {
     fi
 }
 
-# The car's loader resolves every library and function the app and its programs need, without running them.
+# One field of file $1's ELF header, in decimal: $2 bytes (2 or 4) at offset $3, little-endian as on the car. Empty
+# when the file is too short.
+elf_field() {
+    hexdump -s "$3" -n "$2" -e "1/$2 \"%u\"" "$1" 2>/dev/null
+}
+
+# How program $1 runs on the car, from its ELF headers: "dynamic" when it has an interpreter or a dynamic section (the
+# app's library, and the C workers, which the car's loader starts with its C library), "static" for a 32-bit ARM EABI 5
+# program that needs neither (the Rust workers), and "other" for anything else.
+linking() {
+    if [ "$(hexdump -n 7 -e '7/1 "%02x"' "$1" 2>/dev/null)" != 7f454c46010101 ]; then
+        echo other
+        return
+    fi
+    _machine=$(elf_field "$1" 2 18)
+    _flags=$(elf_field "$1" 4 36)
+    _phoff=$(elf_field "$1" 4 28)
+    _phsize=$(elf_field "$1" 2 42)
+    _phnum=$(elf_field "$1" 2 44)
+    case $_machine/$_flags/$_phoff/$_phsize/$_phnum in
+        /* | */ | *//* | *[!0-9/]*)
+            echo other
+            return
+            ;;
+    esac
+    if [ "$_machine" != 40 ] || [ "$_phnum" -gt 64 ]; then
+        echo other
+        return
+    fi
+    _kind=static
+    _i=0
+    while [ "$_i" -lt "$_phnum" ]; do
+        case $(elf_field "$1" 4 $((_phoff + _i * _phsize))) in
+            2 | 3) _kind=dynamic ;; # PT_DYNAMIC, PT_INTERP
+        esac
+        _i=$((_i + 1))
+    done
+    if [ "$_kind" = static ] && [ $((_flags >> 24)) != 5 ]; then
+        _kind=other
+    fi
+    echo "$_kind"
+}
+
+# Whether static program $1 runs on this car. With no arguments every worker and ena-gateway print their usage and exit
+# 2, touching nothing; anything else, or no end within 5 seconds, is a failure. RAN says what happened.
+runs_here() {
+    "$1" </dev/null >/dev/null 2>&1 &
+    _pid=$!
+    _n=0
+    while [ "$_n" -lt 50 ]; do
+        case $(sed -n 's/.*) \([A-Z]\).*/\1/p' "/proc/$_pid/stat" 2>/dev/null) in
+            '' | Z | X) break ;;
+        esac
+        usleep 100000
+        _n=$((_n + 1))
+    done
+    kill -9 "$_pid" 2>/dev/null
+    wait "$_pid"
+    _rc=$?
+    if [ "$_n" -ge 50 ]; then
+        RAN="still running after 5 seconds"
+    else
+        RAN="exit $_rc"
+    fi
+    [ "$_n" -lt 50 ] && [ "$_rc" = 2 ]
+}
+
+# The car's loader resolves every library and function the app and its programs need, without running them. A static
+# program needs no library and no loader: glibc 2.15's loader crashes tracing one, and the trace then names nothing
+# missing. So a static worker or ena-gateway runs instead (runs_here), and the app's library must be dynamic.
 check_libraries() {
     if [ ! -x "$LOADER" ]; then
         stop "$LOADER is missing: not an armhf EntryNav2"
@@ -357,13 +426,33 @@ check_libraries() {
     fi
     _failed=0
     for _f in "$SRC/$SOURCE/lib$APP.so" "$SRC/$SOURCE/$WORKER" "$SRC/$SOURCE/ena-gateway"; do
-        _out=$(LD_TRACE_LOADED_OBJECTS=1 LD_WARN=yes LD_BIND_NOW=yes LD_LIBRARY_PATH=$LIBS "$LOADER" "$_f" 2>&1 |
-            grep -E 'not found|undefined symbol|not defined in file')
-        if [ -n "$_out" ]; then
-            _failed=1
-            stop "${_f##*/}: something it needs is missing on this car"
-            printf '%s\n' "$_out" | while read -r _line; do say "        $_line"; done
+        _kind=$(linking "$_f")
+        if [ "$_kind" = static ] && [ "$_f" = "$SRC/$SOURCE/lib$APP.so" ]; then
+            _kind=other
         fi
+        case $_kind in
+            dynamic)
+                _out=$(LD_TRACE_LOADED_OBJECTS=1 LD_WARN=yes LD_BIND_NOW=yes LD_LIBRARY_PATH=$LIBS "$LOADER" "$_f" 2>&1 |
+                    grep -E 'not found|undefined symbol|not defined in file')
+                if [ -n "$_out" ]; then
+                    _failed=1
+                    stop "${_f##*/}: something it needs is missing on this car"
+                    printf '%s\n' "$_out" | while read -r _line; do say "        $_line"; done
+                fi
+                ;;
+            static)
+                if runs_here "$_f"; then
+                    info "${_f##*/} is statically linked: it needs no library on this car, and it runs here"
+                else
+                    _failed=1
+                    stop "${_f##*/} is statically linked but doesn't run on this car ($RAN)"
+                fi
+                ;;
+            *)
+                _failed=1
+                stop "${_f##*/} is not a program for this head unit's 32-bit ARM Linux"
+                ;;
+        esac
     done
     if [ "$_failed" = 0 ]; then
         ok "every library and function the app uses exists on this car"
