@@ -203,6 +203,62 @@ another). That copy holds BMW files and never goes into git.
 CI can't hold the copy of the car's system, so the ARM build and its checks run only in `tools/check.py`, which
 `tools/publish_release.py` runs before every release.
 
+### The Rust workers
+
+`rust/` holds Rust ports of two read-only workers, `ena-gateway` and `engine-codes`, beside their C originals in
+`src/collector.c`. They take the same arguments, print the same lines and exit the same way. Nothing installs or
+packages them: the releases still ship the C workers.
+
+| Command | What it does |
+|---|---|
+| `make rust` | Both workers for the head unit, statically linked, in `build/rust`, with the Rust version `rust/rust-toolchain.toml` pins. From WSL on Windows: `make rust CARGO=cargo.exe` |
+| `python3 tests/run_rust.py` | Their unit tests, the worker tests on both builds, and a test that runs the C and Rust builds through the same scenarios and compares them, all under QEMU. Run `bash toolchain/tc.sh make arm` first |
+| `uv run --no-project --with paramiko tests/test_try_on_car.py` | Tests `tools/try_on_car.py` against a pretend head unit in Docker |
+
+#### Trying them in the car
+
+`tools/try_on_car.py` runs the Rust workers on the head unit next to the installed C ones and compares the results.
+It installs nothing and doesn't need Flare Drive. It uploads the workers to a new folder in `/tmp`, checks their
+SHA-256 there, and deletes the folder when it finishes. Only the read-only jobs the apps give these workers run:
+reading the engine's fault codes, and checking and finding the gateway. `--clear` is refused. `engine-codes` also
+gets `--gateway-file` in that folder: if it finds the gateway at a new address, it saves the address there and not in
+the apps' settings.
+
+You need Engine Fault Codes installed, a saved gateway (`setup.sh gateway`), and `build/rust` from `make rust`.
+
+1. Park with the ignition on, and close every EntryNav-Apps page in iDrive.
+2. Join the laptop to the car's Wi-Fi, or plug it into the ENET cable. Don't share the laptop's internet connection
+   over the cable, or the gateway takes an address from it.
+3. Run the script with the head unit's address. Flare Drive's Connection page shows it, and over the cable it is
+   usually `169.254.1.0`:
+
+   ```
+   uv run --no-project --with paramiko tools/try_on_car.py --host 169.254.1.0
+   ```
+
+   It asks for the root password, or takes it from `HEADUNIT_PASSWORD`. It never shows or saves the password.
+
+For each job it prints both workers' exit code, run time, peak memory and output. A good run ends like this:
+
+```
+   Result: MATCH, same stdout and exit code
+
+3 of 3 compared runs matched.
+Deleted /tmp/ena-rust.Ab3dE9 on the head unit
+```
+
+A fault code that changes state between the two runs makes the fault code lists differ. Run the script again. If the
+difference stays, the port has a bug, and the output shows both versions.
+
+The script stops before it uploads anything if an app's worker is running or holds the diagnostic lease, since the
+two would take turns on the gateway. Close the page and run it again. Ctrl-C stops it at any time: it ends the worker
+it started and deletes its folder. If the connection drops before that, the folder stays in `/tmp` until the head
+unit restarts, and the script prints the command that deletes it.
+
+`--worker engine-codes` or `--worker ena-gateway` runs one worker. `--worker-args` gives that worker other read-only
+arguments, such as `--worker-args "check --host 169.254.10.3"`. The script exits 0 when every run matched, 1 when one
+differed, 2 when it refused the arguments and 3 when a check stopped it.
+
 ### Publishing a release
 
 Every app shares one version, `VERSION`, and every release ships all of them: a change to one app raises `VERSION`, and
