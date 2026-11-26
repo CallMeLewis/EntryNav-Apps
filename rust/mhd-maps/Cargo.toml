@@ -1,0 +1,10 @@
+[package]
+name = "mhd-maps"
+description = "MHD+ live controls for MHD+ Suite, a port of src/collector.c's MHD_MAPS_ONLY worker"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+ena-diag = { path = "../ena-diag" }

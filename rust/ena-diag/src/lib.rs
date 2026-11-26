@@ -102,6 +102,13 @@ pub fn program_name(args: &[Vec<u8>]) -> &[u8] {
 /// (minus wraps), and ULONG_MAX past the top. Returns the value and whether anything is left after the digits, or
 /// after s itself when it has none.
 pub fn strtoul(s: &[u8]) -> (c_ulong, bool) {
+    strtoul_base(s, 10)
+}
+
+/// strtoul(s, &end, base) for base 10 or 16, as strtoul above. Base 16 also takes a 0x or 0X before the digits, as the
+/// C library does; without a hex digit after it, only the 0 is read.
+pub fn strtoul_base(s: &[u8], base: u32) -> (c_ulong, bool) {
+    let digit = |c: u8| (c as char).to_digit(base);
     let mut i = 0;
     while i < s.len() && matches!(s[i], b' ' | b'\t' | b'\n' | 0x0b | 0x0c | b'\r') {
         i += 1;
@@ -110,11 +117,14 @@ pub fn strtoul(s: &[u8]) -> (c_ulong, bool) {
     if i < s.len() && (s[i] == b'-' || s[i] == b'+') {
         i += 1;
     }
+    if base == 16 && s.len() > i + 2 && s[i] == b'0' && matches!(s[i + 1], b'x' | b'X') && digit(s[i + 2]).is_some() {
+        i += 2;
+    }
     let digits = i;
     let mut value: u128 = 0;
     let mut overflow = false;
-    while i < s.len() && s[i].is_ascii_digit() {
-        value = value * 10 + u128::from(s[i] - b'0');
+    while i < s.len() && digit(s[i]).is_some() {
+        value = value * u128::from(base) + u128::from(digit(s[i]).unwrap_or(0));
         if value > c_ulong::MAX as u128 {
             overflow = true;
             value = c_ulong::MAX as u128 + 1; // stays above the limit, never grows
@@ -198,8 +208,24 @@ mod tests {
     }
 
     #[test]
+    fn strtoul_reads_hex_like_the_c_library() {
+        assert_eq!(strtoul_base(b"807FFE50", 16), (0x807f_fe50, false));
+        assert_eq!(strtoul_base(b"0977fe4c", 16), (0x0977_fe4c, false));
+        assert_eq!(strtoul_base(b"0x7FFE50", 16), (0x7f_fe50, false));
+        assert_eq!(strtoul_base(b"0X1f", 16), (0x1f, false));
+        assert_eq!(strtoul_base(b"0xg", 16), (0, true)); // only the 0: end is at the x
+        assert_eq!(strtoul_base(b"0x", 16), (0, true));
+        assert_eq!(strtoul_base(b" +807FFE5", 16), (0x0807_ffe5, false));
+        assert_eq!(strtoul_base(b"807FFE5G", 16), (0x0807_ffe5, true));
+        assert_eq!(strtoul_base(b"G", 16), (0, true));
+        assert_eq!(strtoul_base(b"ff", 10), (0, true));
+    }
+
+    #[test]
     #[cfg(target_pointer_width = "32")]
     fn a_negative_wraps_in_32_bits_on_the_head_unit() {
+        assert_eq!(strtoul_base(b"-0000001", 16), (0xffff_ffff, false));
+        assert_eq!(strtoul_base(b"-FFFFFFF", 16), (0xf000_0001, false));
         // -(2^32 - 1801) is 1801 in a 32-bit unsigned long: the car's C worker takes --port -4294965495 as 1801.
         assert_eq!(strtoul(b"-4294965495"), (1801, false));
         assert_eq!(strtoul(b"4294967296"), (c_ulong::MAX, false));

@@ -1,10 +1,12 @@
-# Rust ports of four read-only workers, ena-gateway, engine-codes, boostdeck-collector and shift-deck, beside their C
-# originals in src/collector.c, and ena-capture, which records what a gauge worker sends for the car trial. Nothing
-# installs them: make rust builds them into build/rust for the head unit, tests/run_rust.py checks that they behave like
-# the C, and tools/try_on_car.py runs them on a car from /tmp.
+# Rust ports of the six workers, ena-gateway, engine-codes, boostdeck-collector, shift-deck, bm3-maps and mhd-maps,
+# beside their C originals in src/collector.c, and ena-capture, which records what a gauge worker sends for the car
+# trial. make rust builds them into build/rust for the head unit, tests/run_rust.py checks that they behave like the C,
+# tools/try_on_car.py runs them on a car from /tmp, and tools/package_release.py --workers rust puts them in the release
+# archives in place of the C ones.
 [workspace]
 resolver = "2"
-members = ["ena-diag", "ena-gateway", "engine-codes", "boostdeck-collector", "shift-deck", "ena-capture"]
+members = ["ena-diag", "ena-gateway", "engine-codes", "boostdeck-collector", "shift-deck", "bm3-maps", "mhd-maps",
+           "ena-capture"]
 
 [workspace.package]
 version = "0.1.0"

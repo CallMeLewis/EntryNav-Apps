@@ -1,0 +1,10 @@
+[package]
+name = "bm3-maps"
+description = "bootmod3 CustomROM controls for Bootmod3 Suite, a port of src/bm3.c and src/collector.c's BM3_MAPS_ONLY worker"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+ena-diag = { path = "../ena-diag" }
