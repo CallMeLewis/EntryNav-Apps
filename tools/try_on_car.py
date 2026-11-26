@@ -12,9 +12,14 @@ saved. Then it:
 2. makes a folder with mktemp -d /tmp/ena-rust.XXXXXX, uploads build/rust's workers into it (make rust builds them)
    and checks each one's SHA-256 on the car;
 3. runs each read-only job the apps give these workers, the Rust worker first and then the installed C one, with the
-   same arguments: engine-codes --host GATEWAY --codes, as Engine Fault Codes runs it, and ena-gateway check --host
-   GATEWAY and ena-gateway discover, as setup.sh gateway runs them. engine-codes also gets --gateway-file in the
-   folder, so that a worker that finds the gateway at a new address saves it there instead of in the apps' settings;
+   same arguments: engine-codes --host GATEWAY --codes, as Engine Fault Codes runs it, ena-gateway check --host
+   GATEWAY and ena-gateway discover, as setup.sh gateway runs them, and bm3-maps --host GATEWAY --status, as Bootmod3
+   Suite runs it when its page opens. That identifies the ROM, defining the dynamic DID F301 in the engine computer's
+   RAM (2C) and reading it (22) or its memory (23), then reads the active map; it writes no memory. mhd-maps has no
+   read-only job, since every one asks MHD's code for something, so it runs only as mhd-maps --host GATEWAY, which
+   sends nothing and prints its usage; without MHD+ Suite installed it is left out, as there is nothing to compare
+   with. Each worker but ena-gateway also gets --gateway-file in the folder, so that a worker that finds the gateway
+   at a new address saves it there instead of in the apps' settings;
 4. runs the gauge workers as BoostDeck and ShiftDeck run them (boostdeck-collector --host GATEWAY --session and
    shift-deck --host GATEWAY), the Rust one and then the C one, for --seconds each, since two can't hold the gateway at
    once. Each sends its frames to ena-capture, a listener uploaded with them, on a free port of its own (--udp-port),
@@ -25,8 +30,9 @@ saved. Then it:
    reading's median (within its tolerance in READINGS or SPEEDS, as live readings change between runs);
 6. deletes its folder, also after an error or Ctrl-C.
 
-It never writes outside its folder, never changes /opt, restarts nothing, and refuses --clear and every argument that
-isn't one of the workers' read-only ones. --worker-args runs one worker with other read-only arguments.
+It never writes outside its folder, never changes /opt, restarts nothing, and refuses every argument that writes to the
+engine computer (engine-codes --clear, bm3-maps --map, --burbles and --sound, mhd-maps --map and --cooling) and every
+one that isn't one of the workers' read-only ones. --worker-args runs one worker with other read-only arguments.
 Exit 0 when every run matched, 1 when one differed, 2 for refused arguments, 3 when a check stopped it, 130 for Ctrl-C.
 """
 
@@ -49,7 +55,7 @@ from pathlib import Path
 import paramiko
 
 ROOT = Path(__file__).resolve().parents[1]
-ONE_SHOT = ("engine-codes", "ena-gateway")
+ONE_SHOT = ("engine-codes", "ena-gateway", "bm3-maps", "mhd-maps")
 GAUGES = ("boostdeck-collector", "shift-deck")
 WORKERS = (*ONE_SHOT, *GAUGES)
 CAPTURE = "ena-capture"  # records what a gauge worker sends; uploaded with the gauge workers
@@ -58,6 +64,8 @@ PLUGINS = "/opt/hmi/data/ro/Plugins"
 INSTALLED = {"engine-codes": [f"{PLUGINS}/EngineCodes/engine-codes"],
              "ena-gateway": [f"{PLUGINS}/{app}/ena-gateway"
                              for app in ("EngineCodes", "BoostDeck", "ShiftDeck", "Bm3Maps", "MhdMaps")],
+             "bm3-maps": [f"{PLUGINS}/Bm3Maps/bm3-maps"],
+             "mhd-maps": [f"{PLUGINS}/MhdMaps/mhd-maps"],
              "boostdeck-collector": [f"{PLUGINS}/BoostDeck/boostdeck-collector"],
              "shift-deck": [f"{PLUGINS}/ShiftDeck/shift-deck"]}
 GATEWAY_FILE = "/var/local/data/EntryNavApps/gateway-ip.txt"
@@ -69,12 +77,28 @@ PORT = "@PORT@"  # replaced on the head unit by ena-capture's port
 JOBS = {"engine-codes": [("read the engine's fault codes, as Engine Fault Codes does", ["--host", GATEWAY, "--codes"])],
         "ena-gateway": [("check the route to the gateway, as setup.sh gateway does", ["check", "--host", GATEWAY]),
                         ("look for the gateway on vbr0, as setup.sh gateway does", ["discover"])],
+        # Identifies the ROM (2C defines DID F301 in the DME's RAM, 22 and 23 read) and reads the active map: no write.
+        "bm3-maps": [("identify the ROM and read the active map, as Bootmod3 Suite does when its page opens",
+                      ["--host", GATEWAY, "--status"])],
+        # Every job of mhd-maps writes (--map, --cooling), so only its answer to a run without one, which sends nothing.
+        "mhd-maps": [("refuse a run without a map or Max Cooling, sending nothing (its only jobs write)",
+                      ["--host", GATEWAY])],
         "boostdeck-collector": [("stream the eight readings, as BoostDeck does", ["--host", GATEWAY, "--session"])],
         "shift-deck": [("stream engine and road speed, as ShiftDeck does", ["--host", GATEWAY])]}
 # How each upload is tried before it runs: these arguments make it exit 2 at once, with its usage when it has one.
-PROBES = {"engine-codes": ([], True), "ena-gateway": ([], True), "boostdeck-collector": (["--help"], True),
+PROBES = {"engine-codes": ([], True), "ena-gateway": ([], True), "bm3-maps": ([], True), "mhd-maps": ([], True),
+          "boostdeck-collector": (["--help"], True),
           "shift-deck": (["--help"], False), CAPTURE: (["--help"], True)}
 LEASE_HELD = "Diagnostics busy"
+# The arguments that make a worker write to the engine computer, refused whatever else is given.
+WRITES = {"bm3-maps": {"--map": "writes bootmod3's map slot to the engine computer",
+                       "--burbles": "writes the burble table and switch to the engine computer",
+                       "--sound": "sends the engine computer an Active Sound command"},
+          "mhd-maps": {"--map": "asks the engine computer's MHD code to switch maps",
+                       "--cooling": "sends the engine computer's MHD code a Max Cooling command"}}
+# What is tried only when its app is installed, with the reason it isn't tried otherwise.
+NEEDS_APP = {"mhd-maps": "MHD+ Suite isn't installed on this car, so there is no C mhd-maps to compare with. mhd-maps "
+                         "is left out: only a car with MHD+ Suite installed can try it."}
 EXIT_MISMATCH, EXIT_REFUSED, EXIT_STOPPED, EXIT_INTERRUPTED = 1, 2, 3, 130
 
 # How far the C and Rust gauge runs may differ. They run one after the other, so live readings change between them:
@@ -112,6 +136,9 @@ def refused(worker, args):
     the apps run them."""
     if "--clear" in args:
         return "--clear clears the engine computer's fault memory. This script only reads."
+    for option, what in WRITES.get(worker, {}).items():
+        if option in args:
+            return f"{option} {what}. This script only reads."
     if worker in GAUGES:
         options = {"--host": address, "--port": lambda v: number(v, 1, 65535)}
         flags, rest = ({"--session", "--no-trans", "--trace"} if worker == "boostdeck-collector" else set()), list(args)
@@ -124,6 +151,15 @@ def refused(worker, args):
         flags, rest = {"--codes"}, list(args)
         if "--codes" not in rest:
             return "engine-codes needs --codes, its read-only job"
+    elif worker == "bm3-maps":
+        options = {"--host": address, "--port": lambda v: number(v, 1, 65535),
+                   "--marker": lambda v: re.fullmatch(r"[0-9A-Fa-f]{8}", v) is not None}
+        flags, rest = {"--status", "--dump"}, list(args)
+        if "--status" not in rest:
+            return "bm3-maps needs --status, its read-only job"
+    elif worker == "mhd-maps":
+        options = {"--host": address, "--port": lambda v: number(v, 1, 65535)}
+        flags, rest = set(), list(args)
     elif worker == "ena-gateway":
         if not args or args[0] not in ("discover", "check"):
             return "ena-gateway takes discover or check, then its options"
@@ -385,6 +421,8 @@ def run_worker(unit, folder, program, args, timeout):
     _, stdout, stderr = unit.run(f'cat "{folder}/out"; cat "{folder}/err" >&2')
     start, end = float(found["START"][0]), float(found["END"][0])
     peak = (found.get("PEAK_KB") or [""])[0]
+    # A usage line names the program, which is in another folder for each build.
+    stderr = stderr.replace(program.encode(), b"WORKER")
     return {"code": int(found["CODE"][0]), "stdout": stdout, "stderr": stderr, "seconds": end - start,
             "peak": f"{peak} kB" if peak.split() and peak.split()[0].isdigit() else "not readable",
             "moved": (found.get("MOVED") or [None])[0]}
@@ -659,7 +697,7 @@ def compare(title, args, rust, c, folder, c_path):
             print(f"     {line}")
         print("   Result: no installed C worker to compare with")
         return None
-    same = rust["code"] == c["code"] and rust["stdout"] == c["stdout"]
+    same = rust["code"] == c["code"] and rust["stdout"] == c["stdout"] and rust["stderr"] == c["stderr"]
     if same:
         print("   stdout, the same from both:")
         for line in lines(rust["stdout"]) or ["(empty)"]:
@@ -675,7 +713,7 @@ def compare(title, args, rust, c, folder, c_path):
         print("   Rust:")
         for line in lines(rust["stderr"]):
             print(f"     {line}")
-    print("   Result: " + ("MATCH, same stdout and exit code" if same else "DIFFERENT"))
+    print("   Result: " + ("MATCH, the same stdout, stderr and exit code" if same else "DIFFERENT"))
     return same
 
 
@@ -717,14 +755,19 @@ def interrupt(*_):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Runs the Rust workers on a car beside the installed C ones and "
-                                                 "compares them. Read-only; installs nothing.")
+    parser = argparse.ArgumentParser(
+        description="Runs the Rust workers on a car beside the installed C ones and compares them. Read-only; installs "
+                    "nothing. Every argument that writes to the engine computer is refused: engine-codes --clear, "
+                    "bm3-maps --map, --burbles and --sound, and mhd-maps --map and --cooling. bm3-maps runs only "
+                    "--status, and mhd-maps only a run without an action, which sends nothing and is left out when "
+                    "MHD+ Suite isn't installed.")
     parser.add_argument("--host", required=True, help="the head unit's address on the car's Wi-Fi or ENET")
     parser.add_argument("--ssh-port", type=int, default=22)
     parser.add_argument("--worker", choices=("all", "gauges", *WORKERS), default="all",
-                        help="all four workers, both gauge workers, or one")
+                        help="all six workers, both gauge workers, or one")
     parser.add_argument("--worker-args", help="read-only arguments for --worker instead of the apps' own, quoted as "
-                                              "one string, for example \"check --host 169.254.10.3\"")
+                                              "one string, for example \"check --host 169.254.10.3\" or "
+                                              "\"--host 169.254.10.3 --status --dump\" for bm3-maps")
     parser.add_argument("--seconds", type=int, default=20, choices=range(3, 301), metavar="3-300",
                         help="how long each gauge worker runs (default 20)")
     parser.add_argument("--rust-dir", type=Path, default=ROOT / "build" / "rust", help="where make rust put them")
@@ -762,10 +805,18 @@ def main(argv=None):
         if CAPTURE in binaries:
             need_kb += options.seconds * 30
         installed, openssl = preflight(unit, workers, need_kb)
+        for worker, why in NEEDS_APP.items():
+            if worker in workers and installed[worker] is None:
+                print(why)
+                workers.remove(worker)
+                del binaries[worker]
         gateway = saved_gateway(unit)
         jobs = [(worker, title, args) for worker in workers for title, args in JOBS[worker]]
         if custom is not None:
-            jobs = [(workers[0], "the arguments given", custom)]
+            jobs = [(workers[0], "the arguments given", custom)] if workers else []
+        if not jobs:
+            print("\nNothing to compare.")
+            return 0
         if any(GATEWAY in args for _, _, args in jobs) and not gateway:
             raise Stop(f"No usable gateway address in {GATEWAY_FILE}, so the apps can't reach the car (Engine Fault "
                        "Codes says \"Gateway not set up\"). sh /opt/hmi/data/ro/Plugins/EngineCodes/setup.sh gateway "
@@ -781,7 +832,7 @@ def main(argv=None):
             args = [gateway if a == GATEWAY else a for a in args]
             if worker in GAUGES:  # its frames to ena-capture, never to the app's port
                 args += ["--udp-port", PORT]
-            if worker in ("engine-codes", *GAUGES):
+            if worker != "ena-gateway":  # each worker that can search for the gateway saves what it finds here
                 args += ["--gateway-file", f"{folder}/moved-gateway.txt"]
             outcome = {}
             for build, program in (("rust", f"{folder}/{worker}"), ("c", installed[worker])):

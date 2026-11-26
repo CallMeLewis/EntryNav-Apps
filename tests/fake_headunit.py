@@ -12,9 +12,10 @@ system from the Docker volume entrynav2-rootfs (HU_ROOTFS to use another) read-o
 chroot. Every command runs with the car's own bash 3.2, BusyBox 1.21 and openssl, and its ARM programs run through the
 kernel's binfmt registration for QEMU. As on the car, /tmp is a tmpfs that allows programs, /var/local a noexec tmpfs
 with the apps' saved gateway, and /opt/hmi/data/ro/Plugins holds the C engine-codes and ena-gateway (EngineCodes),
-boostdeck-collector (BoostDeck) and shift-deck (ShiftDeck) from build-arm. A dummy vbr0 carries the head unit's
-address and the gateway's, 169.254.10.2 and 169.254.10.3, where a simulated gateway answers HSFZ on TCP 6801 (the
-fault codes, the supported PIDs and the gauges' readings) and vehicle identification on UDP 6811.
+boostdeck-collector (BoostDeck), shift-deck (ShiftDeck) and bm3-maps (Bm3Maps) from build-arm. MHD+ Suite isn't
+installed, as in the owner's car. A dummy vbr0 carries the head unit's address and the gateway's, 169.254.10.2 and
+169.254.10.3, where a simulated gateway answers HSFZ on TCP 6801 (the fault codes, the supported PIDs, the gauges'
+readings, and a DME running bootmod3's R1C900000 with map 2 active) and vehicle identification on UDP 6811.
 
 The SSH server runs on this computer (paramiko) and passes each command to the container's chroot. It takes root with
 the password fixture-only. tests/test_try_on_car.py uses it to test the trial script.
@@ -38,7 +39,7 @@ HEAD_UNIT, GATEWAY = "169.254.10.2", "169.254.10.3"
 PLUGINS = "/hu/opt/hmi/data/ro/Plugins"
 # Which C workers the head unit has installed, and where: build-arm's, in each app's folder.
 INSTALLED = {"EngineCodes": ("engine-codes", "ena-gateway"), "BoostDeck": ("boostdeck-collector",),
-             "ShiftDeck": ("shift-deck",)}
+             "ShiftDeck": ("shift-deck",), "Bm3Maps": ("bm3-maps",)}
 INSTALL = "\n".join(f"mkdir -p {PLUGINS}/{app} && cp " + " ".join(f"/work/build-arm/{w}" for w in workers)
                     + f" {PLUGINS}/{app}/ && chmod 755 " + " ".join(f"{PLUGINS}/{app}/{w}" for w in workers)
                     for app, workers in INSTALLED.items())
@@ -76,15 +77,21 @@ echo 0 > {DELAY_FILE}
 # BoostDeck's DIDs (22) as a 2016 340i answers them, standing with the engine at idle, and ShiftDeck's OBD speeds (01).
 READINGS = {"224201": "63ca", "224205": "31e5", "225889": "104e", "224a49": "004e", "22580f": "82", "22da12": "008e",
             "2256d7": "1169", "22586f": "09c1", "224300": "0bf8", "010c": "0ae0", "010d": "00"}
+# What bm3-maps --status reads from a DME running bootmod3's R1C900000 (src/bm3_profiles.h): its CustomROM marker in the
+# text layout, through the dynamic DID F301, and map slot 2 (byte 01) at 4005E006.
+BM3_STATUS = {"2c03f301": "6c03f301", "2c02f30124807ffe5000ff": "6c02f301",
+              "22f301": "62f301" + b"BM3_R#R1C900000#".ljust(255, b"\0").hex(), "23144005e00601": "6301"}
 
 
 def answer(uds):
-    """The answer to one UDS request: two fault codes, the supported PIDs, the gauges' readings, and a refusal of
-    anything else."""
+    """The answer to one UDS request: two fault codes, the supported PIDs, the gauges' readings, bootmod3's marker and
+    map slot, and a refusal of anything else."""
     if uds == bytes.fromhex("1902af"):
         return bytes.fromhex("5902ff" "1a2f0f2f" "30fe0108")
     if uds == bytes.fromhex("0100"):
         return bytes.fromhex("4100be3fa813")
+    if uds.hex() in BM3_STATUS:
+        return bytes.fromhex(BM3_STATUS[uds.hex()])
     if uds.hex() in READINGS:
         return bytes([uds[0] + 0x40]) + uds[1:] + bytes.fromhex(READINGS[uds.hex()])
     return bytes([0x7f, uds[0] if uds else 0, 0x11])
@@ -139,7 +146,7 @@ def docker(*args, check=True, **kwargs):
 
 class HeadUnitContainer:
     def __init__(self):
-        for worker in ("engine-codes", "ena-gateway", "boostdeck-collector", "shift-deck"):
+        for worker in ("engine-codes", "ena-gateway", "boostdeck-collector", "shift-deck", "bm3-maps", "mhd-maps"):
             if not (ROOT / "build-arm" / worker).is_file():
                 raise SystemExit(f"build-arm/{worker} is missing: bash toolchain/tc.sh make arm")
         self.name = f"ena-fake-headunit-{secrets.token_hex(4)}"

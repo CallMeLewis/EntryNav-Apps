@@ -5,8 +5,9 @@ the installed C workers, and a simulated gateway. Needs Docker, build-arm (bash 
     uv run --no-project --with paramiko tests/test_try_on_car.py
 
 It checks that a run uploads, verifies and compares every worker, the gauge workers by the frames ena-capture records,
-writes nothing outside its /tmp folder and deletes that folder, also after a damaged upload or Ctrl-C; that --clear
-and other arguments that aren't read-only are refused before it connects; and that it stops, having uploaded nothing,
+writes nothing outside its /tmp folder and deletes that folder, also after a damaged upload or Ctrl-C; that only reads
+reach the engine computer, that mhd-maps is left out without MHD+ Suite and sends nothing with it; that --clear, map
+switching and the other arguments that aren't read-only are refused before it connects; and that it stops, having uploaded nothing,
 when another worker holds the diagnostic lease or is running, when /tmp is noexec, when no gateway is saved, and when
 the password is wrong, and stops its own gauge worker when an app's worker starts during the run. GaugeComparisonTest
 checks, without Docker, how the gauge runs are compared and which differences count.
@@ -21,7 +22,8 @@ import time
 import unittest
 from pathlib import Path
 
-from fake_headunit import DELAY_FILE, GATEWAY, PASSWORD, READINGS, REQUESTS_LOG, HeadUnitContainer, ssh_server
+from fake_headunit import (BM3_STATUS, DELAY_FILE, GATEWAY, PASSWORD, PLUGINS, READINGS, REQUESTS_LOG,
+                           HeadUnitContainer, ssh_server)
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "tools" / "try_on_car.py"
@@ -29,8 +31,10 @@ WINDOWS = os.name == "nt"
 # What the head unit's system looks like to the test: the overlay's writes (everything outside the mounts below),
 # and the data partition. /tmp is the script's to use.
 WRITES = "cd /ovl/up && find . | sort; cd /hu/var/local && find . -type f | sort | xargs -r md5sum"
-RUST = ("engine-codes", "ena-gateway", "boostdeck-collector", "shift-deck", "ena-capture")
-OURS = "engine-codes ena-gateway boostdeck-collector shift-deck ena-capture"
+RUST = ("engine-codes", "ena-gateway", "bm3-maps", "mhd-maps", "boostdeck-collector", "shift-deck", "ena-capture")
+OURS = "engine-codes ena-gateway bm3-maps mhd-maps boostdeck-collector shift-deck ena-capture"
+# What a request to the engine computer may start with when it only reads, or defines bootmod3's dynamic DID (2C).
+WRITING = ("14", "2e", "2f", "3d", "3e")
 
 
 def load_script():
@@ -90,7 +94,7 @@ class TryOnCarTest(unittest.TestCase):
         self.assertIn("Firmware 202306092158", out)
         self.assertIn("/tmp is writable, allows programs", out)
         self.assertIn(f"Saved gateway: {GATEWAY}", out)
-        for worker in RUST:
+        for worker in (w for w in RUST if w != "mhd-maps"):
             size = (ROOT / "build" / "rust" / worker).stat().st_size
             self.assertRegex(out, rf"Uploaded {worker}: {size} bytes, SHA-256 [0-9a-f]{{64}} matches "
                                   r"\(openssl on the car\)")
@@ -98,6 +102,11 @@ class TryOnCarTest(unittest.TestCase):
         self.assertIn("Installed C shift-deck: /opt/hmi/data/ro/Plugins/ShiftDeck/shift-deck", out)
         self.assertIn(f"== --host {GATEWAY} --codes --gateway-file /tmp/ena-rust.", out)
         self.assertIn("Engine: 2 codes", out)
+        self.assertIn(f"== --host {GATEWAY} --status --gateway-file /tmp/ena-rust.", out)
+        self.assertIn("     Map 2 active\n", out)
+        # The owner's car, as the pretend one, has no MHD+ Suite: mhd-maps is left out, not uploaded.
+        self.assertIn("MHD+ Suite isn't installed on this car", out)
+        self.assertNotIn("Uploaded mhd-maps", out)
         self.assertIn(f"Gateway {GATEWAY} answers; the DME replied to OBD 01 00", out)
         self.assertIn(f"     {GATEWAY}\n", out)  # discover found it on vbr0
         self.assertIn(f"== --host {GATEWAY} --session --udp-port PORT --gateway-file /tmp/ena-rust.", out)
@@ -105,15 +114,17 @@ class TryOnCarTest(unittest.TestCase):
         self.assertRegex(out, r"Coolant +33\.2 C, 100% given +33\.2 C, 100% given")
         self.assertRegex(out, r"Engine speed +696\.0 rpm, 100% given +696\.0 rpm, 100% given")
         self.assertRegex(out, r"frames +\d+, [\d.]+ a second +\d+, [\d.]+ a second")
-        self.assertEqual(out.count("Result: MATCH"), 5)
-        self.assertIn("5 of 5 compared runs matched.", out)
+        self.assertEqual(out.count("Result: MATCH"), 6)
+        self.assertIn("6 of 6 compared runs matched.", out)
         self.assertRegex(out, r"peak memory +\d+ kB +\d+ kB")
         self.assertRegex(out, r"Deleted /tmp/ena-rust\.\w{6} on the head unit")
-        # Only reads reached the engine computer: the fault memory twice, the supported PIDs twice, and the gauges'
-        # DIDs (22) and OBD speeds (01 0C, 01 0D).
+        # Only reads reached the engine computer: the fault memory twice, the supported PIDs twice, bootmod3's marker
+        # and map slot twice, and the gauges' DIDs (22) and OBD speeds (01 0C, 01 0D).
         requests = self.requests()
         self.assertEqual(sorted(r for r in requests if r in ("0100", "1902af")), ["0100", "0100", "1902af", "1902af"])
-        self.assertTrue(set(requests) - {"0100", "1902af"} <= set(READINGS), set(requests))
+        self.assertEqual([r for r in requests if r in BM3_STATUS], [*BM3_STATUS] * 2)
+        self.assertTrue(set(requests) - {"0100", "1902af"} <= set(READINGS) | set(BM3_STATUS), set(requests))
+        self.assertFalse([r for r in requests if r.startswith(WRITING)])
         self.assertGreater(len(requests), 100)
 
     def test_the_gauge_workers_alone(self):
@@ -158,7 +169,22 @@ class TryOnCarTest(unittest.TestCase):
                  ("boostdeck-collector", f"--host {GATEWAY} --session --session", "given twice"),
                  ("shift-deck", f"--host {GATEWAY} --gateway-file /var/local/data/x", "isn't a read-only"),
                  ("shift-deck", f"--host {GATEWAY} --session", "isn't a read-only"),
-                 ("shift-deck", "--host 1.2.3.4;reboot", "needs a valid value")]
+                 ("shift-deck", "--host 1.2.3.4;reboot", "needs a valid value"),
+                 ("bm3-maps", f"--host {GATEWAY} --map 2", "--map writes bootmod3's map slot"),
+                 ("bm3-maps", f"--host {GATEWAY} --status --map 2", "--map writes"),
+                 ("bm3-maps", f"--map 1 --host {GATEWAY}", "--map writes"),
+                 ("bm3-maps", f"--host {GATEWAY} --burbles 0", "--burbles writes the burble table"),
+                 ("bm3-maps", f"--host {GATEWAY} --sound 1", "--sound sends the engine computer"),
+                 ("bm3-maps", f"--host {GATEWAY} --status --sound 0", "--sound sends"),
+                 ("bm3-maps", f"--host {GATEWAY}", "needs --status"),
+                 ("bm3-maps", f"--host {GATEWAY} --status --marker 0977FE4", "needs a valid value"),
+                 ("bm3-maps", f"--host {GATEWAY} --status --marker '0977FE4C;reboot'", "needs a valid value"),
+                 ("bm3-maps", f"--host {GATEWAY} --status --search-dev lo", "isn't a read-only"),
+                 ("bm3-maps", f"--host {GATEWAY} --status --status", "given twice"),
+                 ("mhd-maps", f"--host {GATEWAY} --map 1", "--map asks the engine computer's MHD code"),
+                 ("mhd-maps", f"--host {GATEWAY} --cooling 0", "--cooling sends"),
+                 ("mhd-maps", f"--cooling 1 --host {GATEWAY}", "--cooling sends"),
+                 ("mhd-maps", f"--host {GATEWAY} --status", "isn't a read-only")]
         for worker, args, why in cases:
             with self.subTest(args=args):
                 result = self.run_script("--worker", worker, "--worker-args", args)
@@ -166,6 +192,35 @@ class TryOnCarTest(unittest.TestCase):
                 self.assertIn("Refused: ", result.stderr)
                 self.assertIn(why, result.stderr)
         self.assertEqual(self.server.connections, self.connections, "it connected for a refused run")
+
+    def test_bm3_maps_status_with_its_dump(self):
+        result = self.run_script("--worker", "bm3-maps", "--worker-args", f"--host {GATEWAY} --status --dump")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Installed C bm3-maps: /opt/hmi/data/ro/Plugins/Bm3Maps/bm3-maps", result.stdout)
+        self.assertIn("1 of 1 compared runs matched.", result.stdout)
+        self.assertEqual(self.requests(), [*BM3_STATUS] * 2)
+
+    def test_mhd_maps_is_left_out_without_mhd_plus(self):
+        result = self.run_script("--worker", "mhd-maps")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("MHD+ Suite isn't installed on this car, so there is no C mhd-maps to compare with", result.stdout)
+        self.assertIn("Nothing to compare.", result.stdout)
+        self.assertNotIn("Made /tmp", result.stdout)
+        self.assertEqual(self.requests(), [])
+
+    def test_mhd_maps_with_mhd_plus_installed_sends_nothing(self):
+        folder = f"{PLUGINS}/MhdMaps"
+        self.unit.sh(f"mkdir {folder} && cp /work/build-arm/mhd-maps {folder}/ && chmod 755 {folder}/mhd-maps")
+        try:
+            result = self.run_script("--worker", "mhd-maps")
+        finally:
+            self.unit.sh(f"rm -rf {folder}")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Installed C mhd-maps: /opt/hmi/data/ro/Plugins/MhdMaps/mhd-maps", result.stdout)
+        self.assertIn(f"== --host {GATEWAY} --gateway-file /tmp/ena-rust.", result.stdout)
+        self.assertIn("exit code      2", result.stdout)
+        self.assertIn("1 of 1 compared runs matched.", result.stdout)
+        self.assertEqual(self.requests(), [])
 
     def test_stops_when_another_worker_holds_the_lease(self):
         self.unit.sh("python3 -c 'import socket, time; s = socket.socket(2, 2); s.bind((\"127.0.0.1\", 42861)); "
