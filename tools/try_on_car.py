@@ -177,7 +177,9 @@ class HeadUnit:
                 out += channel.recv(65536)
             elif channel.recv_stderr_ready():
                 err += channel.recv_stderr(65536)
-            elif channel.exit_status_ready():
+            # The exit status isn't held back by SSH's flow control as output is, so on a slow link it can arrive while
+            # output is still on its way: stop only once the head unit has also ended the output (EOF).
+            elif channel.exit_status_ready() and channel.eof_received:
                 break
             elif time.monotonic() > deadline:
                 channel.close()
@@ -474,6 +476,10 @@ def run_gauge(unit, folder, program, args, seconds):
                    "iDrive. This script stopped its own worker. Close the page and run this again.")
     _, stdout, stderr = unit.run(f'cat "{folder}/out"; cat "{folder}/err" >&2')
     _, recorded, _ = unit.run(f'cat "{folder}/capture"', timeout=120)
+    _, size, _ = unit.text(f'wc -c <"{folder}/capture"')
+    if size.strip() != str(len(recorded)):
+        raise Stop(f"The recording of {program} came back short ({len(recorded)} of {size.strip()} bytes): the "
+                   "connection to the head unit is unsteady. Run this again.")
     start, end = float(found["START"][0]), float(found["END"][0])
     peak = (found.get("PEAK_KB") or [""])[0]
     return {"code": int(found["CODE"][0]), "stdout": stdout, "stderr": stderr, "seconds": end - start,
