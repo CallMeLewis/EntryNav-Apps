@@ -1,5 +1,6 @@
 """The bm3-maps worker against a simulated DME with bootmod3's map slot, like cauliflowermossgrape's test_bm3_protocol.js
-fixture. Checks that nothing is written unless the marker names a known ROM, and that a map change is read back."""
+fixture. Checks that nothing is written unless the marker names a known ROM, and that a map change is read back. Also
+runs test-bm3, tests/test_bm3.c's checks of the ROM table and the requests, from each build."""
 from pathlib import Path
 import socket
 import struct
@@ -9,8 +10,8 @@ import threading
 import unittest
 
 from test_transport import exact, frame
+from workers import for_each_build
 
-WORKER = Path(__file__).resolve().parents[1] / "build" / "bm3-maps"
 MARKER = 0x807FFE50
 MEVD17_MARKER = 0x0977FE4C  # where an F20 M140i keeps it: bootmod3's second address
 SLOT = 0x4005E006  # R1C900000's map slot (bm3_profiles.h)
@@ -72,7 +73,9 @@ class FakeDme:
         raise AssertionError(f"unexpected service {sid:02x}")
 
 
-class Bm3WorkerTest(unittest.TestCase):
+class Bm3WorkerTest:
+    worker = None  # the build's command line, set by for_each_build
+
     def run_worker(self, dme, *args, marker=MARKER, host="127.0.0.1"):
         """Runs bm3-maps against dme behind a gateway on 127.0.0.1, which serves each connection in turn."""
         errors, done = [], threading.Event()
@@ -106,7 +109,7 @@ class Bm3WorkerTest(unittest.TestCase):
             thread.start()
             chosen = ["--marker", f"{marker:08X}"] if marker is not None else []
             try:
-                result = subprocess.run([WORKER, "--host", host, "--port", str(listener.getsockname()[1]),
+                result = subprocess.run([*self.worker, "--host", host, "--port", str(listener.getsockname()[1]),
                                          *chosen, *args], capture_output=True, text=True, timeout=30)
             finally:
                 done.set()
@@ -267,6 +270,20 @@ class Bm3WorkerTest(unittest.TestCase):
         self.assertEqual(self.run_worker(dme, "--burbles", "4")[0], 2)
         self.assertEqual(dme.requests, [])
 
+
+class Bm3LibraryTest:
+    worker = None  # test-bm3 from the build
+
+    def test_every_check_of_test_bm3_c_passes(self):
+        result = subprocess.run(self.worker, capture_output=True, text=True, timeout=60)
+        self.assertEqual((result.returncode, result.stderr), (0, ""), result.stderr)
+        self.assertEqual(result.stdout,
+                         "BM3: marker layouts, all 150 profiles, requests, replies and burble tables passed.\n")
+
+
+for_each_build(Bm3WorkerTest, "bm3-maps", globals())
+for_each_build(Bm3LibraryTest, "test-bm3", globals())
+del Bm3WorkerTest, Bm3LibraryTest
 
 if __name__ == "__main__":
     unittest.main()

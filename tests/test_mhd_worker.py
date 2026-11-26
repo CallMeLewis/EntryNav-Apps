@@ -1,7 +1,6 @@
 """The mhd-maps worker against a simulated DME that answers MHD's 2F requests with an echo, like the MHD case of
 cauliflowermossgrape's test_live_adjustments.js. Checks each request's bytes, that a press counts only on the DME's echo,
 and that Max Cooling goes on only with the engine running."""
-from pathlib import Path
 import socket
 import struct
 import subprocess
@@ -9,8 +8,7 @@ import threading
 import unittest
 
 from test_transport import exact, frame
-
-WORKER = Path(__file__).resolve().parents[1] / "build" / "mhd-maps"
+from workers import for_each_build
 
 
 class FakeDme:
@@ -31,7 +29,9 @@ class FakeDme:
         raise AssertionError(f"unexpected request {uds.hex()}")
 
 
-class MhdWorkerTest(unittest.TestCase):
+class MhdWorkerTest:
+    worker = None  # the build's command line, set by for_each_build
+
     def run_worker(self, dme, *args):
         """Runs mhd-maps against dme behind a gateway on 127.0.0.1, which serves each connection in turn."""
         errors, done = [], threading.Event()
@@ -64,7 +64,8 @@ class MhdWorkerTest(unittest.TestCase):
             thread = threading.Thread(target=gateway)
             thread.start()
             try:
-                result = subprocess.run([WORKER, "--host", "127.0.0.1", "--port", str(listener.getsockname()[1]), *args],
+                result = subprocess.run([*self.worker, "--host", "127.0.0.1", "--port",
+                                         str(listener.getsockname()[1]), *args],
                                         capture_output=True, text=True, timeout=30)
             finally:
                 done.set()
@@ -120,6 +121,9 @@ class MhdWorkerTest(unittest.TestCase):
                 self.assertEqual(self.run_worker(dme, *args)[0], 2)
                 self.assertEqual(dme.requests, [])
 
+
+for_each_build(MhdWorkerTest, "mhd-maps", globals())
+del MhdWorkerTest
 
 if __name__ == "__main__":
     unittest.main()
