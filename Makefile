@@ -8,6 +8,8 @@
 #   bash toolchain/qemu.sh python3 tests/run_arm.py
 #                    the ARM checks: each plugin loaded with the car's own HMI libraries under QEMU, and its
 #                    vtable compared slot by slot with the car's bmw::PluginApp
+#   make rust        the Rust ports of ena-gateway and engine-codes for the head unit, static, in build/rust. Nothing
+#                    installs or packages them. python3 tests/run_rust.py checks them against the C under QEMU
 #   make clean       every build output
 
 CC ?= cc
@@ -18,7 +20,7 @@ CFLAGS ?= -O2 -std=c99 -Wall -Wextra -Werror
 CORE = src/gauge_core.c
 HEADERS = src/gauge_core.h src/drive_frame.h src/diagnostic_lease.h
 BM3 = src/bm3.c src/bm3.h src/bm3_profiles.h
-.PHONY: assets check syntax lint generated test arm clean
+.PHONY: assets check syntax lint generated test arm rust clean
 
 assets:
 	$(PYTHON) tools/make_bars.py
@@ -135,5 +137,19 @@ arm: build-arm/libBoostDeck.so build-arm/libShiftDeck.so build-arm/libBm3Maps.so
      build-arm/libEngineCodes.so build-arm/boostdeck-collector build-arm/shift-deck build-arm/bm3-maps build-arm/mhd-maps \
      build-arm/ena-gateway build-arm/engine-codes build-arm/test-plugin-load build-arm/test-spawn build-arm/test-bm3
 
+# ---- Rust (rust/, with the toolchain rust/rust-toolchain.toml pins) -----------------------------------------------------
+# Static ARMv7 hard-float binaries, linked by Rust's own rust-lld against the target's musl: no cross compiler, and
+# nothing from the car's glibc. cargo runs in rust/ so that rustup and cargo find rust-toolchain.toml and
+# .cargo/config.toml.
+# From WSL on Windows, make rust CARGO=cargo.exe uses the Windows Rust.
+CARGO ?= cargo
+RUST_TARGET = armv7-unknown-linux-musleabihf
+RUST_OUT = rust/target/$(RUST_TARGET)/release
+
+rust: | build
+	cd rust && $(CARGO) build --release --locked --target $(RUST_TARGET)
+	mkdir -p build/rust
+	cp $(RUST_OUT)/ena-gateway $(RUST_OUT)/engine-codes build/rust/
+
 clean:
-	rm -rf build build-arm
+	rm -rf build build-arm rust/target
