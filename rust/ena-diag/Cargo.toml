@@ -1,0 +1,11 @@
+[package]
+name = "ena-diag"
+description = "HSFZ and UDS through the car's diagnostic gateway, the diagnostic lease and the gateway search, as src/collector.c does them"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+# The C library's functions, structures and constants as each target defines them, rather than written out by hand.
+libc = "0.2"

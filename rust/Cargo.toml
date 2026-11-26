@@ -1,0 +1,20 @@
+# Rust ports of two read-only workers, ena-gateway and engine-codes, beside their C originals in src/collector.c.
+# Nothing installs them: make rust builds them into build/rust for the head unit, tests/run_rust.py checks that they
+# behave like the C, and tools/try_on_car.py runs them on a car from /tmp.
+[workspace]
+resolver = "2"
+members = ["ena-diag", "ena-gateway", "engine-codes"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+
+# Small static workers: no unwinding (a panic ends the run, as a crash of the C worker would), one codegen unit and LTO.
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

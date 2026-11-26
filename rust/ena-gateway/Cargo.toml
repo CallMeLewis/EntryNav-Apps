@@ -1,0 +1,10 @@
+[package]
+name = "ena-gateway"
+description = "Finds the diagnostic gateway and checks the route to it for setup.sh, a port of src/collector.c's GATEWAY_TOOL"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+ena-diag = { path = "../ena-diag" }

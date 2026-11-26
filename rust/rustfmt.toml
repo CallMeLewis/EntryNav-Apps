@@ -1,0 +1,2 @@
+# The repo's line width: 120, as in src/ and tools/.
+max_width = 120

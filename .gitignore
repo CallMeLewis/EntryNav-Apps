@@ -1,5 +1,6 @@
 /build/
 /build-arm/
+/rust/target/
 /plugin/*_ALL_Images.zip
 __pycache__/
 .venv/

@@ -1,0 +1,6 @@
+# The toolchain the head unit's Rust workers are built and tested with. Its armv7 musl target ships musl's C library and
+# rust-lld, so a fully static ARM binary links on any host with no cross compiler.
+[toolchain]
+channel = "1.94.1"
+targets = ["armv7-unknown-linux-musleabihf"]
+profile = "minimal"

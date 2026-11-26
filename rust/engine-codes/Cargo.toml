@@ -1,0 +1,10 @@
+[package]
+name = "engine-codes"
+description = "The DME's fault memory for the Engine Fault Codes app, a port of src/collector.c's ENGINE_CODES_ONLY worker"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+ena-diag = { path = "../ena-diag" }

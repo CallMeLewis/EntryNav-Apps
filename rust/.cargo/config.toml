@@ -1,0 +1,5 @@
+# The head unit: ARMv7 Cortex-A15, hard float, kernel 3.12. Linked fully static against the target's own musl with
+# rust-lld, so the binaries need nothing from the car's glibc 2.15.
+[target.armv7-unknown-linux-musleabihf]
+linker = "rust-lld"
+rustflags = ["-C", "linker-flavor=ld.lld", "-C", "link-self-contained=yes", "-C", "target-cpu=cortex-a15"]
