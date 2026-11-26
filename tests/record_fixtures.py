@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Records what the C workers do in every scenario of tests/test_worker_equivalence.py and
 tests/test_gauge_equivalence.py, under QEMU, as tests/fixtures/<worker>.json. With these the equivalence tests keep
-checking the Rust workers against the C's behaviour after the C is deleted (tests/reference.py). Record them again only
-while the C still exists, after a scenario was added or changed, and commit them with the change.
+checking the Rust workers against the C's behaviour after the C is deleted (tests/support/reference.py). Record them
+again only while the C still exists, after a scenario was added or changed, and commit them with the change.
 
     bash toolchain/tc.sh make arm
     python3 tests/record_fixtures.py [WORKER ...]
@@ -31,10 +31,10 @@ C_BUILD = "build-arm"
 
 def record(workers):
     """Inside the container: runs each scenario on the C build and writes the fixtures."""
-    import reference
+    from support import reference
     import test_gauge_equivalence
     import test_worker_equivalence
-    from workers import command
+    from support.workers import command
 
     scenarios = {**test_worker_equivalence.SCENARIOS, **test_gauge_equivalence.SCENARIOS}
     unknown = set(workers) - set(scenarios)

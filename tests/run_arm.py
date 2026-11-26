@@ -42,7 +42,7 @@ def main():
     frameworks_match()
     for lib, name, _ in PLUGINS:
         run(f"load {name}", [*QEMU, str(ARM / "test-plugin-load"), str(ARM / lib), name])
-    run("vtables", [sys.executable, str(ROOT / "tests/check_vtable.py"), SYSROOT,
+    run("vtables", [sys.executable, str(ROOT / "tests/support/check_vtable.py"), SYSROOT,
                     *[f"{ARM / lib}:{vtable}" for lib, _, vtable in PLUGINS]])
     run("worker spawn", [*QEMU, str(ARM / "test-spawn"), "--hu-glibc"])
     run("bm3 markers and requests", [*QEMU, str(ARM / "test-bm3")], "passed")

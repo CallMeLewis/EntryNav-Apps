@@ -1,4 +1,4 @@
-//! test-bm3: tests/test_bm3.c's checks of src/bm3.c, one for one, run on the Rust port in src/lib.rs. Like the C
+//! test-bm3: tests/native/test_bm3.c's checks of src/bm3.c, one for one, run on the Rust port in src/lib.rs. Like the C
 //! program it prints each failure on stderr and exits 1, or prints one line and exits 0, so tests/test_bm3_worker.py
 //! runs both builds of it the same way. cargo test runs the same checks.
 

@@ -210,7 +210,7 @@ CI can't hold the copy of the car's system, so the ARM build and its checks run 
 Suite's `mhd-maps`. They take the same arguments, send the same requests in the same order, print the same lines and
 exit the same way. The releases ship the C workers unless you package the Rust ones, as the last part of this section
 describes. `ena-capture`, built with them, records what a gauge worker sends, for the car trial below. `test-bm3` is
-`tests/test_bm3.c` ported to Rust, and the bm3-maps tests run both programs.
+`tests/native/test_bm3.c` ported to Rust, and the bm3-maps tests run both programs.
 
 | Command | What it does |
 |---|---|

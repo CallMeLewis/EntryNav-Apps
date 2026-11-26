@@ -16,9 +16,9 @@ import os
 import re
 from pathlib import Path
 
-from workers import builds
+from .workers import builds
 
-FIXTURES = Path(__file__).resolve().parent / "fixtures"
+FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 # Ports picked at random for a run (unused_port), which the workers' lines may print: written as PORT, so that a result
 # recorded once still compares.
 PORTS = set()

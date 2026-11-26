@@ -1,6 +1,6 @@
-"""tools/try_on_car.py against the fake head unit of tests/fake_headunit.py: the car's own shell, BusyBox and openssl,
-the installed C workers, and a simulated gateway. Needs Docker, build-arm (bash toolchain/tc.sh make arm) and build/rust
-(make rust):
+"""tools/try_on_car.py against the fake head unit of tests/support/fake_headunit.py: the car's own shell, BusyBox and
+openssl, the installed C workers, and a simulated gateway. Needs Docker, build-arm (bash toolchain/tc.sh make arm) and
+build/rust (make rust):
 
     uv run --no-project --with paramiko tests/test_try_on_car.py
 
@@ -22,7 +22,7 @@ import time
 import unittest
 from pathlib import Path
 
-from fake_headunit import (BM3_STATUS, DELAY_FILE, GATEWAY, PASSWORD, PLUGINS, READINGS, REQUESTS_LOG,
+from support.fake_headunit import (BM3_STATUS, DELAY_FILE, GATEWAY, PASSWORD, PLUGINS, READINGS, REQUESTS_LOG,
                            HeadUnitContainer, ssh_server)
 
 ROOT = Path(__file__).resolve().parents[1]

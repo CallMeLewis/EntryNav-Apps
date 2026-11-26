@@ -148,7 +148,7 @@ mod tests {
         assert!((x - expected).abs() < 0.00001, "{did:04X}: {x}, not {expected}");
     }
 
-    /// tests/test_core.c: payloads from OBDb's 2016 3-Series captures (CC BY-SA 4.0).
+    /// tests/native/test_core.c: payloads from OBDb's 2016 3-Series captures (CC BY-SA 4.0).
     const BARO: [u8; 2] = [0x63, 0xca];
     const PRESSURE: [u8; 2] = [0x31, 0xe5];
     const TIMING: [u8; 2] = [0, 0x4e];

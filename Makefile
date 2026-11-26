@@ -65,10 +65,10 @@ build/ena-gateway: src/collector.c $(CORE) $(HEADERS) | build
 build/engine-codes: src/collector.c $(CORE) $(HEADERS) src/paths.h | build
 	$(CC) $(CFLAGS) -Isrc -DENGINE_CODES_ONLY $(filter %.c,$^) -lm -o $@
 
-build/test-core: tests/test_core.c $(CORE) $(HEADERS) | build
+build/test-core: tests/native/test_core.c $(CORE) $(HEADERS) | build
 	$(CC) $(CFLAGS) -Isrc $(filter %.c,$^) -lm -o $@
 
-build/test-bm3: tests/test_bm3.c $(BM3) | build
+build/test-bm3: tests/native/test_bm3.c $(BM3) | build
 	$(CC) $(CFLAGS) -Isrc $(filter %.c,$^) -o $@
 
 test: build/boostdeck-collector build/shift-deck build/bm3-maps build/mhd-maps build/ena-gateway build/engine-codes \
@@ -128,12 +128,12 @@ build-arm/ena-gateway: src/collector.c $(CORE) $(HEADERS) | build-arm
 build-arm/engine-codes: src/collector.c $(CORE) $(HEADERS) src/paths.h | build-arm
 	$(ARM_CC) $(ARM_CFLAGS) -Isrc -DENGINE_CODES_ONLY src/collector.c $(CORE) -o $@ $(LIBDIRS) -lm -lrt
 
-build-arm/test-plugin-load: tests/test_plugin_load.cpp | build-arm
-	$(ARM_CXX) -O2 -Wall -Wextra -Werror $(ARCH) tests/test_plugin_load.cpp -o $@ $(LIBDIRS) -ldl
-build-arm/test-spawn: tests/test_spawn.cpp src/diagnostic_worker.h src/paths.h | build-arm
-	$(ARM_CXX) -O2 -Wall -Wextra -Werror $(ARCH) -Isrc tests/test_spawn.cpp -o $@ $(LIBDIRS)
-build-arm/test-bm3: tests/test_bm3.c $(BM3) | build-arm
-	$(ARM_CC) $(ARM_CFLAGS) -Isrc tests/test_bm3.c src/bm3.c -o $@ $(LIBDIRS)
+build-arm/test-plugin-load: tests/native/test_plugin_load.cpp | build-arm
+	$(ARM_CXX) -O2 -Wall -Wextra -Werror $(ARCH) tests/native/test_plugin_load.cpp -o $@ $(LIBDIRS) -ldl
+build-arm/test-spawn: tests/native/test_spawn.cpp src/diagnostic_worker.h src/paths.h | build-arm
+	$(ARM_CXX) -O2 -Wall -Wextra -Werror $(ARCH) -Isrc tests/native/test_spawn.cpp -o $@ $(LIBDIRS)
+build-arm/test-bm3: tests/native/test_bm3.c $(BM3) | build-arm
+	$(ARM_CC) $(ARM_CFLAGS) -Isrc tests/native/test_bm3.c src/bm3.c -o $@ $(LIBDIRS)
 
 arm: build-arm/libBoostDeck.so build-arm/libShiftDeck.so build-arm/libBm3Maps.so build-arm/libMhdMaps.so \
      build-arm/libEngineCodes.so build-arm/boostdeck-collector build-arm/shift-deck build-arm/bm3-maps build-arm/mhd-maps \

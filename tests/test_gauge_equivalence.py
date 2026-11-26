@@ -1,6 +1,6 @@
 r"""The C and Rust builds of the gauge workers, boostdeck-collector and shift-deck, side by side. Each scenario runs
 every build in ENA_WORKERS against the same pretend gateway, with a pretend app listening for the frames, and compares
-each build with the first, the C, or with what the C did as tests/fixtures records it (tests/reference.py).
+each build with the first, the C, or with what the C did as tests/fixtures records it (tests/support/reference.py).
 
 What can't depend on timing must be the same: stdout, stderr (the trace's clock readings aside), the exit code, the
 frames' format, each reading's sequence of values as the app sees it, the gateway's first requests and which ECU each
@@ -31,10 +31,10 @@ import time
 import unittest
 from pathlib import Path
 
-import reference
+from support import reference
 from test_boostdeck_worker import CAR_VALUES, VALUES, frame
 from test_worker_equivalence import CRASHED, LEASE_PORT, Lease, Responder, add_tests, identification, pairs, run
-from workers import builds
+from support.workers import builds
 
 BOOST_DIDS = (0x4201, 0x4205, 0x5889, 0x4A49, 0x580F, 0xDA12, 0x56D7, 0x586F, 0x4300)
 SLOW_DIDS = {0x4201: 1000, 0x580F: 2000, 0xDA12: 2000, 0x4300: 2000}  # and their periods

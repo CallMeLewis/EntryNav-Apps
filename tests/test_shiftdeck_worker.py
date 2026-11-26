@@ -1,5 +1,5 @@
 """Verify ShiftDeck's worker, shift-deck, on a simulated HSFZ gateway. It runs every build in ENA_WORKERS
-(tests/workers.py), the C build by default."""
+(tests/support/workers.py), the C build by default."""
 import socket
 import struct
 import subprocess
@@ -7,7 +7,7 @@ import threading
 import unittest
 
 from test_boostdeck_worker import exact, frame
-from workers import for_each_build
+from support.workers import for_each_build
 
 
 class ShiftDeckWorkerTest:

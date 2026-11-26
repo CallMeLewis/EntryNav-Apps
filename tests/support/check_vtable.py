@@ -7,7 +7,9 @@ libAppFramework would call the wrong function. For every slot this reads which f
 (from its relocations) and which one the car's _ZTVN3bmw9PluginAppE points at, and requires either the same function
 (inherited) or the plugin's own function with the same name and parameters (overridden).
 
-Run where the ARM binutils are (the QEMU image): check_vtable.py SYSROOT build-arm/libX.so:_ZTV9ClassName ...
+Run where the ARM binutils are (the QEMU image):
+
+    tests/support/check_vtable.py SYSROOT build-arm/libX.so:_ZTV9ClassName ...
 """
 
 import re

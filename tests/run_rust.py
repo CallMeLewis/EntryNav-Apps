@@ -6,7 +6,7 @@ shift-deck, bm3-maps and mhd-maps, against their C originals, under QEMU with th
 2. The Rust unit tests, built for the head unit's target and run under qemu-arm with no copy of the car's system.
 3. The worker tests against the ARM builds of each, C and Rust: tests/test_engine_codes.py,
    tests/test_gateway_tool.py, tests/test_boostdeck_worker.py, tests/test_shiftdeck_worker.py,
-   tests/test_bm3_worker.py (bm3-maps, and test-bm3: tests/test_bm3.c and its Rust port) and
+   tests/test_bm3_worker.py (bm3-maps, and test-bm3: tests/native/test_bm3.c and its Rust port) and
    tests/test_mhd_worker.py.
 4. tests/test_worker_equivalence.py and tests/test_gauge_equivalence.py: every scenario on both builds, compared, and
    the C compared with what tests/fixtures recorded of it.
@@ -35,7 +35,8 @@ from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKERS = ("ena-gateway", "engine-codes", "boostdeck-collector", "shift-deck", "bm3-maps", "mhd-maps")
-# Built with them, with no C worker of the same name to compare: the car trial's recorder, and tests/test_bm3.c's port.
+# Built with them, with no C worker of the same name to compare: the car trial's recorder, and
+# tests/native/test_bm3.c's port.
 OTHERS = ("ena-capture", "test-bm3")
 TARGET = "armv7-unknown-linux-musleabihf"
 QEMU = "qemu-arm -cpu cortex-a15 -r 3.12.25-FR21.0"  # the car's CPU and kernel release, for uname

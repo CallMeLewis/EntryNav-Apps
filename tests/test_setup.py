@@ -1,4 +1,5 @@
-"""Each plugin's setup.sh on a pretend EntryNav2 (tests/headunit.py), with the archives from tools/package_release.py.
+"""Each plugin's setup.sh on a pretend EntryNav2 (tests/support/headunit.py), with the archives from
+tools/package_release.py.
 
 Run through tests/run_setup.py, which starts the privileged QEMU container this needs.
 """
@@ -13,7 +14,7 @@ import threading
 import unittest
 from pathlib import Path
 
-from headunit import Unit
+from support.headunit import Unit
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "VERSION").read_text().strip()

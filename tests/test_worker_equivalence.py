@@ -1,12 +1,12 @@
 r"""The C and Rust builds of the one-shot workers, ena-gateway, engine-codes, bm3-maps and mhd-maps, side by side: each
-scenario runs every build in ENA_WORKERS against the same pretend gateway and DME and compares them with the first,
-the C, or with what the C did as tests/fixtures records it (tests/reference.py). They must print the same stdout and
+scenario runs every build in ENA_WORKERS against the same pretend gateway and DME and compares them with the first, the
+C, or with what the C did as tests/fixtures records it (tests/support/reference.py). They must print the same stdout and
 stderr, exit with the same code, send the gateway the same requests, byte for byte and in the same order, leave the
-pretend DME's memory the same, write the same files and take as long when they wait out a timeout. Error paths
-included: no gateway, a gateway that refuses, closes or never answers, the lease held by another worker, SIGTERM part
-way, and wrong arguments. For bm3-maps, which writes to the DME, every write path: a map change accepted, refused with
-any code, unanswered or not taken, burbles and Active Sound alike, and each reason nothing is written (an unknown ROM, a
-stock or MHD-tuned DME, a lost DME, a profile whose addresses the DME refuses).
+pretend DME's memory the same, write the same files and take as long when they wait out a timeout. Error paths included:
+no gateway, a gateway that refuses, closes or never answers, the lease held by another worker, SIGTERM part way, and
+wrong arguments. For bm3-maps, which writes to the DME, every write path: a map change accepted, refused with any code,
+unanswered or not taken, burbles and Active Sound alike, and each reason nothing is written (an unknown ROM, a stock or
+MHD-tuned DME, a lost DME, a profile whose addresses the DME refuses).
 
 Needs two builds, or one and the fixtures, as tests/run_rust.py runs it:
     ENA_WORKERS=c=build-arm,rust=build/rust ENA_WORKER_RUNNER="qemu-arm -L /sysroot ..." \
@@ -25,10 +25,10 @@ import unittest
 from contextlib import contextmanager
 from pathlib import Path
 
-import reference
+from support import reference
 from test_bm3_worker import legacy_marker, mevd17_marker
 from test_boostdeck_worker import exact, frame
-from workers import builds, command
+from support.workers import builds, command
 
 LEASE_PORT = 42861
 IDENT = b"DIAGADR10BMWMAC001122334455BMWVINWBA00000000000000"
@@ -384,12 +384,12 @@ CAPTURED = bytes.fromhex("1141F2144D88227FC9D6EBF6C0CEE74104BFF6652CF4A3F310CDC3
 
 
 def binary_marker(token):
-    """The MG1 layout (tests/test_bm3.c): BM3_, the captured 64-byte block, ~|~, 30 underscores, #token, NUL."""
+    """The MG1 layout (tests/native/test_bm3.c): BM3_, the captured 64-byte block, ~|~, 30 underscores, #token, NUL."""
     return (b"BM3_" + CAPTURED + b"~|~" + b"_" * 30 + b"#" + token.encode() + b"\0").ljust(255, b"\xff")
 
 
 def hash_marker(tag):
-    """The S58 layout (tests/test_bm3.c): BM3_, bytes without '#', the only '#' at byte 101, the tag, NUL."""
+    """The S58 layout (tests/native/test_bm3.c): BM3_, bytes without '#', the only '#' at byte 101, the tag, NUL."""
     block = bytes(0x24 if v == 0x23 else v for v in ((i * 37 + 11) & 0xFF for i in range(4, 101)))
     return (b"BM3_" + block + b"#" + tag.encode()).ljust(255, b"\0")
 
@@ -771,8 +771,9 @@ CRASHED = (-6, -11, 134, 139)
 
 
 def pairs(worker, scenario, name):
-    """[(reference label, reference, label, result)]: each build's result against the reference's (tests/reference.py).
-    Live, each build after the first against the first, then the first against its recording if it has one."""
+    """[(reference label, reference, label, result)]: each build's result against the reference's
+    (tests/support/reference.py). Live, each build after the first against the first, then the first against its
+    recording if it has one."""
     recorded = reference.recorded(worker, name)
     if reference.mode(worker) == "fixtures":
         if recorded is None:

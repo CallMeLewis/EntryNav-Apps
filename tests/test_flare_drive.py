@@ -1,4 +1,5 @@
-"""Flare Drive's own scripts for the three plugins, run on a pretend EntryNav2 (tests/headunit.py) as the app runs them.
+"""Flare Drive's own scripts for the three plugins, run on a pretend EntryNav2 (tests/support/headunit.py) as the app
+runs them.
 
 Flare Drive's `gradlew :core:test` writes the scripts it generates to core/build/head-unit-scripts/entrynav-apps
 (EntryNavAppsTest.writesTheScriptsForTheShellTests). tests/run_setup.py mounts that folder at /scripts when the
@@ -14,7 +15,7 @@ import sys
 import unittest
 from pathlib import Path
 
-from headunit import Unit
+from support.headunit import Unit
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "VERSION").read_text().strip()

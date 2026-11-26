@@ -1,6 +1,6 @@
 // bmw_list.h - reconstructed BMW HMI plugin SDK subset (list-capable), from the NBT Evo.
 // The EntryNav2 ships the same libAppFramework/libCoreFramework API built for Linux;
-// tests/check_vtable.py and tests/test_plugin_load.cpp check this header against the car's copies.
+// tests/support/check_vtable.py and tests/native/test_plugin_load.cpp check this header against the car's copies.
 // Layouts/tags recovered from libAppFramework.A.so, libCoreFramework.A.so,
 // libSecurityMenu.so and HmiMain3D. Real method bodies live in the shared libs
 // (resolved at link/dlopen). We only reconstruct data layouts + inline templates

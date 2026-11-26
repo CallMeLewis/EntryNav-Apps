@@ -1,6 +1,6 @@
 r"""A pretend EntryNav2 that tools/try_on_car.py can log in to, made from the copy of the car's system. Local only.
 
-    uv run --no-project --with paramiko tests/fake_headunit.py [--port 2222]
+    uv run --no-project --with paramiko tests/support/fake_headunit.py [--port 2222]
 
 then, in another terminal (the password is fixture-only):
 
@@ -33,7 +33,7 @@ import time
 import types
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 PASSWORD = "fixture-only"
 HEAD_UNIT, GATEWAY = "169.254.10.2", "169.254.10.3"
 PLUGINS = "/hu/opt/hmi/data/ro/Plugins"
@@ -155,7 +155,7 @@ class HeadUnitContainer:
                "aa-entrynav-qemu:local", "sleep", "infinity")
         try:
             self.sh(SETUP)
-            docker("exec", "-d", self.name, "python3", "-B", "/work/tests/fake_headunit.py", "--gateway")
+            docker("exec", "-d", self.name, "python3", "-B", "/work/tests/support/fake_headunit.py", "--gateway")
             for _ in range(50):
                 if self.sh(f"python3 -c 'import socket; socket.create_connection((\"{GATEWAY}\", 6801), 1)'",
                            check=False).returncode == 0:

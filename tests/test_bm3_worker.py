@@ -1,6 +1,6 @@
 """The bm3-maps worker against a simulated DME with bootmod3's map slot, like cauliflowermossgrape's test_bm3_protocol.js
 fixture. Checks that nothing is written unless the marker names a known ROM, and that a map change is read back. Also
-runs test-bm3, tests/test_bm3.c's checks of the ROM table and the requests, from each build."""
+runs test-bm3, tests/native/test_bm3.c's checks of the ROM table and the requests, from each build."""
 from pathlib import Path
 import socket
 import struct
@@ -10,7 +10,7 @@ import threading
 import unittest
 
 from test_boostdeck_worker import exact, frame
-from workers import for_each_build
+from support.workers import for_each_build
 
 MARKER = 0x807FFE50
 MEVD17_MARKER = 0x0977FE4C  # where an F20 M140i keeps it: bootmod3's second address

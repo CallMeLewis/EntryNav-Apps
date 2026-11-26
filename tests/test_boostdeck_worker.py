@@ -1,6 +1,6 @@
 """Exercise BoostDeck's worker, boostdeck-collector, against a loopback HSFZ gateway; no car needed. It runs every build
-in ENA_WORKERS (tests/workers.py), the C build by default. The other worker tests share its gateway helpers (frame,
-exact) and readings."""
+in ENA_WORKERS (tests/support/workers.py), the C build by default. The other worker tests share its gateway helpers
+(frame, exact) and readings."""
 import re
 import socket
 import struct
@@ -9,7 +9,7 @@ import threading
 import time
 import unittest
 
-from workers import for_each_build
+from support.workers import for_each_build
 
 VALUES = {0x4201: bytes.fromhex("63ca"), 0x4205: bytes.fromhex("31e5"),
           0x5889: bytes.fromhex("104e"), 0x4A49: bytes.fromhex("004e"),
