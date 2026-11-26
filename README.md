@@ -196,7 +196,7 @@ another). That copy holds BMW files and never goes into git.
 | `make check` | The PC tests, the apps' C++ compiled for errors, ShellCheck, and the committed screens matching their generators. CI runs each as its own job on every push |
 | `bash toolchain/tc.sh make arm` | The ARM apps, workers and test programs |
 | `bash toolchain/qemu.sh python3 tests/run_arm.py` | Loads each app the way iDrive does, with the car's own libraries under QEMU |
-| `python3 tools/package_release.py` | One release archive per app, in `dist/` |
+| `python3 tools/package_release.py` | One release archive per app, in `dist/`, with the C workers. `--workers rust` packages the Rust ones (see [The Rust workers](#the-rust-workers)) |
 | `python3 tests/run_setup.py` | `setup.sh` on a pretend head unit built from the copy of the car's system |
 | `python3 tools/check.py` | Every check above, in the order a release needs them |
 
@@ -205,29 +205,54 @@ CI can't hold the copy of the car's system, so the ARM build and its checks run 
 
 ### The Rust workers
 
-`rust/` holds Rust ports of four read-only workers beside their C originals in `src/collector.c`: `ena-gateway`,
-`engine-codes`, BoostDeck's `boostdeck-collector` and ShiftDeck's `shift-deck`. They take the same arguments, print and
-send the same bytes and exit the same way. Nothing installs or packages them: the releases still ship the C workers.
-`ena-capture`, built with them, records what a gauge worker sends, for the car trial below.
+`rust/` holds Rust ports of all six workers beside their C originals in `src/collector.c`: `ena-gateway`,
+`engine-codes`, BoostDeck's `boostdeck-collector`, ShiftDeck's `shift-deck`, Bootmod3 Suite's `bm3-maps` and MHD+
+Suite's `mhd-maps`. They take the same arguments, send the same requests in the same order, print the same lines and
+exit the same way. The releases ship the C workers unless you package the Rust ones, as the last part of this section
+describes. `ena-capture`, built with them, records what a gauge worker sends, for the car trial below. `test-bm3` is
+`tests/test_bm3.c` ported to Rust, and the bm3-maps tests run both programs.
 
 | Command | What it does |
 |---|---|
-| `make rust` | The four workers and `ena-capture` for the head unit, statically linked, in `build/rust`, with the Rust version `rust/rust-toolchain.toml` pins. From WSL on Windows: `make rust CARGO=cargo.exe` |
-| `python3 tests/run_rust.py` | Their unit tests, the worker tests on both builds, and two tests that run the C and Rust builds through the same scenarios and compare them, all under QEMU. Run `bash toolchain/tc.sh make arm` first |
+| `make rust` | The six workers, `ena-capture` and `test-bm3` for the head unit, statically linked, in `build/rust`, with the Rust version `rust/rust-toolchain.toml` pins. From WSL on Windows: `make rust CARGO=cargo.exe` |
+| `python3 tests/run_rust.py` | Their unit tests, the worker tests on both builds, and two tests that run the C and Rust builds through the same scenarios and compare them, all under QEMU. Run `bash toolchain/tc.sh make arm` first. `--fixtures` compares the Rust builds with the recorded C instead |
+| `python3 tests/record_fixtures.py` | Runs the C workers through every comparison scenario under QEMU and records what they did in `tests/fixtures` |
 | `uv run --no-project --with paramiko tests/test_try_on_car.py` | Tests `tools/try_on_car.py` against a pretend head unit in Docker |
+
+The one-shot workers are compared byte for byte: stdout, stderr, the exit code, every request the pretend gateway
+received in order, files written, and how long a run takes when it waits out a timeout. `bm3-maps` writes to the engine
+computer, so its scenarios cover every write: a map change accepted, refused with any code, unanswered, answered
+wrongly or not taken, the same for the burbles and Active Sound, SIGTERM part way through a write, and each reason
+nothing is written, such as an unknown ROM, a stock or MHD-tuned engine computer, or a held lease. The pretend engine
+computer's memory after each run is compared too. `tools/make_bm3_profiles.py` writes the ROM table for both builds
+from the same upstream file, and a unit test checks that the two tables match.
 
 The gauge workers stream, so their comparison can't be byte for byte. It checks what can't depend on timing exactly,
 such as each frame's format and the values each reading takes, and what does depend on it, such as the frame rate and
 when the slow readings come, within a tolerance.
+
+`tests/fixtures` holds what the C workers did in every scenario. Each comparison also checks the live C against that
+recording. Once `build-arm` has no C workers, the comparisons check the Rust ones against the recording instead, so
+the Rust stays checked after the C is deleted. Record the fixtures again only while the C exists, after adding or
+changing a scenario, on a computer that isn't busy: the gauge recordings include timing.
 
 #### Trying them in the car
 
 `tools/try_on_car.py` runs the Rust workers on the head unit next to the installed C ones and compares the results.
 It installs nothing and doesn't need Flare Drive. It uploads the workers to a new folder in `/tmp`, checks their
 SHA-256 there, and deletes the folder when it finishes. Only the read-only jobs the apps give these workers run:
-reading the engine's fault codes, checking and finding the gateway, and streaming BoostDeck's and ShiftDeck's
-readings. `--clear` is refused. Each worker that can search for the gateway also gets `--gateway-file` in that folder:
-if it finds the gateway at a new address, it saves the address there and not in the apps' settings.
+reading the engine's fault codes, checking and finding the gateway, streaming BoostDeck's and ShiftDeck's readings,
+and reading the active map as Bootmod3 Suite does when its page opens. Every argument that writes to the engine
+computer is refused: `engine-codes --clear`, `bm3-maps --map`, `--burbles` and `--sound`, and `mhd-maps --map` and
+`--cooling`. Each worker that can search for the gateway also gets `--gateway-file` in that folder: if it finds the
+gateway at a new address, it saves the address there and not in the apps' settings.
+
+- `bm3-maps --status` identifies the ROM as the app does each time: it defines the dynamic DID F301 in the engine
+  computer's RAM and reads the CustomROM marker through it, or straight from memory. Then it reads the active map. It
+  writes no memory.
+- Every job of `mhd-maps` asks MHD's code in the engine computer for something. So the script only checks how it
+  answers a run without a map or Max Cooling, which sends nothing. Without MHD+ Suite installed there is no C
+  `mhd-maps` to compare with, and the script says so and leaves it out.
 
 You need the apps installed, a saved gateway (`setup.sh gateway`), and `build/rust` from `make rust`.
 
@@ -244,8 +269,8 @@ You need the apps installed, a saved gateway (`setup.sh gateway`), and `build/ru
 
    It asks for the root password, or takes it from `HEADUNIT_PASSWORD`. It never shows or saves the password.
 
-For each job it prints both workers' exit code, run time and peak memory. For `engine-codes` and `ena-gateway` it also
-prints their output, which must be the same.
+For each job it prints both workers' exit code, run time and peak memory. For the one-shot workers, `engine-codes`,
+`ena-gateway`, `bm3-maps` and `mhd-maps`, it also prints their output, which must be the same.
 
 Two gauge workers can't hold the gateway at once, so the script runs the Rust one for 20 seconds, then the C one
 (`--seconds` changes how long). Each sends its frames to `ena-capture` on a port of its own, so the apps' ports stay
@@ -264,7 +289,7 @@ like this:
 ```
    Result: MATCH, the same readings, frame rates within 15% and medians within tolerance
 
-5 of 5 compared runs matched.
+6 of 6 compared runs matched.
 Deleted /tmp/ena-rust.Ab3dE9 on the head unit
 ```
 
@@ -278,10 +303,23 @@ if an app's worker has started, it stops its own worker and ends. Ctrl-C stops i
 it started and deletes its folder. If the connection drops before that, the folder stays in `/tmp` until the head
 unit restarts, and the script prints the command that deletes it.
 
-`--worker` runs one worker, `engine-codes`, `ena-gateway`, `boostdeck-collector` or `shift-deck`, and `--worker
-gauges` runs both gauge workers. `--worker-args` gives that one worker other read-only arguments, such as
-`--worker-args "check --host 169.254.10.3"`. The script exits 0 when every run matched, 1 when one differed, 2 when it
-refused the arguments and 3 when a check stopped it.
+`--worker` runs one worker, `engine-codes`, `ena-gateway`, `bm3-maps`, `mhd-maps`, `boostdeck-collector` or
+`shift-deck`, and `--worker gauges` runs both gauge workers. `--worker-args` gives that one worker other read-only
+arguments, such as `--worker-args "check --host 169.254.10.3"`, or `--worker-args "--host 169.254.10.3 --status
+--dump"` to see each step of bootmod3's identification. The script exits 0 when every run matched, 1 when one
+differed, 2 when it refused the arguments and 3 when a check stopped it.
+
+#### Packaging the Rust workers
+
+`python3 tools/package_release.py --workers rust dist/rust` builds the same archives with the workers and
+`ena-gateway` from `build/rust` in place of the C ones. The app's library stays the same. It refuses a worker that
+isn't a static ARM program. `ENA_RELEASE_WORKERS=rust` does the same for `tools/check.py` and
+`tools/publish_release.py`, and `check.py` then runs `tests/run_rust.py` as well. Without either, the archives hold the
+C workers. `python3 tests/run_setup.py --dist dist/rust` runs the `setup.sh` and Flare Drive tests on those archives.
+
+A static program needs no library from the car, and the car's loader crashes when it traces one, so `setup.sh check`
+doesn't trace a static worker. It runs it with no arguments instead, and the worker must print its usage and exit 2
+within 5 seconds. The app's library must still pass the loader's trace.
 
 ### Publishing a release
 
@@ -304,7 +342,7 @@ catalog alone; older Flare Drive versions have no per-plugin list for it.
 EntryNav-Apps is a port of [ID6_apps_prerelease](https://github.com/inotbarnacle/ID6_apps_prerelease) by inotbarnacle.
 Bootmod3 Suite's protocol and ROM profiles come from [cauliflowermossgrape](https://github.com/cauliflowermossgrape)'s
 port of BM3 Live by ezl0l, under the MIT licence in [third-party](third-party/cauliflowermossgrape-LICENSE).
-`tools/make_bm3_profiles.py` regenerates the ROM table from that port's `bm3_profiles.js`. MHD+ Suite's commands come
+`tools/make_bm3_profiles.py` regenerates the ROM table for the C and the Rust worker from that port's `bm3_profiles.js`. MHD+ Suite's commands come
 from the same author's Live Adjustments app, from a1-mapping's captures.
 
 EntryNav-Apps is under the [MIT licence](LICENSE), like the project it comes from. It comes with no warranty.

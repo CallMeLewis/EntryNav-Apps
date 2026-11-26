@@ -7,10 +7,12 @@ kept until the Rust one has matched them in the car (`tests/run_rust.py`, then `
 in `src/*.cpp` and `sdk/` stays C++: it has to match iDrive's C++ interface, built with GCC 4.7. Rust for the head unit
 is static (`armv7-unknown-linux-musleabihf`) and never needs the car's own libraries changed.
 
-Once a Rust worker ships in place of its C one, remove what it replaced in the same change: its code in
-`src/collector.c`, headers only it used, its Makefile rules and its C-only tests. Before that, record the C worker's
-outputs as fixtures so the Rust stays checked against the old behaviour. Delete files nothing references whenever you
-find them, after checking Flare Drive and AA-EntryNav don't use them.
+Once a Rust worker ships in place of its C one (`tools/package_release.py --workers rust`) and that release has run in
+the car, remove what it replaced in the same change: its code in `src/collector.c`, headers only it used, its Makefile
+rules and its C-only tests. Before that, record the C worker's outputs as fixtures (`tests/record_fixtures.py`, into
+`tests/fixtures`) so the Rust stays checked against the old behaviour; the equivalence tests use them once the C build
+is gone. Delete files nothing references whenever you find them, after checking Flare Drive and AA-EntryNav don't use
+them.
 
 ## Publishing
 
