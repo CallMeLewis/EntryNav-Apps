@@ -56,8 +56,9 @@ ROOT = Path(__file__).resolve().parents[1]
 BUCKET = "darkzone-updates"
 REPO = "CallMeLewis/EntryNav-Apps"  # gh would otherwise pick the upstream fork parent
 # What the archives are built from. Once v<version> is tagged, none of it may change before the rest of the apps publish.
-APP_PATHS = ("VERSION", "Makefile", "src", "plugin", "plugins", "install", "sdk", "third-party", "images", "toolchain",
-             "tools/package_release.py")
+# rust holds the workers --workers rust packages. The image archives aren't committed, so their generators are listed.
+APP_PATHS = ("VERSION", "Makefile", "src", "rust", "plugin", "plugins", "install", "sdk", "third-party", "toolchain",
+             "tools/package_release.py", "tools/make_bars.py", "tools/make_drive_apps.py", "tools/shift_art.py")
 BASE_URL = "https://updates.darkzone.dev"
 PLUGINS = ("boostdeck", "shiftdeck", "bm3-maps", "mhd-maps", "engine-codes")
 # flare-publish, which sends releases to Flare Drive's plugin catalog (docs/publishing.md in Flare Drive).

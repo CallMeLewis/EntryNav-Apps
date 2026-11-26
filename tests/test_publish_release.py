@@ -1,15 +1,38 @@
-"""Publishing retries must use the catalog and preserve the already published bytes."""
+"""Publishing retries must use the catalog and preserve the already published bytes, and the tag check must compare
+everything the archives are built from."""
 import hashlib
 import importlib.util
 from pathlib import Path
+import subprocess
 import tempfile
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-spec = importlib.util.spec_from_file_location("publish_release", Path(__file__).resolve().parents[1] / "tools/publish_release.py")
+ROOT = Path(__file__).resolve().parents[1]
+spec = importlib.util.spec_from_file_location("publish_release", ROOT / "tools/publish_release.py")
 publisher = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(publisher)
+
+
+def tracked(*paths):
+    """The committed files git matches with these pathspecs, as the tag check's git diff matches them."""
+    return set(subprocess.run(["git", "ls-files", "--", *paths], cwd=ROOT, capture_output=True, text=True,
+                              check=True).stdout.splitlines())
+
+
+class AppPathsTests(unittest.TestCase):
+    def test_every_path_is_in_the_repository(self):
+        for path in publisher.APP_PATHS:
+            self.assertTrue(tracked(path), f"APP_PATHS names {path}, which has no committed files")
+
+    def test_the_tag_check_covers_what_the_archives_are_built_from(self):
+        # The Rust workers (package_release.py --workers rust), and the generators of the image archives, which
+        # aren't committed.
+        built_from = tracked("rust", "tools/make_bars.py", "tools/make_drive_apps.py", "tools/shift_art.py",
+                             "src", "plugin", "install", "sdk", "tools/package_release.py")
+        self.assertIn("rust/Cargo.lock", built_from)
+        self.assertEqual(sorted(built_from - tracked(*publisher.APP_PATHS)), [])
 
 
 class PublishRetryTests(unittest.TestCase):
