@@ -1,5 +1,12 @@
 # Notes for coding agents
 
+## Rust
+
+New components are written in Rust, in `rust/`; C and C++ get fixes only. The C workers are ported one at a time and
+kept until the Rust one has matched them in the car (`tests/run_rust.py`, then `tools/try_on_car.py`). The plugin code
+in `src/*.cpp` and `sdk/` stays C++: it has to match iDrive's C++ interface, built with GCC 4.7. Rust for the head unit
+is static (`armv7-unknown-linux-musleabihf`) and never needs the car's own libraries changed.
+
 ## Publishing
 
 `tools/publish_release.py publish` sends each app's release to Flare Drive's plugin catalog through `flare-publish`
