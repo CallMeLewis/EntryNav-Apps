@@ -1,5 +1,4 @@
 """ena-gateway against a simulated gateway: discovery by HSFZ vehicle identification, and the read-only route check."""
-from pathlib import Path
 import socket
 import struct
 import subprocess
@@ -7,12 +6,14 @@ import threading
 import unittest
 
 from test_transport import exact, frame
+from workers import for_each_build
 
-TOOL = Path(__file__).resolve().parents[1] / "build" / "ena-gateway"
 IDENT = b"DIAGADR10BMWMAC001122334455BMWVINWBA00000000000000"
 
 
-class DiscoverTest(unittest.TestCase):
+class DiscoverTest:
+    worker = None  # the build's command line, set by for_each_build
+
     def discover(self, replies):
         """Run discover against a UDP responder on 127.0.0.1 that answers with each of replies."""
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as responder:
@@ -28,7 +29,7 @@ class DiscoverTest(unittest.TestCase):
 
             thread = threading.Thread(target=answer, daemon=True)
             thread.start()
-            result = subprocess.run([TOOL, "discover", "--to", "127.0.0.1", "--port",
+            result = subprocess.run([*self.worker, "discover", "--to", "127.0.0.1", "--port",
                                      str(responder.getsockname()[1]), "--wait", "400"],
                                     capture_output=True, text=True, timeout=5)
             thread.join(2)
@@ -54,14 +55,15 @@ class DiscoverTest(unittest.TestCase):
 
             thread = threading.Thread(target=answer, daemon=True)
             thread.start()
-            result = subprocess.run([TOOL, "discover", "--dev", "lo", "--port", str(responder.getsockname()[1]),
-                                     "--wait", "400"], capture_output=True, text=True, timeout=5)
+            result = subprocess.run([*self.worker, "discover", "--dev", "lo", "--port",
+                                     str(responder.getsockname()[1]), "--wait", "400"],
+                                    capture_output=True, text=True, timeout=5)
             thread.join(2)
         self.assertEqual(received, [bytes.fromhex("000000000011")])
         self.assertEqual((result.returncode, result.stdout), (0, "127.0.0.1\n"))
 
     def test_a_device_without_an_address(self):
-        result = subprocess.run([TOOL, "discover", "--dev", "nonexistent0", "--wait", "100"],
+        result = subprocess.run([*self.worker, "discover", "--dev", "nonexistent0", "--wait", "100"],
                                 capture_output=True, text=True, timeout=5)
         self.assertEqual((result.returncode, result.stdout), (1, ""))
         self.assertIn("nonexistent0 has no IPv4 address", result.stderr)
@@ -73,7 +75,9 @@ class DiscoverTest(unittest.TestCase):
         self.assertEqual((result.returncode, result.stdout), (1, ""))
 
 
-class CheckTest(unittest.TestCase):
+class CheckTest:
+    worker = None
+
     def check(self, responses):
         with socket.socket() as listener:
             listener.bind(("127.0.0.1", 0))
@@ -92,7 +96,7 @@ class CheckTest(unittest.TestCase):
 
             thread = threading.Thread(target=gateway, daemon=True)
             thread.start()
-            result = subprocess.run([TOOL, "check", "--host", "127.0.0.1", "--port",
+            result = subprocess.run([*self.worker, "check", "--host", "127.0.0.1", "--port",
                                      str(listener.getsockname()[1])], capture_output=True, text=True, timeout=5)
             thread.join(2)
             self.assertEqual(requests, [(1, bytes.fromhex("f4120100"))])
@@ -112,11 +116,15 @@ class CheckTest(unittest.TestCase):
         with socket.socket() as unused:
             unused.bind(("127.0.0.1", 0))
             port = unused.getsockname()[1]
-        result = subprocess.run([TOOL, "check", "--host", "127.0.0.1", "--port", str(port)],
+        result = subprocess.run([*self.worker, "check", "--host", "127.0.0.1", "--port", str(port)],
                                 capture_output=True, text=True, timeout=5)
         self.assertEqual(result.returncode, 1)
         self.assertIn("No connection", result.stdout)
 
+
+for_each_build(DiscoverTest, "ena-gateway", globals())
+for_each_build(CheckTest, "ena-gateway", globals())
+del DiscoverTest, CheckTest
 
 if __name__ == "__main__":
     unittest.main()

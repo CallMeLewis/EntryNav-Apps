@@ -1,6 +1,5 @@
 """The engine-codes worker against a simulated DME: reading the fault memory, clearing it, and a DME that wants the
 extended session before it clears."""
-from pathlib import Path
 import socket
 import struct
 import subprocess
@@ -8,8 +7,8 @@ import threading
 import unittest
 
 from test_transport import exact, frame
+from workers import for_each_build
 
-WORKER = Path(__file__).resolve().parents[1] / "build" / "engine-codes"
 READ = "1902af"
 CLEAR = "14ffffff"
 
@@ -32,7 +31,9 @@ class FakeDme:
         return [bytes.fromhex(part) for part in reply.split()]
 
 
-class EngineCodesTest(unittest.TestCase):
+class EngineCodesTest:
+    worker = None  # the build's command line, set by for_each_build
+
     def run_worker(self, dme, *args):
         errors, done = [], threading.Event()
         with socket.socket() as listener:
@@ -64,7 +65,7 @@ class EngineCodesTest(unittest.TestCase):
             thread = threading.Thread(target=gateway)
             thread.start()
             try:
-                result = subprocess.run([WORKER, "--host", "127.0.0.1", "--port", str(listener.getsockname()[1]),
+                result = subprocess.run([*self.worker, "--host", "127.0.0.1", "--port", str(listener.getsockname()[1]),
                                          *args], capture_output=True, text=True, timeout=30)
             finally:
                 done.set()
@@ -111,11 +112,14 @@ class EngineCodesTest(unittest.TestCase):
         with socket.socket() as unused:
             unused.bind(("127.0.0.1", 0))
             port = unused.getsockname()[1]  # closed again before the worker connects
-        result = subprocess.run([WORKER, "--host", "127.0.0.1", "--port", str(port), "--codes",
+        result = subprocess.run([*self.worker, "--host", "127.0.0.1", "--port", str(port), "--codes",
                                  "--search-dev", "lo", "--search-port", "1"], capture_output=True, text=True,
                                 timeout=30)
         self.assertEqual((result.returncode, result.stdout), (0, "Diagnostic gateway unavailable\n"))
 
+
+for_each_build(EngineCodesTest, "engine-codes", globals())
+del EngineCodesTest
 
 if __name__ == "__main__":
     unittest.main()
