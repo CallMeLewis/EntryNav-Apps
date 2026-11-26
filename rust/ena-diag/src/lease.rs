@@ -8,6 +8,14 @@ use std::net::Ipv4Addr;
 use std::os::fd::OwnedFd;
 
 pub const DIAGNOSTIC_PORT: u16 = 42861;
+/// How long a gauge worker holds the gateway before it gives it up and takes it again.
+pub const LEASE_MS: u64 = 500;
+/// How long it holds it at least, even when another worker is waiting.
+pub const MIN_LEASE_MS: u64 = 140;
+/// How long it leaves the gateway alone after giving it up.
+pub const YIELD_MS: u64 = 165;
+/// How long it waits before it tries again after the connection failed.
+pub const RETRY_MS: u64 = 300;
 
 /// The lock, or the errno that kept it: EADDRINUSE while another worker holds it.
 pub fn reserve_gateway() -> Result<OwnedFd, i32> {
@@ -31,11 +39,48 @@ pub fn release_gateway(connection: Option<OwnedFd>, lock: Option<OwnedFd>) {
     drop(lock);
 }
 
+/// Whether a gauge worker holding lock since until - LEASE_MS gives the gateway up now: once the lease is over, or
+/// after MIN_LEASE_MS when a waiting worker's byte is there (gateway_should_yield, which reads one byte each time).
+pub fn should_yield(lock: &OwnedFd, now: u64, until: u64) -> bool {
+    if now >= until {
+        return true;
+    }
+    until - now <= LEASE_MS - MIN_LEASE_MS && sys::recv_bytes(lock, &mut [0u8; 1]) > 0
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::net::UdpSocket;
     use std::time::Duration;
+
+    #[test]
+    fn a_waiting_worker_gets_the_gateway_after_the_shortest_lease() {
+        // Any non-blocking UDP socket: should_yield only reads the waiting bytes from it.
+        let lock = sys::udp_socket().unwrap();
+        assert!(sys::set_nonblocking(&lock));
+        assert_eq!(sys::bind_to(&lock, Ipv4Addr::LOCALHOST, 0), 0);
+        let port = sys::local_port(&lock);
+        let until = 10_000;
+        let start = until - LEASE_MS;
+        assert!(!should_yield(&lock, start, until), "nobody waits");
+        UdpSocket::bind("127.0.0.1:0")
+            .unwrap()
+            .send_to(&[1], ("127.0.0.1", port))
+            .unwrap();
+        std::thread::sleep(Duration::from_millis(50));
+        assert!(
+            !should_yield(&lock, start + MIN_LEASE_MS - 1, until),
+            "too soon to give it up"
+        );
+        assert!(
+            should_yield(&lock, start + MIN_LEASE_MS, until),
+            "the waiting byte, after 140 ms"
+        );
+        assert!(!should_yield(&lock, start + MIN_LEASE_MS, until), "the byte was read");
+        assert!(should_yield(&lock, until, until), "the lease is over");
+        assert!(should_yield(&lock, until + 1, until));
+    }
 
     /// The one test that touches the real port, so that tests running side by side don't race for it.
     #[test]

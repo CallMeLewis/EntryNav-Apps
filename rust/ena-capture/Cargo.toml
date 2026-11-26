@@ -1,0 +1,10 @@
+[package]
+name = "ena-capture"
+description = "Records what a gauge worker sends on the head unit, for tools/try_on_car.py; not a worker and never installed"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+ena-diag = { path = "../ena-diag" }

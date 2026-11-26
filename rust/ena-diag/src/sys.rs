@@ -102,6 +102,18 @@ pub fn bind_to(fd: &OwnedFd, address: Ipv4Addr, port: u16) -> i32 {
     unsafe { libc::bind(fd.as_raw_fd(), (&at as *const sockaddr_in).cast::<sockaddr>(), SOCKADDR_SIZE) }
 }
 
+/// The port a socket is bound to, for the tests.
+#[cfg(test)]
+pub fn local_port(fd: &OwnedFd) -> u16 {
+    let mut at = sockaddr(Ipv4Addr::UNSPECIFIED, 0);
+    let mut length = SOCKADDR_SIZE;
+    // SAFETY: at and length live for the call, and at is big enough for the socket's IPv4 address.
+    let rc =
+        unsafe { libc::getsockname(fd.as_raw_fd(), (&mut at as *mut sockaddr_in).cast::<sockaddr>(), &mut length) };
+    assert_eq!(rc, 0);
+    u16::from_be(at.sin_port)
+}
+
 pub fn send_bytes(fd: &OwnedFd, data: &[u8]) -> isize {
     // SAFETY: data is valid for its length.
     unsafe { libc::send(fd.as_raw_fd(), data.as_ptr().cast(), data.len(), 0) }
@@ -158,6 +170,35 @@ pub fn poll_one(fd: RawFd, events: i16, timeout_ms: i32) -> (i32, i16) {
 pub fn pause(timeout_ms: i32) -> i32 {
     // SAFETY: no descriptors.
     unsafe { libc::poll(std::ptr::null_mut(), 0, timeout_ms) }
+}
+
+/// CLOCK_MONOTONIC in whole milliseconds, as bd_mono_ms in src/gauge_core.c reads it, or 0 when it can't be read. The
+/// gauge workers stamp their frames with it and the apps compare those stamps with their own clock, so it must be the
+/// same clock and not one that starts with the process. It makes the system call itself, with the kernel's own timespec
+/// of two longs, so that the time read doesn't depend on the time_t the C library was built with.
+pub fn monotonic_ms() -> u64 {
+    let mut time: [libc::c_long; 2] = [0, 0];
+    // SAFETY: time is the kernel's struct timespec for clock_gettime (two longs) and lives for the call.
+    let rc = unsafe { libc::syscall(libc::SYS_clock_gettime, libc::CLOCK_MONOTONIC, time.as_mut_ptr()) };
+    if rc != 0 {
+        return 0;
+    }
+    time[0] as u64 * 1000 + time[1] as u64 / 1_000_000
+}
+
+/// getppid().
+pub fn parent_pid() -> i32 {
+    // SAFETY: plain call, which always succeeds.
+    unsafe { libc::getppid() }
+}
+
+/// What the C library's printf("%.6f", x) prints, for the tests that compare Rust's formatting with it.
+#[cfg(test)]
+pub fn c_fixed6(x: f64) -> String {
+    let mut buffer = [0u8; 400];
+    // SAFETY: the format takes one double; snprintf writes at most buffer.len() bytes, ending with a NUL.
+    let n = unsafe { libc::snprintf(buffer.as_mut_ptr().cast(), buffer.len(), c"%.6f".as_ptr(), x) };
+    String::from_utf8(buffer[..n as usize].to_vec()).unwrap()
 }
 
 /// One IPv4 address of an interface, in host order.

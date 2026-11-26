@@ -8,8 +8,9 @@
 #   bash toolchain/qemu.sh python3 tests/run_arm.py
 #                    the ARM checks: each plugin loaded with the car's own HMI libraries under QEMU, and its
 #                    vtable compared slot by slot with the car's bmw::PluginApp
-#   make rust        the Rust ports of ena-gateway and engine-codes for the head unit, static, in build/rust. Nothing
-#                    installs or packages them. python3 tests/run_rust.py checks them against the C under QEMU
+#   make rust        the Rust ports of ena-gateway, engine-codes, boostdeck-collector and shift-deck for the head unit,
+#                    static, in build/rust, with ena-capture for the car trial. Nothing installs or packages them.
+#                    python3 tests/run_rust.py checks them against the C under QEMU
 #   make clean       every build output
 
 CC ?= cc
@@ -145,11 +146,12 @@ arm: build-arm/libBoostDeck.so build-arm/libShiftDeck.so build-arm/libBm3Maps.so
 CARGO ?= cargo
 RUST_TARGET = armv7-unknown-linux-musleabihf
 RUST_OUT = rust/target/$(RUST_TARGET)/release
+RUST_PROGRAMS = ena-gateway engine-codes boostdeck-collector shift-deck ena-capture
 
 rust: | build
 	cd rust && $(CARGO) build --release --locked --target $(RUST_TARGET)
 	mkdir -p build/rust
-	cp $(RUST_OUT)/ena-gateway $(RUST_OUT)/engine-codes build/rust/
+	cp $(addprefix $(RUST_OUT)/,$(RUST_PROGRAMS)) build/rust/
 
 clean:
 	rm -rf build build-arm rust/target

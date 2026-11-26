@@ -1,0 +1,10 @@
+[package]
+name = "shift-deck"
+description = "ShiftDeck's worker: reads engine and road speed and sends them to the app, a port of src/collector.c's SHIFT_DECK_ONLY"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+ena-diag = { path = "../ena-diag" }

@@ -1,9 +1,11 @@
-//! What ena-gateway and engine-codes share, ported from src/collector.c, src/diagnostic_lease.h and src/gauge_core.c:
-//! HSFZ to the car's diagnostic gateway and UDS through it (hsfz), the loopback lock every worker takes before it talks
-//! to the gateway (lease), and finding the gateway on the car-side Ethernet (gateway). Each function keeps the C's
-//! timeouts, messages and results, so the workers built on it print the same bytes and exit with the same codes.
+//! What the Rust workers share, ported from src/collector.c, src/diagnostic_lease.h and src/gauge_core.c: HSFZ to the
+//! car's diagnostic gateway and UDS through it (hsfz), the loopback lock every worker takes before it talks to the
+//! gateway (lease), finding the gateway on the car-side Ethernet (gateway), and the gauge workers' readings and the
+//! frames they send the apps (gauge). Each function keeps the C's timeouts, messages and results, so the workers built
+//! on it print and send the same bytes and exit with the same codes.
 
 pub mod gateway;
+pub mod gauge;
 pub mod hsfz;
 pub mod lease;
 mod sys;
@@ -12,10 +14,8 @@ use std::io::Write;
 use std::net::Ipv4Addr;
 use std::os::raw::{c_int, c_ulong};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::OnceLock;
-use std::time::Instant;
 
-pub use sys::{EADDRINUSE, EINTR};
+pub use sys::{errno, parent_pid, EADDRINUSE, EINTR};
 
 static RUNNING: AtomicBool = AtomicBool::new(true);
 
@@ -28,15 +28,20 @@ pub fn running() -> bool {
     RUNNING.load(Ordering::Relaxed)
 }
 
+/// Ends the run as a signal would, for a worker that can't go on (collector.c's running = 0).
+pub fn end_run() {
+    RUNNING.store(false, Ordering::Relaxed);
+}
+
 /// SIGINT and SIGTERM end the run cleanly, and SIGPIPE is ignored, as in each C worker's main.
 pub fn handle_signals() {
     sys::handle_stop_signals(stop);
 }
 
-/// Milliseconds on the monotonic clock, for deadlines (bd_mono_ms; only differences are used).
+/// Milliseconds on the monotonic clock (bd_mono_ms): the system's CLOCK_MONOTONIC, shared by every process on the head
+/// unit, which the gauge apps compare their frames' stamps with.
 pub fn mono_ms() -> u64 {
-    static START: OnceLock<Instant> = OnceLock::new();
-    START.get_or_init(Instant::now).elapsed().as_millis() as u64
+    sys::monotonic_ms()
 }
 
 /// poll(0, 0, ms): 0 after the wait, or the errno of a wait a signal cut short.
@@ -46,6 +51,11 @@ pub fn pause_ms(ms: i32) -> i32 {
     } else {
         0
     }
+}
+
+/// poll(0, 0, ms) again after each signal that leaves the run going (pause_ms of the BoostDeck collector).
+pub fn sleep_ms(ms: i32) {
+    while running() && pause_ms(ms) == EINTR {}
 }
 
 /// What a worker prints on stdout, written in one go when it ends, as the C's buffered stdout is on a pipe. Errors
