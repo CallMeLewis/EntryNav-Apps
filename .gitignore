@@ -3,6 +3,7 @@
 /rust/target/
 /plugin/*_ALL_Images.zip
 __pycache__/
+.ruff_cache/
 .venv/
 .DS_Store
 /dist/

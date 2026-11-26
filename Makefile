@@ -1,7 +1,8 @@
 # EntryNav-Apps: BoostDeck, ShiftDeck, Bootmod3 Suite, MHD+ Suite and Engine Fault Codes for the EntryNav2 (ARMv7
 # hard-float Linux, glibc 2.15).
 #
-#   make test        host tests: the decoders and the workers against a simulated gateway (cc, python3)
+#   make test        host tests: the decoders, the workers against a simulated gateway, and how
+#                    tools/publish_release.py retries and checks the tag (cc, python3 with cryptography)
 #   make assets      the screens' XML and image archives (python3 with Pillow)
 #   bash toolchain/tc.sh make arm
 #                    the ARM plugins, workers and test programs, in the build image against the copy of the car
@@ -82,6 +83,7 @@ test: build/boostdeck-collector build/shift-deck build/bm3-maps build/mhd-maps b
 	$(PYTHON) -B tests/test_engine_codes.py
 	$(PYTHON) -B tests/test_gateway_tool.py
 	$(PYTHON) -B tests/test_probe_signals.py
+	$(PYTHON) -B tests/test_publish_release.py
 
 # ---- ARM (run through toolchain/tc.sh) --------------------------------------------------------------------------------
 ARM_CC  = arm-linux-gnueabihf-gcc

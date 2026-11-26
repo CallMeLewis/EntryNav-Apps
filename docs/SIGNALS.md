@@ -16,3 +16,5 @@ These are the reference Gen 1 B58/340i candidates in the current source. They ar
 | ShiftDeck speed | DME `12` | OBD `01 0D` | One byte in km/h, displayed in mph. |
 
 The worker enforces data length, plausibility limits, and freshness. Look at the code for exact bounds and units. If the DME reports coolant via `01 05`, confirm that reading against the intended coolant channel before adding an explicit fallback. An OBD PID and a BMW DID are distinct requests with distinct reply formats. [Request table](../src/collector.c) · [Decoder](../src/gauge_core.c)
+
+The Rust ports of the workers make the same requests and conversions: [BoostDeck's requests](../rust/boostdeck-collector/src/main.rs) · [ShiftDeck's requests](../rust/shift-deck/src/main.rs) · [Decoder](../rust/ena-diag/src/gauge.rs)

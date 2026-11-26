@@ -1,8 +1,9 @@
-"""Flare Drive's own scripts for the three plugins, run on a pretend EntryNav2 (tests/support/headunit.py) as the app
-runs them.
+"""Flare Drive's own scripts for BoostDeck, ShiftDeck, Bootmod3 Suite and Engine Fault Codes, run on a pretend EntryNav2
+(tests/support/headunit.py) as the app runs them.
 
 Flare Drive's `gradlew :core:test` writes the scripts it generates to core/build/head-unit-scripts/entrynav-apps
-(EntryNavAppsTest.writesTheScriptsForTheShellTests). tests/run_setup.py mounts that folder at /scripts when the
+(EntryNavAppsTest.writesTheScriptsForTheShellTests), for each app in the catalog built into Flare Drive. MHD+ Suite
+reaches Flare Drive only through the live catalog, so it has no scripts there and isn't tested here. tests/run_setup.py mounts that folder at /scripts when the
 flare-drive repository sits beside this one; this suite is skipped otherwise. Each script runs as the app sends it over
 SSH, `sh -c <script>`, with the car's own programs: the upload of the archive on the standard input, then the snapshot,
 status, the gateway and the removal. The install script's @MD5@ and @TOP@ are this release's.
@@ -23,7 +24,8 @@ VERSION = (ROOT / "VERSION").read_text().strip()
 # repository), such as dist/rust for the archives with the Rust workers.
 DIST = ROOT / os.environ.get("ENA_DIST", "dist")
 SCRIPTS = Path("/scripts")
-PLUGINS = {"boostdeck": ("BoostDeck", "BOOSTDECK"), "shiftdeck": ("ShiftDeck", "SHIFTDECK"), "bm3-maps": ("Bm3Maps", "BM3MAPS")}
+PLUGINS = {"boostdeck": ("BoostDeck", "BOOSTDECK"), "shiftdeck": ("ShiftDeck", "SHIFTDECK"), "bm3-maps": ("Bm3Maps", "BM3MAPS"),
+           "engine-codes": ("EngineCodes", "ENGINECODES")}
 LOCK = "tmp/aa-entrynav-launch.lock"
 
 

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Every check of EntryNav-Apps, in the order a release needs them. There is no CI: tools/publish_release.py runs this.
+"""Every check of EntryNav-Apps, in the order a release needs them. tools/publish_release.py runs this before every
+release. CI (.github/workflows/ci.yml) runs the PC checks on every push; the ARM build and the QEMU checks need the copy
+of the car's system, so they run only here, on a developer's machine.
 
     python3 tools/check.py
 

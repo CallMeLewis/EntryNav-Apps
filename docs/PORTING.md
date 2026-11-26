@@ -33,8 +33,9 @@ Use an ECU-matched diagnostic definition or capture the request from a trusted l
 
 - Keep the existing profile usable. If a new ECU uses a different layout or scaling, add a distinct profile gated by verified ECU identification. Avoid choosing a formula solely because its result falls inside the display range.
 - Update the request and ECU address in `src/collector.c`, and the reply checks and conversion in `src/gauge_core.c`. Keep invalid or stale readings blank.
+- While the C workers remain, make the same change in their Rust ports, which will replace them: the request and ECU address in `rust/boostdeck-collector/src/main.rs` (ShiftDeck's in `rust/shift-deck/src/main.rs`), and the reply checks and conversion in `rust/ena-diag/src/gauge.rs`. `tests/run_rust.py` checks that both builds still behave the same.
 - Add a captured, de-identified positive fixture and a negative or invalid-length fixture in `tests/`. Run `make test`.
 - Change the layout only when needed. Use `tools/make_bars.py` or `make_drive_apps.py`, regenerate assets, and keep model IDs, image IDs, worker formats, and connector IDs consistent.
-- Build and install as the [README](../README.md#build) describes. While parked, compare the display with a trusted tool on the same car. Check the blank or stale state with diagnostics unavailable. Record the tested ECU and firmware separately from supported but untested combinations.
+- Build and install as the [README](../README.md#building-it-yourself) describes. While parked, compare the display with a trusted tool on the same car. Check the blank or stale state with diagnostics unavailable. Record the tested ECU and firmware separately from supported but untested combinations.
 
 Share a minimal signal table and sanitized examples. Avoid uploading full vehicle captures, identifying data, or framework libraries.

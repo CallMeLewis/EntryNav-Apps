@@ -191,7 +191,7 @@ another). That copy holds BMW files and never goes into git.
 
 | Command | What it does |
 |---|---|
-| `make test` | The PC tests: the decoders, and each worker against a simulated gateway (Linux or WSL) |
+| `make test` | The PC tests: the decoders, each worker against a simulated gateway, and how `tools/publish_release.py` retries and checks the tag (Linux or WSL, Python with cryptography) |
 | `make assets` | The screens and their image archives (Python with Pillow) |
 | `make check` | The PC tests, the apps' C++ compiled for errors, ShellCheck, and the committed screens matching their generators. CI runs each as its own job on every push |
 | `bash toolchain/tc.sh make arm` | The ARM apps, workers and test programs |

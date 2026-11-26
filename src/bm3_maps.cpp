@@ -1,7 +1,7 @@
-// Bootmod3 Suite (the Bm3Maps plugin, BM3 Maps until 0.1.0): bootmod3 CustomROM controls from iDrive. The bm3-maps
-// worker does the diagnostics (src/bm3.h); this plugin starts it and shows the line it prints. Opening the page reads the active map; a tile writes that slot and
-// reads it back. OPTIONS has Active Sound and burbles, each on its own screen with its own result line. One worker at
-// a time: a press while one runs only says so.
+// Bootmod3 Suite (the Bm3Maps plugin, called BM3 Maps until 0.1.1): bootmod3 CustomROM controls from iDrive. The
+// bm3-maps worker does the diagnostics (src/bm3.h); this plugin starts it and shows the line it prints. Opening the
+// page reads the active map; a tile writes that slot and reads it back. OPTIONS has Active Sound and burbles, each on
+// its own screen with its own result line. One worker at a time: a press while one runs only says so.
 // Independent of and unaffiliated with bootmod3.
 #include "plugin_factory.h"
 #include "diagnostic_worker.h"

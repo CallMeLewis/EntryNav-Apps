@@ -21,7 +21,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: The decoders, and each worker against a simulated gateway
+      - name: Install cryptography, which tools/publish_release.py imports
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends python3-cryptography
+      - name: The decoders, each worker against a simulated gateway, and publish_release.py's retry and tag check
         run: make test
 
   syntax:
