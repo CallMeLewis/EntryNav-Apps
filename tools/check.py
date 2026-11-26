@@ -8,6 +8,9 @@
 3. The host tests (make test), in WSL on Windows.
 4. The release archives (tools/package_release.py). The screens' image archives must be there (make assets).
 5. setup.sh and Flare Drive's scripts on a pretend head unit (tests/run_setup.py).
+
+With ENA_RELEASE_WORKERS=rust the archives hold the Rust workers from build/rust (make rust), and tests/run_rust.py
+checks them against the C first, after step 2.
 """
 
 import os
@@ -17,6 +20,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+WORKERS = os.environ.get("ENA_RELEASE_WORKERS") or "c"  # which workers tools/package_release.py packages
 # The bash on PATH: on Windows a bare "bash" finds System32's WSL launcher before PATH, and WSL may have no Docker.
 BASH = shutil.which("bash") or "bash"
 
@@ -32,6 +36,8 @@ def main():
         sys.exit(f"FAIL: plugin/{missing[0]}_ALL_Images.zip is missing. Run make assets (Python with Pillow) first.")
     run(BASH, "toolchain/tc.sh", "make", "arm")
     run(BASH, "toolchain/qemu.sh", "python3", "tests/run_arm.py")
+    if WORKERS == "rust":
+        run(sys.executable, "tests/run_rust.py")
     if os.name == "nt":
         run("wsl", "-e", "sh", "-c", f'cd "$(wslpath "{ROOT}")" && make test')
     else:

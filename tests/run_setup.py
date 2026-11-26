@@ -2,7 +2,11 @@
 """Runs the tests on a pretend EntryNav2 made from the copy of the car's system: tests/test_setup.py (each plugin's
 setup.sh), then tests/test_flare_drive.py (the scripts Flare Drive sends).
 
-    python3 tools/package_release.py && python3 tests/run_setup.py [test_setup|test_flare_drive] [TestCase.test_name ...]
+    python3 tools/package_release.py && python3 tests/run_setup.py [--dist DIR] [test_setup|test_flare_drive] [TestCase.test_name ...]
+
+--dist tests the archives in another folder of the repository than dist, such as the ones with the Rust workers:
+
+    python3 tools/package_release.py --workers rust dist/rust && python3 tests/run_setup.py --dist dist/rust
 
 The tests run in the disposable aa-entrynav-qemu:local container, started with --privileged so that they can mount
 and chroot, with the copy of the car's system from the Docker volume entrynav2-rootfs (HU_ROOTFS to use another).
@@ -13,7 +17,7 @@ the flare-drive repository sits beside this one; test_flare_drive is skipped wit
 import os
 import subprocess
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
 SUITES = ("test_setup", "test_flare_drive")
@@ -21,6 +25,9 @@ FLARE_DRIVE_SCRIPTS = ROOT.parent / "flare-drive" / "core" / "build" / "head-uni
 
 
 def main(args):
+    dist = "dist"
+    if args[:1] == ["--dist"] and len(args) > 1:
+        dist, args = PurePosixPath(Path(args[1]).resolve().relative_to(ROOT).as_posix()), args[2:]
     suites = [args[0]] if args and args[0] in SUITES else list(SUITES)
     cases = args[1:] if args and args[0] in SUITES else args
     script = " && ".join(f"python3 /work/tests/{suite}.py {' '.join(cases)}".strip() for suite in suites)
@@ -28,7 +35,7 @@ def main(args):
                "-v", f"{os.environ.get('HU_ROOTFS', 'entrynav2-rootfs')}:/sysroot:ro",
                "-v", f"{ROOT}:/work:ro",
                *(["-v", f"{FLARE_DRIVE_SCRIPTS}:/scripts:ro"] if FLARE_DRIVE_SCRIPTS.is_dir() else []),
-               "-e", "PYTHONDONTWRITEBYTECODE=1", "-w", "/work/tests",
+               "-e", "PYTHONDONTWRITEBYTECODE=1", "-e", f"ENA_DIST={dist}", "-w", "/work/tests",
                "aa-entrynav-qemu:local", "sh", "-c", script]
     env = dict(os.environ, MSYS_NO_PATHCONV="1")
     return subprocess.run(command, env=env).returncode

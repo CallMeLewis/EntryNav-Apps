@@ -8,6 +8,7 @@ status, the gateway and the removal. The install script's @MD5@ and @TOP@ are th
 """
 
 import hashlib
+import os
 import subprocess
 import sys
 import unittest
@@ -17,13 +18,16 @@ from headunit import Unit
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "VERSION").read_text().strip()
+# The archives to test: dist, as tools/package_release.py writes them, or another folder (ENA_DIST, relative to the
+# repository), such as dist/rust for the archives with the Rust workers.
+DIST = ROOT / os.environ.get("ENA_DIST", "dist")
 SCRIPTS = Path("/scripts")
 PLUGINS = {"boostdeck": ("BoostDeck", "BOOSTDECK"), "shiftdeck": ("ShiftDeck", "SHIFTDECK"), "bm3-maps": ("Bm3Maps", "BM3MAPS")}
 LOCK = "tmp/aa-entrynav-launch.lock"
 
 
 def archive(plugin):
-    return ROOT / "dist" / f"{plugin}-{VERSION}-armhf.tar"
+    return DIST / f"{plugin}-{VERSION}-armhf.tar"
 
 
 def script(name):

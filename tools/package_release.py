@@ -14,23 +14,32 @@ setup.sh and the rule file are install/setup.sh and install/firewall.rules with 
 covers every other file (setup.sh check verifies it on the car, which has no sha256sum). The archives are
 reproducible: fixed owner, modes and dates, sorted entries, USTAR as Flare Drive's contract asks.
 
-    python3 tools/package_release.py [OUT] [ID ...]
+    python3 tools/package_release.py [--workers c|rust] [OUT] [ID ...]
+
+--workers chooses the worker and ena-gateway each archive holds: c, the default, takes build-arm's (bash toolchain/tc.sh
+make arm); rust takes build/rust's static ports (make rust), which must pass tests/run_rust.py first. Without --workers,
+ENA_RELEASE_WORKERS chooses, so tools/check.py and tools/publish_release.py follow it too. The app's library comes from
+build-arm either way. Give rust archives their own OUT, such as dist/rust, so the two never mix.
 """
 
+import argparse
 import hashlib
 import io
 import json
+import os
 import re
+import struct
 import subprocess
-import sys
 import tarfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ARM = ROOT / "build-arm"
+RUST = ROOT / "build" / "rust"
 PLUGIN = ROOT / "plugin"
 VERSION = re.compile(r"^\d+\.\d+\.\d+(-(beta|test)\.\d+)?$")
 ELF_ARM = b"\x7fELF\x01\x01\x01"
+WORKER_BUILDS = ("c", "rust")
 
 
 class Plugin:
@@ -68,6 +77,25 @@ def arm(path: Path) -> bytes:
     return data
 
 
+def static_arm(path: Path) -> bytes:
+    """A Rust worker: a 32-bit ARM EABI 5 hard-float program with no interpreter or dynamic section, which needs
+    nothing from the car's loader or C library (setup.sh check runs it instead of tracing it)."""
+    data = arm(path)
+    flags, = struct.unpack_from("<I", data, 36)
+    if flags >> 24 != 5 or not flags & 0x400:
+        fail(f"{path.relative_to(ROOT)} is not EABI 5 hard-float")
+    phoff, = struct.unpack_from("<I", data, 28)
+    size, count = struct.unpack_from("<HH", data, 42)
+    if any(struct.unpack_from("<I", data, phoff + i * size)[0] in (2, 3) for i in range(count)):  # PT_DYNAMIC, PT_INTERP
+        fail(f"{path.relative_to(ROOT)} is dynamically linked, not a static Rust worker")
+    return data
+
+
+def program(name: str, workers: str) -> bytes:
+    """A worker or ena-gateway from the build --workers chose."""
+    return static_arm(RUST / name) if workers == "rust" else arm(ARM / name)
+
+
 def unix_text(path: Path) -> bytes:
     data = read(path)
     if b"\r\n" in data:
@@ -88,7 +116,7 @@ def filled(path: Path, plugin: Plugin) -> bytes:
     return text.encode()
 
 
-def release_files(plugin: Plugin, version):
+def release_files(plugin: Plugin, version, workers="c"):
     """archive path inside the top folder -> (bytes, mode)."""
     files = {}
     description = {
@@ -111,8 +139,8 @@ def release_files(plugin: Plugin, version):
     for name, entry in meta.items():
         files[f"{base}/{name}"] = entry
     files[f"{base}/lib{plugin.app}.so"] = (arm(ARM / f"lib{plugin.app}.so"), 0o644)
-    files[f"{base}/{plugin.worker}"] = (arm(ARM / plugin.worker), 0o755)
-    files[f"{base}/ena-gateway"] = (arm(ARM / "ena-gateway"), 0o755)
+    files[f"{base}/{plugin.worker}"] = (program(plugin.worker, workers), 0o755)
+    files[f"{base}/ena-gateway"] = (program("ena-gateway", workers), 0o755)
     for suffix in (".manifest", ".xml"):
         files[f"{base}/{plugin.app}{suffix}"] = (unix_text(PLUGIN / f"{plugin.app}{suffix}"), 0o644)
     files[f"{base}/{plugin.app}_ALL_Images.zip"] = (read(PLUGIN / f"{plugin.app}_ALL_Images.zip"), 0o644)
@@ -130,8 +158,8 @@ def source_epoch():
         return 0
 
 
-def build(plugin: Plugin, version, out: Path, epoch) -> Path:
-    files = release_files(plugin, version)
+def build(plugin: Plugin, version, out: Path, epoch, workers="c") -> Path:
+    files = release_files(plugin, version, workers)
     top = f"{plugin.id}-{version}"
     folders = set()
     for name in files:
@@ -153,9 +181,16 @@ def build(plugin: Plugin, version, out: Path, epoch) -> Path:
     return archive
 
 
-def main(argv):
-    out = Path(argv[1]) if len(argv) > 1 else ROOT / "dist"
-    wanted = set(argv[2:])
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--workers", choices=WORKER_BUILDS, default=os.environ.get("ENA_RELEASE_WORKERS") or "c",
+                        help="the build of the workers and ena-gateway: c (build-arm) or rust (build/rust)")
+    parser.add_argument("out", nargs="?", type=Path, default=ROOT / "dist")
+    parser.add_argument("ids", nargs="*")
+    options = parser.parse_args(argv)
+    if options.workers not in WORKER_BUILDS:
+        fail(f"ENA_RELEASE_WORKERS {options.workers!r} is neither c nor rust")
+    wanted = set(options.ids)
     unknown = wanted - {p.id for p in PLUGINS}
     if unknown:
         fail(f"no plugin called {', '.join(sorted(unknown))}")
@@ -163,13 +198,14 @@ def main(argv):
     if not VERSION.match(version):
         fail(f"VERSION {version!r} is not X.Y.Z, X.Y.Z-beta.N or X.Y.Z-test.N")
     epoch = source_epoch()
+    print(f"Workers: {'the Rust ports, from build/rust' if options.workers == 'rust' else 'the C ones, from build-arm'}")
     for plugin in PLUGINS:
         if wanted and plugin.id not in wanted:
             continue
-        archive = build(plugin, version, out, epoch)
+        archive = build(plugin, version, options.out, epoch, options.workers)
         data = archive.read_bytes()
         print(f"{archive}  {len(data)} bytes  sha256 {hashlib.sha256(data).hexdigest()}")
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main()
